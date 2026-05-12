@@ -28,3 +28,11 @@ pnpm-debug.log*
 
 # Test coverage
 coverage/
+
+# Agency / APM runtime
+/.do-results.json
+/apm_modules/
+
+
+# APM dependencies
+apm_modules/
