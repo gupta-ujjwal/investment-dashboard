@@ -9,7 +9,8 @@ build/
 .vite/
 
 # Env / secrets
-.env
+# .env is committed (Vite reads VITE_* into import.meta.env; safe to share).
+# .env.local and .env.<mode>.local are per-developer overrides — never commit.
 .env.local
 .env.*.local
 

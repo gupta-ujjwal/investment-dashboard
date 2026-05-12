@@ -4,7 +4,7 @@ export default function App() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <header className="mb-10">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Investment Dashboard
+            {import.meta.env.VITE_APP_TITLE}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             Phase 1 scaffold &middot; India + US equities &middot; edge-only
