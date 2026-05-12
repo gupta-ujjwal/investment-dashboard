@@ -33,7 +33,7 @@ When a task touches one of these, surface the decision rather than silently pick
 
 ## Repo
 
-- GitHub: https://github.com/gupta-ujjwal/intestment-dashboard (note the `intestment` typo in the slug — intentional / pre-existing, do not "fix" it without asking)
+- GitHub: https://github.com/gupta-ujjwal/investment-dashboard
 - Default branch: `main`
 - Deploy target: GitHub Pages from this repo
 
