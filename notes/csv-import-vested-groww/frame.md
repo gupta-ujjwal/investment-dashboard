@@ -1,0 +1,25 @@
+# Frame: CSV/XLSX import — Vested + Groww → IndexedDB → list view
+
+- **Kind**: feature (first vertical slice of Phase 1)
+- **One-line summary**: User lands on app → if IndexedDB has no holdings, route to **Import** wizard (pick source → download instructions → upload .xlsx → preview diff → resolve missing rows → commit); otherwise route to **Homepage list view** showing canonical holdings (Vested + Groww unified, source attribute visible).
+- **Files/modules likely touched**:
+  - `src/App.tsx` — replace hello-world body with route switch (no-data → Import; data → Homepage)
+  - `src/main.tsx` — no changes expected
+  - `src/routes/import/` (new) — import wizard (source picker, instructions, upload, preview, commit)
+  - `src/routes/home/` (new) — homepage list view
+  - `src/storage/holdings.ts` (new) — IndexedDB wrapper around `idb`, holds the `holdings` object store, merge-by-(source, sourceSymbol) logic
+  - `src/parsers/groww.ts` (new) — XLSX → canonical holdings for Groww (banded layout, header at row 11, ISIN-keyed)
+  - `src/parsers/vested.ts` (new) — XLSX → canonical holdings for Vested (clean layout, header at row 1, ticker-keyed)
+  - `src/parsers/types.ts` (new) — `CanonicalHolding` type, source/asset-class enums, parser result shape (rows + NA-ghost count)
+  - `src/parsers/diff.ts` (new) — `(existing, incoming) → { inserts, updates, missing }` pure function
+  - `package.json` — add `idb`, `xlsx` (SheetJS) deps; consider `react-router-dom` (or hand-rolled switch — TBD in approaches)
+- **External surface affected**: none. Edge-only, no server, no public API, no backend touchpoint. The only on-device change is the new IndexedDB database; uninstall = clear site data.
+- **Out of scope** (deferred to later Phase 1 slices, do not design speculatively):
+  - Live prices / current value / unrealised P&L (price-data slice)
+  - USD↔INR FX conversion (FX slice)
+  - Analytics views (allocation, P&L over time, performance) — needs price slice first
+  - ISIN→ticker resolution (Groww) and ticker→exchange resolution (Vested) — list view shows whatever the source gave us
+  - Manual add-a-holding form (manual-entry slice)
+  - Edit / delete an individual holding from the list (edit slice — only delete happens implicitly via re-import wizard's "missing rows" branch)
+  - Transaction-level history, snapshots over time (analytics-history slice — likely triggers the SQLite-WASM re-evaluation)
+  - SQLite-WASM evaluation (deferred; constraints captured for the analytics slice — see plan)
