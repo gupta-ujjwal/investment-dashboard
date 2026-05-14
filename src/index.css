@@ -1,1 +1,147 @@
 @import "tailwindcss";
+
+@import "@fontsource/newsreader/latin-400.css";
+@import "@fontsource/newsreader/latin-500.css";
+@import "@fontsource/newsreader/latin-600.css";
+@import "@fontsource/newsreader/latin-400-italic.css";
+@import "@fontsource/geist/latin-400.css";
+@import "@fontsource/geist/latin-500.css";
+@import "@fontsource/geist/latin-600.css";
+@import "@fontsource/geist-mono/latin-400.css";
+@import "@fontsource/geist-mono/latin-500.css";
+
+@theme {
+  --color-paper: #f5f1ea;
+  --color-paper-deep: #ebe4d6;
+  --color-ink: #1a1815;
+  --color-ink-muted: #5b574e;
+  --color-ink-soft: #8a8478;
+  --color-rule: #c8c0b0;
+  --color-rule-strong: #1a1815;
+  --color-oxblood: #6b1d1d;
+  --color-editorial-red: #b03030;
+
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .tabular,
+  table,
+  .font-mono {
+    font-feature-settings: "lnum" 1, "tnum" 1;
+  }
+
+  /* Faint paper-grain overlay — fixed, low-opacity SVG noise. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 180px 180px;
+    mix-blend-mode: multiply;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@layer components {
+  /* Double rule used in the masthead and panel separators.
+     2px solid, ~3px gap, 1px solid. Editorial broadsheet convention. */
+  .rule-double {
+    border-top: 2px solid var(--color-rule-strong);
+    box-shadow: inset 0 -1px 0 0 var(--color-rule-strong);
+    padding-bottom: 3px;
+  }
+
+  .rule-hairline {
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .rule-hairline-strong {
+    border-top: 1px solid var(--color-rule-strong);
+  }
+
+  /* Small-caps treatment via uppercase + tracking. More portable than
+     font-variant-caps across Geist's weights. */
+  .smallcaps {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+  }
+
+  /* Staggered row reveal on the home route's first paint. Indices set
+     inline via --i; total cascade caps at ~20 rows worth of delay. */
+  .reveal {
+    opacity: 0;
+    animation: reveal 480ms ease-out forwards;
+    animation-delay: calc(var(--i, 0) * 25ms + 80ms);
+  }
+
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .crossfade {
+    animation: crossfade 150ms ease-out both;
+  }
+
+  @keyframes crossfade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Holdings row hover — right-edge hairline animates in. */
+  .row-hover {
+    position: relative;
+  }
+
+  .row-hover::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 2px;
+    background-color: var(--color-ink);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform 150ms ease-out;
+  }
+
+  .row-hover:hover::after {
+    transform: scaleY(1);
+  }
+}
