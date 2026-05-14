@@ -36,8 +36,7 @@ export function mapHeaderColumns(headerRow: ExcelJS.Row): Map<string, number> {
  * a cell value. Returns -1 if no such row exists.
  *
  * Used to harden parsers against broker exports that add metadata rows above
- * the data band (the Groww layout does this with client info + summary; some
- * Vested exports appear to as well — observed at implementation time).
+ * the data band (the Groww layout does this with client info + summary).
  */
 export function findHeaderRowBySignature(
   ws: ExcelJS.Worksheet,
@@ -53,6 +52,39 @@ export function findHeaderRowBySignature(
     if (signature.every((s) => cells.has(s))) return i
   }
   return -1
+}
+
+/**
+ * Locate the worksheet (and header row within it) that matches a signature.
+ * Searches every sheet in the workbook — required for multi-sheet exports
+ * where the data sheet is not `worksheets[0]` (e.g. Vested's three-sheet
+ * `User Details` / `Summary` / `Holdings` layout — the brainstorm fixture
+ * was a single-sheet variant, real exports put Holdings on sheet 3).
+ */
+export function findSheetBySignature(
+  wb: ExcelJS.Workbook,
+  signature: readonly string[],
+  limit = 25,
+): { ws: ExcelJS.Worksheet; headerRowIndex: number } | null {
+  for (const ws of wb.worksheets) {
+    const headerRowIndex = findHeaderRowBySignature(ws, signature, limit)
+    if (headerRowIndex > 0) return { ws, headerRowIndex }
+  }
+  return null
+}
+
+/**
+ * Build a diagnostic preview across every worksheet in the workbook — the
+ * first `rows` rows × first `cols` cells of each. Used in ParseError when
+ * no sheet matches the expected signature, so the user can see what was
+ * actually in the file across all sheets, not just the first.
+ */
+export function previewAllSheets(wb: ExcelJS.Workbook, rows = 5, cols = 8): string {
+  const sections: string[] = []
+  for (const ws of wb.worksheets) {
+    sections.push(`Sheet "${ws.name}" (${ws.rowCount} rows):\n${previewFirstRows(ws, rows, cols)}`)
+  }
+  return sections.join('\n\n')
 }
 
 /**

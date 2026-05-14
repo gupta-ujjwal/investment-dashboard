@@ -5,9 +5,9 @@ import { ParseError } from './types'
 import {
   cellNumber,
   cellString,
-  findHeaderRowBySignature,
+  findSheetBySignature,
   mapHeaderColumns,
-  previewFirstRows,
+  previewAllSheets,
 } from './xlsx-utils'
 
 const HEADER_SIGNATURE = ['Name', 'Ticker'] as const
@@ -24,21 +24,21 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
     })
   }
 
-  const ws = wb.worksheets[0]
-  if (!ws || ws.rowCount === 0) {
+  if (wb.worksheets.length === 0) {
     throw new ParseError('vested', { kind: 'empty-file' })
   }
 
-  const headerRowIndex = findHeaderRowBySignature(ws, HEADER_SIGNATURE)
-  if (headerRowIndex < 0) {
+  const found = findSheetBySignature(wb, HEADER_SIGNATURE)
+  if (!found) {
     throw new ParseError('vested', {
       kind: 'header-not-found',
       expected: HEADER_SIGNATURE.join(' + '),
-      foundFirstCells: [cellString(ws.getRow(1).getCell(1))],
-      firstRowsPreview: previewFirstRows(ws),
+      foundFirstCells: wb.worksheets.map((w) => `sheet "${w.name}"`),
+      firstRowsPreview: previewAllSheets(wb),
     })
   }
 
+  const { ws, headerRowIndex } = found
   const headerRow = ws.getRow(headerRowIndex)
   const colIndexByName = mapHeaderColumns(headerRow)
   for (const required of REQUIRED_COLUMNS) {
@@ -47,7 +47,7 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
         kind: 'missing-column',
         expected: required,
         found: [...colIndexByName.keys()],
-        firstRowsPreview: previewFirstRows(ws),
+        firstRowsPreview: previewAllSheets(wb),
       })
     }
   }
