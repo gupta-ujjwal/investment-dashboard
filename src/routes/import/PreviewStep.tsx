@@ -52,80 +52,102 @@ export function PreviewStep({ state, dispatch }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Review changes before committing</h2>
+      <div className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
+              Review changes
+            </h3>
+            <p className="mt-1 font-sans text-sm text-bone-400">
+              Compare the parsed file against existing positions before commit.
+            </p>
+          </div>
           <button
             type="button"
             onClick={handleBackup}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="hidden border border-bone-100/15 px-3 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 sm:block"
           >
-            Download backup (.json)
+            ↓ Backup .json
           </button>
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="New holdings" value={insertCount} tone="emerald" />
-          <Stat label="Updates" value={updateCount} tone="amber" />
-          <Stat label="Missing from file" value={missingCount} tone={missingCount > 0 ? 'rose' : 'slate'} />
-          <Stat label="Skipped (NA)" value={skipped} tone="slate" />
+        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+          <Stat label="New" value={insertCount} tone="jade" />
+          <Stat label="Updates" value={updateCount} tone="tick" />
+          <Stat label="Missing" value={missingCount} tone={missingCount > 0 ? 'ember' : 'mute'} />
+          <Stat label="Skipped" value={skipped} tone="mute" />
         </dl>
 
         {extremes && (
-          <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700">Sanity check:</span>{' '}
+          <div className="mt-6 border-l-2 border-tick-400/60 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+            <span className="font-mono uppercase tracking-[0.16em] text-tick-400">
+              sanity check ·{' '}
+            </span>
             largest holding {formatQuantity(extremes.maxQty.quantity)} {extremes.maxQty.name}
             {' · '}
-            highest avg buy price {formatMoney(extremes.maxPrice.avgBuyPrice, extremes.maxPrice.currency)}{' '}
-            for {extremes.maxPrice.name}
+            highest avg buy{' '}
+            {formatMoney(extremes.maxPrice.avgBuyPrice, extremes.maxPrice.currency)} for{' '}
+            {extremes.maxPrice.name}
           </div>
         )}
 
         {commitError && (
-          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-            Commit failed: {commitError}
+          <div className="mt-6 border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+              commit failed ·{' '}
+            </span>
+            {commitError}
           </div>
         )}
       </div>
 
-      {missingCount > 0 && (
-        <MissingRowsPanel state={state} dispatch={dispatch} />
-      )}
+      {missingCount > 0 && <MissingRowsPanel state={state} dispatch={dispatch} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-upload' })}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
-          Reject changes
+          ← Reject
         </button>
         <button
           type="button"
           onClick={handleCommit}
           disabled={insertCount === 0 && updateCount === 0 && missingCount === 0}
-          className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
         >
-          Commit changes
+          Commit changes →
         </button>
       </div>
     </section>
   )
 }
 
-type StatTone = 'emerald' | 'amber' | 'rose' | 'slate'
-const toneClasses: Record<StatTone, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  amber: 'bg-amber-50 text-amber-700 ring-amber-200',
-  rose: 'bg-rose-50 text-rose-700 ring-rose-200',
-  slate: 'bg-slate-50 text-slate-600 ring-slate-200',
+type StatTone = 'jade' | 'tick' | 'ember' | 'mute'
+const toneAccent: Record<StatTone, string> = {
+  jade: 'text-jade-400',
+  tick: 'text-tick-400',
+  ember: 'text-ember-400',
+  mute: 'text-bone-300',
+}
+const toneRail: Record<StatTone, string> = {
+  jade: 'bg-jade-400/70',
+  tick: 'bg-tick-400/70',
+  ember: 'bg-ember-400/70',
+  mute: 'bg-bone-300/50',
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: StatTone }) {
   return (
-    <div className={`rounded-md px-3 py-2 ring-1 ring-inset ${toneClasses[tone]}`}>
-      <dt className="text-xs font-medium">{label}</dt>
-      <dd className="mt-0.5 text-2xl font-semibold tabular-nums">{value}</dd>
+    <div className="bg-ink-900 px-4 py-5">
+      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+        <span className={`h-px w-3 ${toneRail[tone]}`} />
+        {label}
+      </dt>
+      <dd className={`mt-2 font-display text-3xl leading-none tabular-nums ${toneAccent[tone]}`}>
+        {value}
+      </dd>
     </div>
   )
 }
@@ -135,46 +157,53 @@ function MissingRowsPanel({ state, dispatch }: Props) {
   const { missing } = state.diff
 
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-6">
-      <div className="flex items-baseline justify-between">
+    <div className="border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-rose-900">
-            {missing.length} holdings exist in your dashboard but aren't in this file
+          <h3 className="font-sans text-base font-semibold tracking-tight text-ember-300">
+            {missing.length} on file · absent from this upload
           </h3>
-          <p className="mt-1 text-xs text-rose-700">
-            For each row, choose <span className="font-medium">Keep</span> (your dashboard stays unchanged)
-            or <span className="font-medium">Delete</span> (we remove it on commit).
+          <p className="mt-1 max-w-xl font-sans text-sm text-ember-300/70">
+            Pick{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em]">keep</span>{' '}
+            (unchanged) or{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em]">delete</span>{' '}
+            (removed on commit).
           </p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
-            className="rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
           >
             Keep all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'delete' })}
-            className="rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="border border-ember-400/40 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-ember-300 transition hover:border-ember-400 hover:text-ember-400"
           >
             Delete all
           </button>
         </div>
       </div>
 
-      <ul className="mt-4 divide-y divide-rose-200 overflow-hidden rounded-md border border-rose-200 bg-white">
+      <ul className="mt-6 divide-y divide-bone-100/10 border border-bone-100/10 bg-ink-900">
         {missing.map((row) => {
           const decision = state.decisions[row.sourceSymbol] ?? 'keep'
           return (
-            <li key={row.sourceSymbol} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">{row.name}</p>
-                <p className="text-xs text-slate-500">
-                  <span className="font-mono">{row.sourceSymbol}</span>
-                  {' · '}
-                  {formatQuantity(row.quantity)} @ {formatMoney(row.avgBuyPrice, row.currency)}
+            <li
+              key={row.sourceSymbol}
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-sans text-sm font-medium text-bone-50">
+                  {row.name}
+                </p>
+                <p className="mt-0.5 font-mono text-[11px] text-bone-400">
+                  {row.sourceSymbol} · {formatQuantity(row.quantity)} @{' '}
+                  {formatMoney(row.avgBuyPrice, row.currency)}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -221,11 +250,11 @@ function DecisionButton({
   label: string
   destructive?: boolean
 }) {
-  const base = 'rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset'
+  const base = 'border px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] transition'
   let classes: string
-  if (active && destructive) classes = 'bg-rose-600 text-white ring-rose-700'
-  else if (active) classes = 'bg-slate-900 text-white ring-slate-900'
-  else classes = 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+  if (active && destructive) classes = 'border-ember-400 bg-ember-400 text-ink-950'
+  else if (active) classes = 'border-tick-400 bg-tick-400 text-ink-950'
+  else classes = 'border-bone-100/15 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
 
   return (
     <button type="button" onClick={onClick} className={`${base} ${classes}`}>

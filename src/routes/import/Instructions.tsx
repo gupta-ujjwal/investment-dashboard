@@ -32,32 +32,39 @@ export function Instructions({ source, dispatch }: Props) {
   const info = instructions[source]
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">{info.title}</h2>
-      <ol className="mt-4 space-y-2 text-sm text-slate-700">
+    <section className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <div className="flex items-baseline justify-between">
+        <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
+          {info.title}
+        </h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          step 02 / 04
+        </span>
+      </div>
+      <ol className="mt-6 space-y-1 border-t border-bone-100/10">
         {info.steps.map((step, i) => (
-          <li key={i} className="flex gap-3">
-            <span className="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-              {i + 1}
+          <li key={i} className="flex gap-5 border-b border-bone-100/10 py-4">
+            <span className="font-mono text-[11px] tabular-nums text-tick-400">
+              {String(i + 1).padStart(2, '0')}
             </span>
-            <span>{step}</span>
+            <span className="font-sans text-sm text-bone-100">{step}</span>
           </li>
         ))}
       </ol>
-      <div className="mt-6 flex justify-between">
+      <div className="mt-8 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
-          Back
+          ← Back
         </button>
         <button
           type="button"
           onClick={() => dispatch({ type: 'instructions-acknowledged' })}
-          className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+          className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
         >
-          I have the file
+          I have the file →
         </button>
       </div>
     </section>

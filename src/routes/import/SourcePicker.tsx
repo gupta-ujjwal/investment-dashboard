@@ -6,38 +6,64 @@ type Props = {
   dispatch: Dispatch<WizardAction>
 }
 
-const options: Array<{ source: Source; title: string; subtitle: string }> = [
+const options: Array<{
+  source: Source
+  title: string
+  subtitle: string
+  market: string
+  ccy: string
+}> = [
   {
     source: 'vested',
     title: 'Vested',
-    subtitle: 'US stocks & ETFs · USD',
+    subtitle: 'US stocks & ETFs',
+    market: 'NYSE · NASDAQ',
+    ccy: 'USD',
   },
   {
     source: 'groww',
     title: 'Groww',
-    subtitle: 'India stocks, MFs, ETFs · INR',
+    subtitle: 'India stocks · MFs · ETFs',
+    market: 'NSE · BSE',
+    ccy: 'INR',
   },
 ]
 
 export function SourcePicker({ dispatch }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">Pick a broker</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Each broker has a slightly different export format. Pick the source so we know how to read your file.
+    <section className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <div className="flex items-baseline justify-between">
+        <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
+          Pick a broker
+        </h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          step 01 / 04
+        </span>
+      </div>
+      <p className="mt-2 max-w-xl font-sans text-sm text-bone-400">
+        Every broker exports a different shape. Choose your source so we know how to read it.
       </p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-2">
         {options.map((opt) => (
           <button
             key={opt.source}
             type="button"
             onClick={() => dispatch({ type: 'pick-source', source: opt.source })}
-            className="group flex flex-col items-start rounded-lg border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="group relative flex flex-col items-start gap-4 bg-ink-900 px-6 py-7 text-left transition hover:bg-ink-850 focus:outline-none"
           >
-            <span className="text-base font-semibold text-slate-900 group-hover:text-slate-700">
-              {opt.title}
-            </span>
-            <span className="mt-1 text-xs text-slate-500">{opt.subtitle}</span>
+            <div className="flex w-full items-center justify-between">
+              <span className="font-sans text-lg font-semibold tracking-tight text-bone-50 transition group-hover:text-tick-400">
+                {opt.title}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                {opt.ccy}
+              </span>
+            </div>
+            <div className="font-sans text-sm text-bone-300">{opt.subtitle}</div>
+            <div className="mt-auto flex w-full items-center justify-between border-t border-bone-100/10 pt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+              <span>{opt.market}</span>
+              <span className="text-tick-400 opacity-0 transition group-hover:opacity-100">→</span>
+            </div>
           </button>
         ))}
       </div>

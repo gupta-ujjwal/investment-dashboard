@@ -48,19 +48,33 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
   const sourceLabel = source === 'vested' ? 'Vested' : 'Groww'
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">Upload your {sourceLabel} file</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Choose the <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">.xlsx</code> file you just
-        downloaded. Parsing happens in your browser; nothing is uploaded.
+    <section className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <div className="flex items-baseline justify-between">
+        <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
+          Upload your {sourceLabel} file
+        </h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          step 03 / 04
+        </span>
+      </div>
+      <p className="mt-2 max-w-xl font-sans text-sm text-bone-400">
+        Pick the{' '}
+        <code className="font-mono text-[12px] text-tick-400">.xlsx</code> you just downloaded.
+        Parsing happens here, in your browser.
       </p>
 
-      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center hover:border-slate-400 hover:bg-slate-100">
-        <span className="text-sm font-medium text-slate-700">
-          {fileName ? fileName : 'Click to choose a file'}
+      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-bone-100/20 bg-ink-850 px-6 py-16 text-center transition hover:border-tick-400/60 hover:bg-ink-800">
+        <span
+          aria-hidden="true"
+          className={`font-mono text-2xl text-tick-400 ${busy ? 'spin-slow' : ''}`}
+        >
+          {busy ? '◐' : '⤓'}
         </span>
-        <span className="mt-1 text-xs text-slate-500">
-          {busy ? 'Parsing…' : `Looking for: ${sourceLabel} holdings export (.xlsx)`}
+        <span className="font-sans text-base text-bone-100">
+          {fileName ?? 'Click to choose a file'}
+        </span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
+          {busy ? 'Parsing…' : `${sourceLabel} holdings export · .xlsx`}
         </span>
         <input
           type="file"
@@ -72,11 +86,15 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       </label>
 
       {parseError && (
-        <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          <p className="font-medium">Parse failed</p>
-          <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-xs">{parseError}</pre>
-          <p className="mt-2 text-xs text-rose-600">
-            If the file format has changed, please open an issue with the error message above.
+        <div className="mt-6 border border-ember-400/40 bg-ember-900/30 p-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ember-300">
+            Parse failed
+          </p>
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-ember-300/90">
+            {parseError}
+          </pre>
+          <p className="mt-3 font-sans text-xs text-ember-300/70">
+            If the file format has changed, please open an issue with the error above.
           </p>
         </div>
       )}
@@ -85,9 +103,9 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
-          Back
+          ← Back
         </button>
       </div>
     </section>
