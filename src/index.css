@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-@import "@fontsource/newsreader/latin-400.css";
-@import "@fontsource/newsreader/latin-500.css";
-@import "@fontsource/newsreader/latin-600.css";
-@import "@fontsource/newsreader/latin-400-italic.css";
+@import "@fontsource/eb-garamond/latin-400.css";
+@import "@fontsource/eb-garamond/latin-500.css";
+@import "@fontsource/eb-garamond/latin-400-italic.css";
+@import "@fontsource/eb-garamond/latin-500-italic.css";
 @import "@fontsource/geist/latin-400.css";
 @import "@fontsource/geist/latin-500.css";
 @import "@fontsource/geist/latin-600.css";
@@ -11,17 +11,21 @@
 @import "@fontsource/geist-mono/latin-500.css";
 
 @theme {
-  --color-paper: #f5f1ea;
-  --color-paper-deep: #ebe4d6;
-  --color-ink: #1a1815;
-  --color-ink-muted: #5b574e;
-  --color-ink-soft: #8a8478;
-  --color-rule: #c8c0b0;
-  --color-rule-strong: #1a1815;
-  --color-oxblood: #6b1d1d;
-  --color-editorial-red: #b03030;
+  /* Private ledger, after hours. Warm umber-black background; one brass
+     accent for "mine"; dusty rose reserved for losses. */
+  --color-bg: #15120e;
+  --color-bg-elev: #1c1813;
+  --color-surface: #221d16;
+  --color-ink: #ece6d6;
+  --color-ink-muted: #9c948a;
+  --color-ink-soft: #6b665c;
+  --color-rule: #3a342b;
+  --color-rule-strong: #ece6d6;
+  --color-brass: #c89b3c;
+  --color-brass-dim: #8c6a26;
+  --color-loss: #c97a76;
 
-  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "EB Garamond", "Iowan Old Style", Georgia, "Times New Roman", serif;
   --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
 }
@@ -30,13 +34,12 @@
   html,
   body,
   #root {
-    background-color: var(--color-paper);
+    background-color: var(--color-bg);
     color: var(--color-ink);
   }
 
   body {
     font-family: var(--font-body);
-    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -47,28 +50,48 @@
     font-feature-settings: "lnum" 1, "tnum" 1;
   }
 
-  /* Faint paper-grain overlay — fixed, low-opacity SVG noise. */
+  /* Lamp + vignette. A single warm pool of light from the top-center
+     fades down; corners darken slightly. Reads as: page on a desk, one
+     lamp above. */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.05;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0 0.1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 0%, rgba(232, 196, 130, 0.07), transparent 70%),
+      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55));
+  }
+
+  /* Very subtle grain prevents banding on the gradient and adds material
+     feel. Screen blend mode (lightens) since the bg is dark. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.035;
+    mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.65 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     background-size: 180px 180px;
-    mix-blend-mode: multiply;
   }
 
   #root {
     position: relative;
     z-index: 1;
   }
+
+  /* Selection in brass — small thing, reinforces the accent. */
+  ::selection {
+    background-color: rgba(200, 155, 60, 0.3);
+    color: var(--color-ink);
+  }
 }
 
 @layer components {
-  /* Double rule used in the masthead and panel separators.
-     2px solid, ~3px gap, 1px solid. Editorial broadsheet convention. */
+  /* Double rule in bright ink (now becomes the masthead divider in dark). */
   .rule-double {
     border-top: 2px solid var(--color-rule-strong);
     box-shadow: inset 0 -1px 0 0 var(--color-rule-strong);
@@ -83,16 +106,24 @@
     border-top: 1px solid var(--color-rule-strong);
   }
 
-  /* Small-caps treatment via uppercase + tracking. More portable than
-     font-variant-caps across Geist's weights. */
+  /* Tracked-caps eyebrow — used very sparingly now. Brass-dim color so it
+     doesn't fight body ink. Reduced tracking vs the broadsheet variant. */
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    color: var(--color-brass-dim);
+    font-size: 0.65rem;
+    font-weight: 500;
+  }
+
   .smallcaps {
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.14em;
     font-feature-settings: "lnum" 1, "tnum" 1;
   }
 
-  /* Staggered row reveal on the home route's first paint. Indices set
-     inline via --i; total cascade caps at ~20 rows worth of delay. */
+  /* One staggered fade-in on first paint. */
   .reveal {
     opacity: 0;
     animation: reveal 480ms ease-out forwards;
@@ -123,7 +154,7 @@
     }
   }
 
-  /* Holdings row hover — right-edge hairline animates in. */
+  /* Holdings row hover — right-edge hairline in brass animates in. */
   .row-hover {
     position: relative;
   }
@@ -135,7 +166,7 @@
     top: 25%;
     bottom: 25%;
     width: 2px;
-    background-color: var(--color-ink);
+    background-color: var(--color-brass);
     transform: scaleY(0);
     transform-origin: center;
     transition: transform 150ms ease-out;
@@ -143,5 +174,21 @@
 
   .row-hover:hover::after {
     transform: scaleY(1);
+  }
+
+  .row-hover:hover td {
+    color: var(--color-ink);
+  }
+
+  /* Action link: editorial underline, brass on hover. */
+  .link-brass {
+    color: var(--color-ink);
+    border-bottom: 1px solid var(--color-rule);
+    padding-bottom: 1px;
+    transition: color 150ms ease-out, border-color 150ms ease-out;
+  }
+  .link-brass:hover {
+    color: var(--color-brass);
+    border-bottom-color: var(--color-brass);
   }
 }
