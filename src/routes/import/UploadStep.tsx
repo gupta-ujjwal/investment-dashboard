@@ -74,7 +74,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       {parseError && (
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
           <p className="font-medium">Parse failed</p>
-          <p className="mt-1 break-words">{parseError}</p>
+          <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-xs">{parseError}</pre>
           <p className="mt-2 text-xs text-rose-600">
             If the file format has changed, please open an issue with the error message above.
           </p>

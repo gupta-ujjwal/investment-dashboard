@@ -30,3 +30,47 @@ export function mapHeaderColumns(headerRow: ExcelJS.Row): Map<string, number> {
   })
   return map
 }
+
+/**
+ * Find the first row (within `limit`) that contains every signature string as
+ * a cell value. Returns -1 if no such row exists.
+ *
+ * Used to harden parsers against broker exports that add metadata rows above
+ * the data band (the Groww layout does this with client info + summary; some
+ * Vested exports appear to as well — observed at implementation time).
+ */
+export function findHeaderRowBySignature(
+  ws: ExcelJS.Worksheet,
+  signature: readonly string[],
+  limit = 25,
+): number {
+  const maxRow = Math.min(limit, ws.rowCount)
+  for (let i = 1; i <= maxRow; i++) {
+    const cells = new Set<string>()
+    ws.getRow(i).eachCell({ includeEmpty: false }, (cell) => {
+      cells.add(cellString(cell))
+    })
+    if (signature.every((s) => cells.has(s))) return i
+  }
+  return -1
+}
+
+/**
+ * Build a one-line-per-row preview of the first `rows` rows × first `cols`
+ * cells. Used as diagnostic content in ParseError messages when a header
+ * signature is missing — the user (or maintainer) can read what the file
+ * actually contained without re-uploading.
+ */
+export function previewFirstRows(ws: ExcelJS.Worksheet, rows = 5, cols = 8): string {
+  const lines: string[] = []
+  const maxRow = Math.min(rows, ws.rowCount)
+  for (let r = 1; r <= maxRow; r++) {
+    const cells: string[] = []
+    for (let c = 1; c <= cols; c++) {
+      const v = cellString(ws.getRow(r).getCell(c))
+      cells.push(v ? `"${v}"` : '∅')
+    }
+    lines.push(`  row ${r}: [${cells.join(', ')}]`)
+  }
+  return lines.join('\n')
+}

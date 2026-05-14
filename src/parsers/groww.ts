@@ -2,10 +2,15 @@ import ExcelJS from 'exceljs'
 import type { AssetClass, CanonicalHolding } from '../storage/holdings'
 import type { ParseResult } from './types'
 import { ParseError } from './types'
-import { cellNumber, cellString, mapHeaderColumns } from './xlsx-utils'
+import {
+  cellNumber,
+  cellString,
+  findHeaderRowBySignature,
+  mapHeaderColumns,
+  previewFirstRows,
+} from './xlsx-utils'
 
-const HEADER_FIRST_CELL = 'Stock Name'
-const HEADER_SCAN_LIMIT = 25
+const HEADER_SIGNATURE = ['Stock Name', 'ISIN'] as const
 const REQUIRED_COLUMNS = ['Stock Name', 'ISIN', 'Quantity', 'Average buy price'] as const
 
 export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
@@ -24,12 +29,13 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
     throw new ParseError('groww', { kind: 'empty-file' })
   }
 
-  const { headerRowIndex, foundFirstCells } = scanForHeader(ws)
+  const headerRowIndex = findHeaderRowBySignature(ws, HEADER_SIGNATURE)
   if (headerRowIndex < 0) {
     throw new ParseError('groww', {
       kind: 'header-not-found',
-      expected: HEADER_FIRST_CELL,
-      foundFirstCells,
+      expected: HEADER_SIGNATURE.join(' + '),
+      foundFirstCells: [cellString(ws.getRow(1).getCell(1))],
+      firstRowsPreview: previewFirstRows(ws),
     })
   }
 
@@ -40,6 +46,7 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
         kind: 'missing-column',
         expected: required,
         found: [...colIndexByName.keys()],
+        firstRowsPreview: previewFirstRows(ws),
       })
     }
   }
@@ -83,22 +90,6 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
   }
 
   return { rows, skipped }
-}
-
-function scanForHeader(ws: ExcelJS.Worksheet): {
-  headerRowIndex: number
-  foundFirstCells: string[]
-} {
-  const foundFirstCells: string[] = []
-  const limit = Math.min(HEADER_SCAN_LIMIT, ws.rowCount)
-  for (let i = 1; i <= limit; i++) {
-    const first = cellString(ws.getRow(i).getCell(1))
-    if (first) foundFirstCells.push(first)
-    if (first === HEADER_FIRST_CELL) {
-      return { headerRowIndex: i, foundFirstCells }
-    }
-  }
-  return { headerRowIndex: -1, foundFirstCells: foundFirstCells.slice(0, 10) }
 }
 
 function assetClassFromGroww(isin: string, name: string): AssetClass {

@@ -2,9 +2,15 @@ import ExcelJS from 'exceljs'
 import type { AssetClass, CanonicalHolding } from '../storage/holdings'
 import type { ParseResult } from './types'
 import { ParseError } from './types'
-import { cellNumber, cellString, mapHeaderColumns } from './xlsx-utils'
+import {
+  cellNumber,
+  cellString,
+  findHeaderRowBySignature,
+  mapHeaderColumns,
+  previewFirstRows,
+} from './xlsx-utils'
 
-const HEADER_FIRST_CELL = 'Name'
+const HEADER_SIGNATURE = ['Name', 'Ticker'] as const
 const REQUIRED_COLUMNS = ['Name', 'Ticker', 'Total Shares Held', 'Average Cost (USD)'] as const
 
 export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
@@ -23,16 +29,17 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
     throw new ParseError('vested', { kind: 'empty-file' })
   }
 
-  const headerRow = ws.getRow(1)
-  const firstCell = cellString(headerRow.getCell(1))
-  if (firstCell !== HEADER_FIRST_CELL) {
+  const headerRowIndex = findHeaderRowBySignature(ws, HEADER_SIGNATURE)
+  if (headerRowIndex < 0) {
     throw new ParseError('vested', {
       kind: 'header-not-found',
-      expected: HEADER_FIRST_CELL,
-      foundFirstCells: [firstCell],
+      expected: HEADER_SIGNATURE.join(' + '),
+      foundFirstCells: [cellString(ws.getRow(1).getCell(1))],
+      firstRowsPreview: previewFirstRows(ws),
     })
   }
 
+  const headerRow = ws.getRow(headerRowIndex)
   const colIndexByName = mapHeaderColumns(headerRow)
   for (const required of REQUIRED_COLUMNS) {
     if (!colIndexByName.has(required)) {
@@ -40,6 +47,7 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
         kind: 'missing-column',
         expected: required,
         found: [...colIndexByName.keys()],
+        firstRowsPreview: previewFirstRows(ws),
       })
     }
   }
@@ -53,7 +61,7 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
   let skipped = 0
   const importedAt = Date.now()
 
-  for (let i = 2; i <= ws.rowCount; i++) {
+  for (let i = headerRowIndex + 1; i <= ws.rowCount; i++) {
     const row = ws.getRow(i)
     const name = cellString(row.getCell(nameCol))
     const ticker = cellString(row.getCell(tickerCol))
