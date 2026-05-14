@@ -9,10 +9,10 @@ import { initialState, reducer, type WizardStep } from './wizardState'
 
 const stepLabels: Record<WizardStep, string> = {
   'pick-source': 'Pick broker',
-  instructions: 'Get your file',
+  instructions: 'Get file',
   upload: 'Upload',
   preview: 'Review',
-  committing: 'Committing',
+  committing: 'Review',
   done: 'Done',
 }
 const stepOrder: WizardStep[] = ['pick-source', 'instructions', 'upload', 'preview', 'done']
@@ -22,26 +22,36 @@ export function ImportRoute() {
   const navigate = useNavigate()
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-3xl px-6 py-10">
-        <header className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Import holdings</h1>
-          <p className="mt-1 text-sm text-slate-500">
+    <main className="min-h-screen">
+      <div className="mx-auto max-w-3xl px-6 py-12 sm:px-10 sm:py-16">
+        <header className="reveal" style={{ '--i': 0 } as React.CSSProperties}>
+          <p className="smallcaps text-[0.7rem] text-ink-muted">Import</p>
+          <h1 className="font-display mt-2 text-4xl font-medium leading-tight tracking-tight text-ink sm:text-5xl">
+            Bring holdings in
+          </h1>
+          <p className="mt-3 max-w-prose text-sm text-ink-muted">
             All parsing happens in your browser. Nothing is uploaded.
           </p>
           <StepIndicator current={state.step} />
+          <div className="rule-double mt-6" />
         </header>
 
-        {state.step === 'pick-source' && <SourcePicker dispatch={dispatch} />}
-        {state.step === 'instructions' && state.source && (
-          <Instructions source={state.source} dispatch={dispatch} />
-        )}
-        {state.step === 'upload' && state.source && (
-          <UploadStep source={state.source} parseError={state.parseError} dispatch={dispatch} />
-        )}
-        {state.step === 'preview' && <PreviewStep state={state} dispatch={dispatch} />}
-        {state.step === 'committing' && <CommitStep state="committing" />}
-        {state.step === 'done' && <CommitStep state="done" onContinue={() => navigate('/')} />}
+        <div
+          key={state.step}
+          className="crossfade reveal mt-10"
+          style={{ '--i': 1 } as React.CSSProperties}
+        >
+          {state.step === 'pick-source' && <SourcePicker dispatch={dispatch} />}
+          {state.step === 'instructions' && state.source && (
+            <Instructions source={state.source} dispatch={dispatch} />
+          )}
+          {state.step === 'upload' && state.source && (
+            <UploadStep source={state.source} parseError={state.parseError} dispatch={dispatch} />
+          )}
+          {state.step === 'preview' && <PreviewStep state={state} dispatch={dispatch} />}
+          {state.step === 'committing' && <CommitStep state="committing" />}
+          {state.step === 'done' && <CommitStep state="done" onContinue={() => navigate('/')} />}
+        </div>
       </div>
     </main>
   )
@@ -52,30 +62,33 @@ function StepIndicator({ current }: { current: WizardStep }) {
   const currentIdx = stepOrder.indexOf(displayed)
 
   return (
-    <ol className="mt-6 flex items-center gap-2 text-xs text-slate-500">
-      {stepOrder.map((step, i) => {
-        const active = i === currentIdx
-        const done = i < currentIdx
-        return (
-          <li key={step} className="flex items-center gap-2">
-            <span
-              className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ring-1 ring-inset ${
-                active
-                  ? 'bg-slate-900 text-white ring-slate-900'
-                  : done
-                    ? 'bg-emerald-100 text-emerald-700 ring-emerald-200'
-                    : 'bg-white text-slate-400 ring-slate-300'
-              }`}
-            >
-              {i + 1}
-            </span>
-            <span className={active ? 'font-medium text-slate-900' : ''}>
-              {stepLabels[step]}
-            </span>
-            {i < stepOrder.length - 1 && <span className="text-slate-300">›</span>}
-          </li>
-        )
-      })}
-    </ol>
+    <nav aria-label="Import steps" className="mt-8">
+      <ol className="flex flex-wrap items-baseline gap-x-1 gap-y-1">
+        {stepOrder.map((step, i) => {
+          const isCurrent = i === currentIdx
+          const isDone = i < currentIdx
+          return (
+            <li key={step} className="flex items-baseline gap-x-1">
+              <span
+                className={`smallcaps text-[0.7rem] ${
+                  isCurrent
+                    ? 'text-ink font-semibold'
+                    : isDone
+                      ? 'text-ink-muted'
+                      : 'text-ink-soft'
+                }`}
+              >
+                {stepLabels[step]}
+              </span>
+              {i < stepOrder.length - 1 && (
+                <span aria-hidden className="text-[0.7rem] text-ink-soft">
+                  &nbsp;—&nbsp;
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
   )
 }

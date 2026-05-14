@@ -1,7 +1,7 @@
 import type { Dispatch } from 'react'
 import { toDeleteKeys } from '../../parsers/diff'
 import { commitImport, exportSnapshot, type CanonicalHolding } from '../../storage/holdings'
-import { formatMoney, formatQuantity } from '../../lib/format'
+import { currencyGlyph, formatAmount, formatQuantity } from '../../lib/format'
 import type { WizardAction, WizardState } from './wizardState'
 
 type Props = {
@@ -51,81 +51,101 @@ export function PreviewStep({ state, dispatch }: Props) {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Review changes before committing</h2>
+    <section className="space-y-10">
+      <div>
+        <div className="flex items-baseline justify-between gap-4">
+          <div>
+            <p className="smallcaps text-[0.65rem] text-ink-muted">Review</p>
+            <h2 className="font-display mt-2 text-2xl font-medium text-ink">
+              Before we commit
+            </h2>
+          </div>
           <button
             type="button"
             onClick={handleBackup}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="smallcaps border-b border-ink-muted pb-0.5 text-[0.65rem] text-ink-muted hover:text-ink hover:border-ink"
           >
-            Download backup (.json)
+            Download backup ↓
           </button>
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="New holdings" value={insertCount} tone="emerald" />
-          <Stat label="Updates" value={updateCount} tone="amber" />
-          <Stat label="Missing from file" value={missingCount} tone={missingCount > 0 ? 'rose' : 'slate'} />
-          <Stat label="Skipped (NA)" value={skipped} tone="slate" />
+        <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
+          <Stat label="New" value={insertCount} accent="ink" />
+          <Stat label="Updates" value={updateCount} accent="ink" />
+          <Stat
+            label="Missing from file"
+            value={missingCount}
+            accent={missingCount > 0 ? 'oxblood' : 'soft'}
+          />
+          <Stat label="Skipped" value={skipped} accent="soft" />
         </dl>
 
         {extremes && (
-          <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700">Sanity check:</span>{' '}
-            largest holding {formatQuantity(extremes.maxQty.quantity)} {extremes.maxQty.name}
-            {' · '}
-            highest avg buy price {formatMoney(extremes.maxPrice.avgBuyPrice, extremes.maxPrice.currency)}{' '}
-            for {extremes.maxPrice.name}
-          </div>
+          <blockquote className="mt-10 border-l-2 border-oxblood py-1 pl-6">
+            <p className="smallcaps text-[0.6rem] text-oxblood">Sanity check</p>
+            <p className="font-display mt-2 text-lg italic leading-snug text-ink">
+              Largest holding{' '}
+              <span className="font-mono not-italic text-[0.95rem] text-ink">
+                {formatQuantity(extremes.maxQty.quantity)}
+              </span>{' '}
+              of <span className="font-medium not-italic">{extremes.maxQty.name}</span>;
+              highest average cost{' '}
+              <span className="font-mono not-italic text-[0.95rem] text-ink">
+                {currencyGlyph(extremes.maxPrice.currency)}
+                {formatAmount(extremes.maxPrice.avgBuyPrice, extremes.maxPrice.currency)}
+              </span>{' '}
+              for <span className="font-medium not-italic">{extremes.maxPrice.name}</span>.
+            </p>
+          </blockquote>
         )}
 
         {commitError && (
-          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-            Commit failed: {commitError}
+          <div className="mt-8 border-l-4 border-oxblood bg-paper-deep/60 px-5 py-4 text-sm text-ink">
+            <p className="smallcaps text-[0.65rem] text-oxblood">Commit failed</p>
+            <p className="mt-2">{commitError}</p>
           </div>
         )}
       </div>
 
-      {missingCount > 0 && (
-        <MissingRowsPanel state={state} dispatch={dispatch} />
-      )}
+      {missingCount > 0 && <MissingRowsPanel state={state} dispatch={dispatch} />}
 
-      <div className="flex items-center justify-between">
+      <div className="rule-hairline pt-6 flex items-center justify-between">
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-upload' })}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="smallcaps text-[0.7rem] text-ink-muted hover:text-ink"
         >
-          Reject changes
+          ← Reject
         </button>
         <button
           type="button"
           onClick={handleCommit}
           disabled={insertCount === 0 && updateCount === 0 && missingCount === 0}
-          className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          className="smallcaps border-b-2 border-ink pb-1 text-[0.7rem] font-semibold text-ink hover:text-oxblood hover:border-oxblood disabled:cursor-not-allowed disabled:border-ink-soft disabled:text-ink-soft disabled:hover:border-ink-soft disabled:hover:text-ink-soft"
         >
-          Commit changes
+          Commit changes →
         </button>
       </div>
     </section>
   )
 }
 
-type StatTone = 'emerald' | 'amber' | 'rose' | 'slate'
-const toneClasses: Record<StatTone, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  amber: 'bg-amber-50 text-amber-700 ring-amber-200',
-  rose: 'bg-rose-50 text-rose-700 ring-rose-200',
-  slate: 'bg-slate-50 text-slate-600 ring-slate-200',
+type StatAccent = 'ink' | 'oxblood' | 'soft'
+const accentClasses: Record<StatAccent, string> = {
+  ink: 'text-ink',
+  oxblood: 'text-oxblood',
+  soft: 'text-ink-soft',
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: StatTone }) {
+function Stat({ label, value, accent }: { label: string; value: number; accent: StatAccent }) {
   return (
-    <div className={`rounded-md px-3 py-2 ring-1 ring-inset ${toneClasses[tone]}`}>
-      <dt className="text-xs font-medium">{label}</dt>
-      <dd className="mt-0.5 text-2xl font-semibold tabular-nums">{value}</dd>
+    <div className="border-t-2 border-rule-strong pt-3">
+      <dt className="smallcaps text-[0.6rem] text-ink-muted">{label}</dt>
+      <dd
+        className={`font-display mt-1 text-4xl font-medium tabular leading-none ${accentClasses[accent]}`}
+      >
+        {value}
+      </dd>
     </div>
   )
 }
@@ -135,49 +155,58 @@ function MissingRowsPanel({ state, dispatch }: Props) {
   const { missing } = state.diff
 
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-6">
-      <div className="flex items-baseline justify-between">
+    <div className="border-y-2 border-rule-strong py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-rose-900">
-            {missing.length} holdings exist in your dashboard but aren't in this file
+          <p className="smallcaps text-[0.65rem] text-oxblood">Missing rows</p>
+          <h3 className="font-display mt-1 text-lg font-medium text-ink">
+            {missing.length} {missing.length === 1 ? 'holding exists' : 'holdings exist'} in your
+            dashboard but {missing.length === 1 ? 'is not' : 'are not'} in this file
           </h3>
-          <p className="mt-1 text-xs text-rose-700">
-            For each row, choose <span className="font-medium">Keep</span> (your dashboard stays unchanged)
-            or <span className="font-medium">Delete</span> (we remove it on commit).
+          <p className="mt-1 max-w-prose text-sm italic text-ink-muted">
+            For each row, choose <span className="not-italic font-medium">Keep</span> (your
+            dashboard stays unchanged) or{' '}
+            <span className="not-italic font-medium text-oxblood">Delete</span> (we remove it on
+            commit).
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-4">
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
-            className="rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="smallcaps border-b border-ink-muted pb-0.5 text-[0.65rem] text-ink-muted hover:text-ink hover:border-ink"
           >
             Keep all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'delete' })}
-            className="rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="smallcaps border-b border-oxblood pb-0.5 text-[0.65rem] text-oxblood hover:text-editorial-red hover:border-editorial-red"
           >
             Delete all
           </button>
         </div>
       </div>
 
-      <ul className="mt-4 divide-y divide-rose-200 overflow-hidden rounded-md border border-rose-200 bg-white">
+      <ul className="mt-6 divide-y divide-rule">
         {missing.map((row) => {
           const decision = state.decisions[row.sourceSymbol] ?? 'keep'
           return (
-            <li key={row.sourceSymbol} className="flex items-center justify-between px-4 py-3">
+            <li key={row.sourceSymbol} className="flex items-center justify-between py-4">
               <div>
-                <p className="text-sm font-medium text-slate-900">{row.name}</p>
-                <p className="text-xs text-slate-500">
-                  <span className="font-mono">{row.sourceSymbol}</span>
-                  {' · '}
-                  {formatQuantity(row.quantity)} @ {formatMoney(row.avgBuyPrice, row.currency)}
+                <p className="font-display text-base font-medium text-ink">{row.name}</p>
+                <p className="mt-1 text-xs text-ink-muted">
+                  <span className="font-mono text-ink">{row.sourceSymbol}</span>
+                  <span className="mx-2 text-ink-soft">·</span>
+                  <span className="font-mono">{formatQuantity(row.quantity)}</span>
+                  <span className="mx-1 text-ink-soft">@</span>
+                  <span className="font-mono">
+                    {currencyGlyph(row.currency)}
+                    {formatAmount(row.avgBuyPrice, row.currency)}
+                  </span>
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <DecisionButton
                   active={decision === 'keep'}
                   onClick={() =>
@@ -221,14 +250,22 @@ function DecisionButton({
   label: string
   destructive?: boolean
 }) {
-  const base = 'rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset'
   let classes: string
-  if (active && destructive) classes = 'bg-rose-600 text-white ring-rose-700'
-  else if (active) classes = 'bg-slate-900 text-white ring-slate-900'
-  else classes = 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+  if (active && destructive) {
+    classes = 'border-b-2 border-oxblood pb-0.5 text-oxblood font-semibold'
+  } else if (active) {
+    classes = 'border-b-2 border-ink pb-0.5 text-ink font-semibold'
+  } else {
+    classes =
+      'border-b border-transparent pb-0.5 text-ink-muted hover:text-ink hover:border-rule'
+  }
 
   return (
-    <button type="button" onClick={onClick} className={`${base} ${classes}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`smallcaps text-[0.65rem] ${classes}`}
+    >
       {label}
     </button>
   )

@@ -48,19 +48,25 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
   const sourceLabel = source === 'vested' ? 'Vested' : 'Groww'
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">Upload your {sourceLabel} file</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Choose the <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">.xlsx</code> file you just
+    <section>
+      <p className="smallcaps text-[0.65rem] text-ink-muted">{sourceLabel}</p>
+      <h2 className="font-display mt-2 text-2xl font-medium text-ink">
+        Upload your {sourceLabel} file
+      </h2>
+      <p className="mt-3 max-w-prose text-sm text-ink-muted">
+        Choose the <span className="font-mono text-xs text-ink">.xlsx</span> file you just
         downloaded. Parsing happens in your browser; nothing is uploaded.
       </p>
 
-      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center hover:border-slate-400 hover:bg-slate-100">
-        <span className="text-sm font-medium text-slate-700">
-          {fileName ? fileName : 'Click to choose a file'}
+      <label className="mt-8 flex cursor-pointer flex-col items-center justify-center border-y-2 border-rule-strong bg-paper-deep/40 px-6 py-16 text-center transition-colors hover:bg-paper-deep">
+        <span
+          className="font-display text-3xl font-medium text-ink"
+          style={{ fontStyle: fileName ? 'normal' : 'italic' }}
+        >
+          {fileName ? fileName : 'Choose a file'}
         </span>
-        <span className="mt-1 text-xs text-slate-500">
-          {busy ? 'Parsing…' : `Looking for: ${sourceLabel} holdings export (.xlsx)`}
+        <span className="smallcaps mt-3 text-[0.65rem] text-ink-muted">
+          {busy ? 'Parsing…' : `${sourceLabel} holdings export · .xlsx`}
         </span>
         <input
           type="file"
@@ -72,22 +78,25 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       </label>
 
       {parseError && (
-        <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          <p className="font-medium">Parse failed</p>
-          <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-xs">{parseError}</pre>
-          <p className="mt-2 text-xs text-rose-600">
-            If the file format has changed, please open an issue with the error message above.
+        <div className="mt-6 border-l-4 border-oxblood bg-paper-deep/60 px-5 py-4">
+          <p className="smallcaps text-[0.65rem] text-oxblood">Parse failed</p>
+          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-ink">
+            {parseError}
+          </pre>
+          <p className="mt-3 text-xs text-ink-muted italic">
+            If the broker has changed its export format, please open an issue with the message
+            above.
           </p>
         </div>
       )}
 
-      <div className="mt-6 flex justify-between">
+      <div className="rule-hairline mt-10 pt-6">
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="smallcaps text-[0.7rem] text-ink-muted hover:text-ink"
         >
-          Back
+          ← Back
         </button>
       </div>
     </section>

@@ -6,41 +6,70 @@ type Props = {
   dispatch: Dispatch<WizardAction>
 }
 
-const options: Array<{ source: Source; title: string; subtitle: string }> = [
+const options: Array<{
+  source: Source
+  initial: string
+  title: string
+  market: string
+  detail: string
+}> = [
   {
     source: 'vested',
+    initial: 'V',
     title: 'Vested',
-    subtitle: 'US stocks & ETFs · USD',
+    market: 'US Markets',
+    detail: 'NYSE & NASDAQ — US Dollar',
   },
   {
     source: 'groww',
+    initial: 'G',
     title: 'Groww',
-    subtitle: 'India stocks, MFs, ETFs · INR',
+    market: 'Indian Markets',
+    detail: 'NSE & BSE — Indian Rupee',
   },
 ]
 
 export function SourcePicker({ dispatch }: Props) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">Pick a broker</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Each broker has a slightly different export format. Pick the source so we know how to read your file.
+    <section>
+      <h2 className="font-display text-2xl font-medium text-ink">Pick the broker</h2>
+      <p className="mt-2 max-w-prose text-sm text-ink-muted">
+        Each broker exports a slightly different file. Pick the source so we know how to read it.
       </p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+
+      <ul className="mt-8 divide-y divide-rule border-y border-rule">
         {options.map((opt) => (
-          <button
-            key={opt.source}
-            type="button"
-            onClick={() => dispatch({ type: 'pick-source', source: opt.source })}
-            className="group flex flex-col items-start rounded-lg border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400"
-          >
-            <span className="text-base font-semibold text-slate-900 group-hover:text-slate-700">
-              {opt.title}
-            </span>
-            <span className="mt-1 text-xs text-slate-500">{opt.subtitle}</span>
-          </button>
+          <li key={opt.source}>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'pick-source', source: opt.source })}
+              className="group flex w-full items-baseline gap-6 py-6 text-left transition-colors hover:text-oxblood focus:outline-none focus-visible:bg-paper-deep"
+            >
+              <span
+                aria-hidden
+                className="font-display text-4xl font-medium text-oxblood leading-none"
+              >
+                {opt.initial}
+              </span>
+              <span className="flex-1">
+                <span className="font-display block text-xl font-medium text-ink group-hover:text-oxblood">
+                  {opt.title}
+                </span>
+                <span className="smallcaps mt-1 block text-[0.65rem] text-ink-muted">
+                  {opt.market}
+                </span>
+                <span className="mt-2 block text-sm text-ink-muted">{opt.detail}</span>
+              </span>
+              <span
+                aria-hidden
+                className="smallcaps text-[0.7rem] text-ink-soft transition-colors group-hover:text-oxblood"
+              >
+                Choose →
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   )
 }

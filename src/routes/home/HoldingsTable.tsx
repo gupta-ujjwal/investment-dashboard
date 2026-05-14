@@ -1,15 +1,15 @@
 import type { AssetClass, CanonicalHolding, Source } from '../../storage/holdings'
-import { formatMoney, formatQuantity } from '../../lib/format'
+import { currencyGlyph, formatAmount, formatQuantity } from '../../lib/format'
 
 type Props = {
   holdings: CanonicalHolding[]
 }
 
-const sourceClasses: Record<Source, string> = {
-  vested: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  groww: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+const sourceInitial: Record<Source, string> = {
+  vested: 'V',
+  groww: 'G',
 }
-const sourceLabels: Record<Source, string> = {
+const sourceLabel: Record<Source, string> = {
   vested: 'Vested',
   groww: 'Groww',
 }
@@ -25,42 +25,95 @@ const assetClassLabels: Record<AssetClass, string> = {
 export function HoldingsTable({ holdings }: Props) {
   const sorted = [...holdings].sort((a, b) => a.name.localeCompare(b.name))
 
+  if (sorted.length === 0) return null
+
   return (
-    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <tr>
-            <th scope="col" className="px-4 py-3">Name</th>
-            <th scope="col" className="px-4 py-3">Source</th>
-            <th scope="col" className="px-4 py-3">Symbol</th>
-            <th scope="col" className="px-4 py-3 text-right">Quantity</th>
-            <th scope="col" className="px-4 py-3 text-right">Avg buy price</th>
-            <th scope="col" className="px-4 py-3">Asset class</th>
+    <div className="tabular">
+      <table className="w-full border-collapse text-[0.95rem]">
+        <colgroup>
+          <col style={{ width: '3rem' }} />
+          <col />
+          <col style={{ width: '8rem' }} />
+          <col style={{ width: '6rem' }} />
+          <col style={{ width: '6rem' }} />
+          <col style={{ width: '1.5rem' }} />
+          <col style={{ width: '8rem' }} />
+          <col style={{ width: '4rem' }} />
+        </colgroup>
+        <thead>
+          <tr className="border-y-[3px] border-double border-ink text-ink">
+            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+              Src
+            </th>
+            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+              Holding
+            </th>
+            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+              Symbol
+            </th>
+            <th scope="col" className="px-2 py-3 text-right smallcaps text-[0.65rem]">
+              Qty
+            </th>
+            <th
+              scope="col"
+              className="hidden px-2 py-3 text-left smallcaps text-[0.65rem] sm:table-cell"
+            >
+              Class
+            </th>
+            <th scope="col" className="px-1 py-3 text-right smallcaps text-[0.65rem]" />
+            <th scope="col" className="px-2 py-3 text-right smallcaps text-[0.65rem]">
+              Avg cost
+            </th>
+            <th
+              scope="col"
+              className="hidden px-2 py-3 text-right smallcaps text-[0.65rem] sm:table-cell"
+            >
+              Ccy
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
-          {sorted.map((h) => (
-            <tr key={`${h.source}-${h.sourceSymbol}`} className="hover:bg-slate-50">
-              <td className="px-4 py-3 font-medium text-slate-900">{h.name}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${sourceClasses[h.source]}`}
+        <tbody>
+          {sorted.map((h, i) => (
+            <tr
+              key={`${h.source}-${h.sourceSymbol}`}
+              className="row-hover reveal border-b border-rule align-baseline"
+              style={{ '--i': i + 1 } as React.CSSProperties}
+            >
+              <td className="border-r border-rule px-2 py-3 text-center">
+                <abbr
+                  title={sourceLabel[h.source]}
+                  className="font-display text-base font-medium text-oxblood no-underline"
                 >
-                  {sourceLabels[h.source]}
+                  {sourceInitial[h.source]}
+                </abbr>
+              </td>
+              <td className="px-2 py-3 font-medium text-ink">
+                <span className="font-display text-[1.05rem] leading-snug">{h.name}</span>
+              </td>
+              <td className="border-l border-rule px-2 py-3 font-mono text-xs text-ink-muted">
+                {h.sourceSymbol}
+              </td>
+              <td className="border-l border-rule px-2 py-3 text-right font-mono text-sm text-ink">
+                {formatQuantity(h.quantity)}
+              </td>
+              <td className="hidden border-l border-rule px-2 py-3 text-ink-muted text-xs sm:table-cell">
+                <span className="smallcaps text-[0.65rem]">
+                  {assetClassLabels[h.assetClass]}
                 </span>
               </td>
-              <td className="px-4 py-3 font-mono text-xs text-slate-600">{h.sourceSymbol}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{formatQuantity(h.quantity)}</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {formatMoney(h.avgBuyPrice, h.currency)}
+              <td className="border-l border-rule px-1 py-3 text-right font-mono text-sm text-ink-muted">
+                {currencyGlyph(h.currency)}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500">
-                {assetClassLabels[h.assetClass]}
+              <td className="px-2 py-3 text-right font-mono text-sm text-ink">
+                {formatAmount(h.avgBuyPrice, h.currency)}
+              </td>
+              <td className="hidden border-l border-rule px-2 py-3 text-right text-ink-muted sm:table-cell">
+                <span className="smallcaps text-[0.65rem]">{h.currency}</span>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </section>
+    </div>
   )
 }
