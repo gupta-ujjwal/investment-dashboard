@@ -1,1 +1,169 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink-950: #07080B;
+  --color-ink-900: #0C0E13;
+  --color-ink-850: #11141B;
+  --color-ink-800: #161A22;
+  --color-ink-700: #1E232D;
+  --color-ink-600: #2A303B;
+  --color-ink-500: #3A414F;
+  --color-ink-400: #555D6E;
+
+  --color-bone-50: #FBF7EE;
+  --color-bone-100: #F2EBDB;
+  --color-bone-200: #DFD6BF;
+  --color-bone-300: #B5AC93;
+  --color-bone-400: #8A8270;
+  --color-bone-500: #5F594B;
+
+  --color-tick-200: #F8DCA1;
+  --color-tick-400: #E8B14C;
+  --color-tick-500: #D89A2A;
+  --color-tick-700: #6E5224;
+  --color-tick-900: #2E2110;
+
+  --color-jade-300: #9EDCB6;
+  --color-jade-400: #6BCB8F;
+  --color-jade-500: #3FB573;
+  --color-jade-800: #1F4030;
+  --color-jade-900: #14241B;
+
+  --color-ember-300: #F0A39A;
+  --color-ember-400: #E6736B;
+  --color-ember-500: #D9534A;
+  --color-ember-800: #4A2622;
+  --color-ember-900: #2A1715;
+
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-sans:
+    "Instrument Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background-color: var(--color-ink-950);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-bone-100);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background:
+      radial-gradient(
+        ellipse 80% 60% at 50% -10%,
+        rgba(232, 177, 76, 0.07) 0%,
+        rgba(232, 177, 76, 0) 60%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 100% 100%,
+        rgba(107, 203, 143, 0.04) 0%,
+        rgba(107, 203, 143, 0) 60%
+      ),
+      linear-gradient(180deg, #0A0C11 0%, #07080B 100%);
+    background-attachment: fixed;
+  }
+
+  /* Film grain overlay — fixed, non-interactive, blends into everything */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Faint horizontal scan lines — barely-there texture */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.35;
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.012) 0px,
+      rgba(255, 255, 255, 0.012) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  #root {
+    position: relative;
+    z-index: 2;
+  }
+
+  ::selection {
+    background: var(--color-tick-400);
+    color: var(--color-ink-950);
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--color-tick-400);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer utilities {
+  .tick-frame {
+    --tick: rgba(232, 177, 76, 0.35);
+    background-image:
+      linear-gradient(to right, var(--tick) 0, var(--tick) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--tick) 0, var(--tick) 1px, transparent 1px);
+    background-size: 8px 100%, 100% 8px;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  .hairline-b {
+    box-shadow: inset 0 -1px 0 0 rgba(242, 235, 219, 0.08);
+  }
+  .hairline-t {
+    box-shadow: inset 0 1px 0 0 rgba(242, 235, 219, 0.08);
+  }
+  .hairline-r {
+    box-shadow: inset -1px 0 0 0 rgba(242, 235, 219, 0.08);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Reveal stagger — used on initial mount */
+  .reveal {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: reveal-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+  @keyframes reveal-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .spin-slow {
+    animation: spin 1.2s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

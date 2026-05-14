@@ -5,36 +5,48 @@ type Props =
 export function CommitStep(props: Props) {
   if (props.state === 'committing') {
     return (
-      <section className="rounded-lg border border-slate-200 bg-white p-12 text-center shadow-sm">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-slate-700" />
-        <p className="mt-4 text-sm text-slate-600">Committing changes to your local database…</p>
+      <section className="border border-bone-100/10 bg-ink-900 p-16 text-center">
+        <div className="mx-auto h-10 w-10 spin-slow border border-bone-100/15 border-t-tick-400" />
+        <p className="mt-6 font-sans text-sm text-bone-300">Committing to local storage…</p>
+        <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          indexedDB · on-device
+        </p>
       </section>
     )
   }
 
   return (
-    <section className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-12 text-center">
-      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+    <section className="border border-jade-400/40 bg-jade-900/20 p-16 text-center">
+      <div
+        className="mx-auto flex h-12 w-12 items-center justify-center border border-jade-400 text-jade-400"
+        aria-hidden="true"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={2}
+          strokeWidth={1.5}
           stroke="currentColor"
-          className="h-5 w-5"
-          aria-hidden="true"
+          className="h-6 w-6"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
       </div>
-      <h2 className="mt-4 text-base font-semibold text-emerald-900">Import complete</h2>
-      <p className="mt-1 text-sm text-emerald-700">Your dashboard has been updated.</p>
+      <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.2em] text-jade-300">
+        Reconciled
+      </p>
+      <h2 className="mt-2 font-sans text-2xl font-semibold tracking-tight text-bone-50">
+        Import complete
+      </h2>
+      <p className="mt-2 font-sans text-sm text-bone-300">
+        Your positions are saved on this device.
+      </p>
       <button
         type="button"
         onClick={props.onContinue}
-        className="mt-6 rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+        className="mt-8 border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
       >
-        View dashboard
+        View analytics →
       </button>
     </section>
   )
