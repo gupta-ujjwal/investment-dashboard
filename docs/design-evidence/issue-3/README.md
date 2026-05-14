@@ -1,7 +1,11 @@
 # Issue #3 — design-pass evidence
 
-Playwright captures of the broadsheet redesign in 10 states across two
-viewports (desktop 1440×900, mobile 390×844). Regenerate locally with:
+Playwright captures of the design pass in 10 states across two
+viewports (desktop 1440×900, mobile 390×844). Current direction:
+**Private ledger after hours** (warm-dark, brass accent, EB Garamond
+italic display — see `implementation-docs/frontend-design-pass.md`
+"Iteration 2" for why the original cream-broadsheet got pivoted).
+Regenerate locally with:
 
 ```bash
 npm i -D playwright    # one-time

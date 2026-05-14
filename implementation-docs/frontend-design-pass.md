@@ -85,7 +85,79 @@ redesigned in the same editorial style as the rest of the preview step
 its design is consistent with the rest of the slice and the parser-level
 unit tests already cover the `missing` branch.
 
+## Iteration 2 — pivot from broadsheet to private ledger
+
+Variant A as originally specified (cream broadsheet) shipped and was
+reviewed in PR #5. Two complaints from the user:
+
+1. **"Too white."** Cream `#f5f1ea` on a screen reads as near-white. The
+   paper-grain SVG overlay disappeared under monitor gamma. Ink-to-paper
+   contrast (~9:1) was magazine-page good but screen-tool wrong.
+2. **"Doesn't look right for a personal investment dashboard."** The
+   broadsheet metaphor is *broadcast/published voice* — Financial Times
+   addressing many readers with institutional gravitas. A personal
+   dashboard is the inverse: one user, their own money, after hours.
+   The tonal fit was wrong.
+
+**Pivot kept the typographic discipline; flipped the lighting and voice.**
+New picked direction is **Private ledger after hours** — a warm-dark
+cockpit-by-lamplight, with single brass accent for "this is mine" and
+dusty rose reserved for losses.
+
+### What changed
+
+- **Palette**: cream paper `#f5f1ea` → warm umber-black `#15120e` (bg)
+  + `#1c1813` (bg-elev) + `#221d16` (surface). Ink flipped from
+  `#1a1815` to a warm off-white `#ece6d6`. Oxblood + editorial-red
+  dropped; replaced by **brass** `#c89b3c` (with `--color-brass-dim`
+  `#8c6a26` for muted accents) for "mine"-marker moments, and
+  **dusty rose** `#c97a76` reserved for losses / parse errors.
+- **Display typeface**: Newsreader → **EB Garamond**. Used primarily in
+  italic for masthead, page titles, section headings, sanity-check
+  pull-quote, and holding names in the table. Italic at large sizes is
+  the "handset / private" register; upright is reserved for the table
+  rows themselves so legibility stays high.
+- **Atmosphere**: paper-grain SVG overlay → **lamp-glow + corner vignette**.
+  Two stacked radial gradients (warm pool from top-center, slight darkening
+  at corners) plus a 3.5%-opacity screen-blend noise to prevent banding.
+  Reads as "page on a desk under one lamp" rather than "newsprint paper".
+- **Voice**:
+  - Masthead "AS OF 14 MAY 2026 · IN+US PORTFOLIO · 5 HOLDINGS" dateline-
+    formal copy → simple mono date + holdings count.
+  - "Bring holdings in" → **"Import holdings."** (more direct, less
+    poetic; with a closing period — matches a private-notebook voice).
+  - Step indicator: small-caps tracked em-dash separators → **numbered
+    mono with brass numerals**, body sans labels, current step lit.
+  - Eyebrows: tracking reduced from 0.18em to 0.14em, color tuned to
+    brass-dim instead of ink-muted, kept as section signposts but no
+    longer dateline-loud.
+  - "Filed" / "Sanity check" / "Missing rows" / "Parse failed" kept
+    (they fit the notebook register); "IMPORT" eyebrow on wizard
+    masthead dropped (redundant with the page title).
+- **Holdings table**: holding name bumped from `1.05rem font-medium` to
+  `text-xl` upright EB Garamond — bigger and more characterful. Source
+  initial in brass instead of oxblood. Row hover highlights ink-color
+  on text in addition to the right-edge hairline (now brass too).
+
+The structural bones — Tailwind v4 `@theme` tokens, hairline column
+rules, double top/bottom rule on the header, currency glyph in its own
+column, no shadows, no rounded corners, one-shot staggered fade-in, ~150 ms
+text crossfade — are unchanged. The pivot was a *lighting + tonal* swap,
+not a structural rebuild.
+
+Selection color also tuned to brass (`rgba(200, 155, 60, 0.3)`) — small
+detail, reinforces the accent the way good editorial design uses one
+color consistently.
+
+### Verification
+
+Captures regenerated for both viewports into `docs/design-evidence/issue-3/`
+and `.playwright-mcp/`. Zero new console errors/warnings beyond the
+pre-existing favicon 404 + react-router `HydrateFallback`.
+
 ## Status
 
-Implemented under `/implement-lite`. Branch: `feat/design-pass-broadsheet`
-off `feat/csv-import-vested-groww`. Ready for PR.
+Iteration 2 implemented under `/implement-lite`. Branch:
+`feat/design-pass-broadsheet` off `main` (parent PR #4 already merged).
+PR #5 stays open and reflects iteration 2; iteration 1's commits remain
+in history.
