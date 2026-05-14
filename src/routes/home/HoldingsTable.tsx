@@ -24,12 +24,11 @@ const assetClassLabels: Record<AssetClass, string> = {
 
 export function HoldingsTable({ holdings }: Props) {
   const sorted = [...holdings].sort((a, b) => a.name.localeCompare(b.name))
-
   if (sorted.length === 0) return null
 
   return (
     <div className="tabular">
-      <table className="w-full border-collapse text-[0.95rem]">
+      <table className="w-full border-collapse text-base">
         <colgroup>
           <col style={{ width: '3rem' }} />
           <col />
@@ -41,33 +40,27 @@ export function HoldingsTable({ holdings }: Props) {
           <col style={{ width: '4rem' }} />
         </colgroup>
         <thead>
-          <tr className="border-y-[3px] border-double border-ink text-ink">
-            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+          <tr className="border-y-[3px] border-double border-rule-strong text-ink-muted">
+            <th scope="col" className="eyebrow px-2 py-3 text-left">
               Src
             </th>
-            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+            <th scope="col" className="eyebrow px-2 py-3 text-left">
               Holding
             </th>
-            <th scope="col" className="px-2 py-3 text-left smallcaps text-[0.65rem]">
+            <th scope="col" className="eyebrow px-2 py-3 text-left">
               Symbol
             </th>
-            <th scope="col" className="px-2 py-3 text-right smallcaps text-[0.65rem]">
+            <th scope="col" className="eyebrow px-2 py-3 text-right">
               Qty
             </th>
-            <th
-              scope="col"
-              className="hidden px-2 py-3 text-left smallcaps text-[0.65rem] sm:table-cell"
-            >
+            <th scope="col" className="eyebrow hidden px-2 py-3 text-left sm:table-cell">
               Class
             </th>
-            <th scope="col" className="px-1 py-3 text-right smallcaps text-[0.65rem]" />
-            <th scope="col" className="px-2 py-3 text-right smallcaps text-[0.65rem]">
+            <th scope="col" className="eyebrow px-1 py-3 text-right" />
+            <th scope="col" className="eyebrow px-2 py-3 text-right">
               Avg cost
             </th>
-            <th
-              scope="col"
-              className="hidden px-2 py-3 text-right smallcaps text-[0.65rem] sm:table-cell"
-            >
+            <th scope="col" className="eyebrow hidden px-2 py-3 text-right sm:table-cell">
               Ccy
             </th>
           </tr>
@@ -76,39 +69,37 @@ export function HoldingsTable({ holdings }: Props) {
           {sorted.map((h, i) => (
             <tr
               key={`${h.source}-${h.sourceSymbol}`}
-              className="row-hover reveal border-b border-rule align-baseline"
+              className="row-hover reveal border-b border-rule align-baseline transition-colors"
               style={{ '--i': i + 1 } as React.CSSProperties}
             >
-              <td className="border-r border-rule px-2 py-3 text-center">
+              <td className="border-r border-rule px-2 py-4 text-center">
                 <abbr
                   title={sourceLabel[h.source]}
-                  className="font-display text-base font-medium text-oxblood no-underline"
+                  className="font-display text-lg font-medium text-brass no-underline"
                 >
                   {sourceInitial[h.source]}
                 </abbr>
               </td>
-              <td className="px-2 py-3 font-medium text-ink">
-                <span className="font-display text-[1.05rem] leading-snug">{h.name}</span>
+              <td className="px-2 py-4 text-ink-muted">
+                <span className="font-display text-xl leading-snug text-ink">{h.name}</span>
               </td>
-              <td className="border-l border-rule px-2 py-3 font-mono text-xs text-ink-muted">
+              <td className="border-l border-rule px-2 py-4 font-mono text-xs text-ink-soft">
                 {h.sourceSymbol}
               </td>
-              <td className="border-l border-rule px-2 py-3 text-right font-mono text-sm text-ink">
+              <td className="border-l border-rule px-2 py-4 text-right font-mono text-sm text-ink-muted">
                 {formatQuantity(h.quantity)}
               </td>
-              <td className="hidden border-l border-rule px-2 py-3 text-ink-muted text-xs sm:table-cell">
-                <span className="smallcaps text-[0.65rem]">
-                  {assetClassLabels[h.assetClass]}
-                </span>
+              <td className="hidden border-l border-rule px-2 py-4 sm:table-cell">
+                <span className="eyebrow">{assetClassLabels[h.assetClass]}</span>
               </td>
-              <td className="border-l border-rule px-1 py-3 text-right font-mono text-sm text-ink-muted">
+              <td className="border-l border-rule px-1 py-4 text-right font-mono text-sm text-ink-soft">
                 {currencyGlyph(h.currency)}
               </td>
-              <td className="px-2 py-3 text-right font-mono text-sm text-ink">
+              <td className="px-2 py-4 text-right font-mono text-sm text-ink">
                 {formatAmount(h.avgBuyPrice, h.currency)}
               </td>
-              <td className="hidden border-l border-rule px-2 py-3 text-right text-ink-muted sm:table-cell">
-                <span className="smallcaps text-[0.65rem]">{h.currency}</span>
+              <td className="hidden border-l border-rule px-2 py-4 text-right sm:table-cell">
+                <span className="eyebrow">{h.currency}</span>
               </td>
             </tr>
           ))}

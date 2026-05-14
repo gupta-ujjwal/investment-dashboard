@@ -32,7 +32,7 @@ const options: Array<{
 export function SourcePicker({ dispatch }: Props) {
   return (
     <section>
-      <h2 className="font-display text-2xl font-medium text-ink">Pick the broker</h2>
+      <h2 className="font-display text-2xl font-normal italic text-ink">Pick the broker.</h2>
       <p className="mt-2 max-w-prose text-sm text-ink-muted">
         Each broker exports a slightly different file. Pick the source so we know how to read it.
       </p>
@@ -43,28 +43,26 @@ export function SourcePicker({ dispatch }: Props) {
             <button
               type="button"
               onClick={() => dispatch({ type: 'pick-source', source: opt.source })}
-              className="group flex w-full items-baseline gap-6 py-6 text-left transition-colors hover:text-oxblood focus:outline-none focus-visible:bg-paper-deep"
+              className="group flex w-full items-baseline gap-6 py-6 text-left transition-colors focus:outline-none focus-visible:bg-bg-elev"
             >
               <span
                 aria-hidden
-                className="font-display text-4xl font-medium text-oxblood leading-none"
+                className="font-display text-4xl font-medium text-brass leading-none transition-colors group-hover:text-ink"
               >
                 {opt.initial}
               </span>
               <span className="flex-1">
-                <span className="font-display block text-xl font-medium text-ink group-hover:text-oxblood">
+                <span className="font-display block text-xl italic font-normal text-ink transition-colors group-hover:text-brass">
                   {opt.title}
                 </span>
-                <span className="smallcaps mt-1 block text-[0.65rem] text-ink-muted">
-                  {opt.market}
-                </span>
+                <span className="eyebrow mt-1 block">{opt.market}</span>
                 <span className="mt-2 block text-sm text-ink-muted">{opt.detail}</span>
               </span>
               <span
                 aria-hidden
-                className="smallcaps text-[0.7rem] text-ink-soft transition-colors group-hover:text-oxblood"
+                className="font-mono text-xs text-ink-soft transition-colors group-hover:text-brass"
               >
-                Choose →
+                choose →
               </span>
             </button>
           </li>

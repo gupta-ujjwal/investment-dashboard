@@ -8,8 +8,8 @@ import { UploadStep } from './UploadStep'
 import { initialState, reducer, type WizardStep } from './wizardState'
 
 const stepLabels: Record<WizardStep, string> = {
-  'pick-source': 'Pick broker',
-  instructions: 'Get file',
+  'pick-source': 'Source',
+  instructions: 'File',
   upload: 'Upload',
   preview: 'Review',
   committing: 'Review',
@@ -25,9 +25,8 @@ export function ImportRoute() {
     <main className="min-h-screen">
       <div className="mx-auto max-w-3xl px-6 py-12 sm:px-10 sm:py-16">
         <header className="reveal" style={{ '--i': 0 } as React.CSSProperties}>
-          <p className="smallcaps text-[0.7rem] text-ink-muted">Import</p>
-          <h1 className="font-display mt-2 text-4xl font-medium leading-tight tracking-tight text-ink sm:text-5xl">
-            Bring holdings in
+          <h1 className="font-display text-4xl font-normal italic leading-tight tracking-tight text-ink sm:text-5xl">
+            Import holdings.
           </h1>
           <p className="mt-3 max-w-prose text-sm text-ink-muted">
             All parsing happens in your browser. Nothing is uploaded.
@@ -63,28 +62,26 @@ function StepIndicator({ current }: { current: WizardStep }) {
 
   return (
     <nav aria-label="Import steps" className="mt-8">
-      <ol className="flex flex-wrap items-baseline gap-x-1 gap-y-1">
+      <ol className="flex flex-wrap items-baseline gap-x-5 gap-y-2 text-sm">
         {stepOrder.map((step, i) => {
           const isCurrent = i === currentIdx
           const isDone = i < currentIdx
           return (
-            <li key={step} className="flex items-baseline gap-x-1">
+            <li
+              key={step}
+              className={`flex items-baseline gap-2 ${
+                isCurrent ? 'text-ink' : isDone ? 'text-ink-muted' : 'text-ink-soft'
+              }`}
+            >
               <span
-                className={`smallcaps text-[0.7rem] ${
-                  isCurrent
-                    ? 'text-ink font-semibold'
-                    : isDone
-                      ? 'text-ink-muted'
-                      : 'text-ink-soft'
+                aria-hidden
+                className={`font-mono text-xs ${
+                  isCurrent ? 'text-brass' : isDone ? 'text-brass-dim' : 'text-ink-soft'
                 }`}
               >
-                {stepLabels[step]}
+                {String(i + 1).padStart(2, '0')}
               </span>
-              {i < stepOrder.length - 1 && (
-                <span aria-hidden className="text-[0.7rem] text-ink-soft">
-                  &nbsp;—&nbsp;
-                </span>
-              )}
+              <span className={isCurrent ? 'font-medium' : ''}>{stepLabels[step]}</span>
             </li>
           )
         })}

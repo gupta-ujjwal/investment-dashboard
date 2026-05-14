@@ -6,18 +6,16 @@ export function CommitStep(props: Props) {
   if (props.state === 'committing') {
     return (
       <section className="border-y border-rule px-6 py-20 text-center">
-        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-rule border-t-ink" />
-        <p className="smallcaps mt-6 text-[0.7rem] text-ink-muted">
-          Committing changes to your local database
-        </p>
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-rule border-t-brass" />
+        <p className="eyebrow mt-6">Committing to your local database</p>
       </section>
     )
   }
 
   return (
     <section className="text-center">
-      <p className="smallcaps text-[0.7rem] text-oxblood">Filed</p>
-      <h2 className="font-display mt-3 text-4xl font-medium leading-tight text-ink sm:text-5xl">
+      <p className="eyebrow text-brass">Filed</p>
+      <h2 className="font-display mt-3 text-4xl font-normal italic leading-tight text-ink sm:text-5xl">
         Import complete.
       </h2>
       <p className="mt-4 text-sm italic text-ink-muted">
@@ -27,7 +25,7 @@ export function CommitStep(props: Props) {
       <button
         type="button"
         onClick={props.onContinue}
-        className="smallcaps mt-8 border-b-2 border-ink pb-1 text-[0.7rem] font-semibold text-ink hover:text-oxblood hover:border-oxblood"
+        className="link-brass mt-8 inline-block text-sm font-medium hover:text-brass"
       >
         View dashboard →
       </button>

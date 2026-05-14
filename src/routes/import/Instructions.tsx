@@ -9,7 +9,7 @@ type Props = {
 
 const instructions: Record<Source, { title: string; steps: string[] }> = {
   vested: {
-    title: 'Download your Vested holdings',
+    title: 'Download your Vested holdings.',
     steps: [
       'Open the Vested app or vestedfinance.com and sign in.',
       'Go to Portfolio → tap the share / export icon at the top right.',
@@ -18,7 +18,7 @@ const instructions: Record<Source, { title: string; steps: string[] }> = {
     ],
   },
   groww: {
-    title: 'Download your Groww holdings',
+    title: 'Download your Groww holdings.',
     steps: [
       'Open the Groww app or groww.in and sign in.',
       'Tap Profile (top right) → Reports.',
@@ -34,18 +34,17 @@ export function Instructions({ source, dispatch }: Props) {
 
   return (
     <section>
-      <p className="smallcaps text-[0.65rem] text-ink-muted">{sourceLabel}</p>
-      <h2 className="font-display mt-2 text-2xl font-medium text-ink">{info.title}</h2>
+      <p className="eyebrow">{sourceLabel}</p>
+      <h2 className="font-display mt-2 text-2xl font-normal italic text-ink">{info.title}</h2>
 
       <ol className="mt-8 space-y-5 border-l-2 border-rule-strong pl-6">
         {info.steps.map((step, i) => (
           <li key={i} className="relative">
             <span
               aria-hidden
-              className="font-display absolute -left-[2.6rem] top-0 text-lg font-medium text-oxblood"
-              style={{ fontVariantNumeric: 'oldstyle-nums' }}
+              className="font-mono absolute -left-[2.4rem] top-1 text-xs text-brass"
             >
-              {i + 1}.
+              {String(i + 1).padStart(2, '0')}
             </span>
             <p className="text-[0.95rem] leading-relaxed text-ink">{step}</p>
           </li>
@@ -56,14 +55,14 @@ export function Instructions({ source, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="smallcaps text-[0.7rem] text-ink-muted hover:text-ink"
+          className="font-mono text-xs text-ink-soft hover:text-ink"
         >
-          ← Back
+          ← back
         </button>
         <button
           type="button"
           onClick={() => dispatch({ type: 'instructions-acknowledged' })}
-          className="smallcaps border-b-2 border-ink pb-1 text-[0.7rem] font-semibold text-ink hover:text-oxblood hover:border-oxblood"
+          className="link-brass text-sm font-medium hover:text-brass"
         >
           I have the file →
         </button>

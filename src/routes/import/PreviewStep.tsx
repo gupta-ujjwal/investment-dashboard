@@ -55,16 +55,12 @@ export function PreviewStep({ state, dispatch }: Props) {
       <div>
         <div className="flex items-baseline justify-between gap-4">
           <div>
-            <p className="smallcaps text-[0.65rem] text-ink-muted">Review</p>
-            <h2 className="font-display mt-2 text-2xl font-medium text-ink">
-              Before we commit
+            <p className="eyebrow">Review</p>
+            <h2 className="font-display mt-2 text-2xl font-normal italic text-ink">
+              Before we commit.
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={handleBackup}
-            className="smallcaps border-b border-ink-muted pb-0.5 text-[0.65rem] text-ink-muted hover:text-ink hover:border-ink"
-          >
+          <button type="button" onClick={handleBackup} className="link-brass text-xs">
             Download backup ↓
           </button>
         </div>
@@ -75,33 +71,33 @@ export function PreviewStep({ state, dispatch }: Props) {
           <Stat
             label="Missing from file"
             value={missingCount}
-            accent={missingCount > 0 ? 'oxblood' : 'soft'}
+            accent={missingCount > 0 ? 'loss' : 'soft'}
           />
           <Stat label="Skipped" value={skipped} accent="soft" />
         </dl>
 
         {extremes && (
-          <blockquote className="mt-10 border-l-2 border-oxblood py-1 pl-6">
-            <p className="smallcaps text-[0.6rem] text-oxblood">Sanity check</p>
+          <blockquote className="mt-10 border-l-2 border-brass py-1 pl-6">
+            <p className="eyebrow">Sanity check</p>
             <p className="font-display mt-2 text-lg italic leading-snug text-ink">
               Largest holding{' '}
-              <span className="font-mono not-italic text-[0.95rem] text-ink">
+              <span className="font-mono not-italic text-base text-ink">
                 {formatQuantity(extremes.maxQty.quantity)}
               </span>{' '}
-              of <span className="font-medium not-italic">{extremes.maxQty.name}</span>;
+              of <span className="not-italic">{extremes.maxQty.name}</span>;
               highest average cost{' '}
-              <span className="font-mono not-italic text-[0.95rem] text-ink">
+              <span className="font-mono not-italic text-base text-ink">
                 {currencyGlyph(extremes.maxPrice.currency)}
                 {formatAmount(extremes.maxPrice.avgBuyPrice, extremes.maxPrice.currency)}
               </span>{' '}
-              for <span className="font-medium not-italic">{extremes.maxPrice.name}</span>.
+              for <span className="not-italic">{extremes.maxPrice.name}</span>.
             </p>
           </blockquote>
         )}
 
         {commitError && (
-          <div className="mt-8 border-l-4 border-oxblood bg-paper-deep/60 px-5 py-4 text-sm text-ink">
-            <p className="smallcaps text-[0.65rem] text-oxblood">Commit failed</p>
+          <div className="mt-8 border-l-4 border-loss bg-surface/60 px-5 py-4 text-sm text-ink">
+            <p className="eyebrow text-loss">Commit failed</p>
             <p className="mt-2">{commitError}</p>
           </div>
         )}
@@ -113,15 +109,15 @@ export function PreviewStep({ state, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-upload' })}
-          className="smallcaps text-[0.7rem] text-ink-muted hover:text-ink"
+          className="font-mono text-xs text-ink-soft hover:text-ink"
         >
-          ← Reject
+          ← reject
         </button>
         <button
           type="button"
           onClick={handleCommit}
           disabled={insertCount === 0 && updateCount === 0 && missingCount === 0}
-          className="smallcaps border-b-2 border-ink pb-1 text-[0.7rem] font-semibold text-ink hover:text-oxblood hover:border-oxblood disabled:cursor-not-allowed disabled:border-ink-soft disabled:text-ink-soft disabled:hover:border-ink-soft disabled:hover:text-ink-soft"
+          className="link-brass text-sm font-medium hover:text-brass disabled:cursor-not-allowed disabled:text-ink-soft disabled:border-rule disabled:hover:text-ink-soft disabled:hover:border-rule"
         >
           Commit changes →
         </button>
@@ -130,19 +126,19 @@ export function PreviewStep({ state, dispatch }: Props) {
   )
 }
 
-type StatAccent = 'ink' | 'oxblood' | 'soft'
+type StatAccent = 'ink' | 'loss' | 'soft'
 const accentClasses: Record<StatAccent, string> = {
   ink: 'text-ink',
-  oxblood: 'text-oxblood',
+  loss: 'text-loss',
   soft: 'text-ink-soft',
 }
 
 function Stat({ label, value, accent }: { label: string; value: number; accent: StatAccent }) {
   return (
     <div className="border-t-2 border-rule-strong pt-3">
-      <dt className="smallcaps text-[0.6rem] text-ink-muted">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd
-        className={`font-display mt-1 text-4xl font-medium tabular leading-none ${accentClasses[accent]}`}
+        className={`font-display mt-1 text-4xl font-normal tabular leading-none ${accentClasses[accent]}`}
       >
         {value}
       </dd>
@@ -158,32 +154,30 @@ function MissingRowsPanel({ state, dispatch }: Props) {
     <div className="border-y-2 border-rule-strong py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <p className="smallcaps text-[0.65rem] text-oxblood">Missing rows</p>
-          <h3 className="font-display mt-1 text-lg font-medium text-ink">
+          <p className="eyebrow text-loss">Missing rows</p>
+          <h3 className="font-display mt-1 text-lg italic font-normal text-ink">
             {missing.length} {missing.length === 1 ? 'holding exists' : 'holdings exist'} in your
-            dashboard but {missing.length === 1 ? 'is not' : 'are not'} in this file
+            dashboard but {missing.length === 1 ? 'is not' : 'are not'} in this file.
           </h3>
-          <p className="mt-1 max-w-prose text-sm italic text-ink-muted">
-            For each row, choose <span className="not-italic font-medium">Keep</span> (your
-            dashboard stays unchanged) or{' '}
-            <span className="not-italic font-medium text-oxblood">Delete</span> (we remove it on
-            commit).
+          <p className="mt-1 max-w-prose text-sm text-ink-muted">
+            For each row, choose <span className="text-ink">Keep</span> (your dashboard stays
+            unchanged) or <span className="text-loss">Delete</span> (we remove it on commit).
           </p>
         </div>
         <div className="flex shrink-0 gap-4">
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
-            className="smallcaps border-b border-ink-muted pb-0.5 text-[0.65rem] text-ink-muted hover:text-ink hover:border-ink"
+            className="font-mono text-xs text-ink-muted hover:text-ink"
           >
-            Keep all
+            keep all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'delete' })}
-            className="smallcaps border-b border-oxblood pb-0.5 text-[0.65rem] text-oxblood hover:text-editorial-red hover:border-editorial-red"
+            className="font-mono text-xs text-loss hover:text-ink"
           >
-            Delete all
+            delete all
           </button>
         </div>
       </div>
@@ -194,9 +188,9 @@ function MissingRowsPanel({ state, dispatch }: Props) {
           return (
             <li key={row.sourceSymbol} className="flex items-center justify-between py-4">
               <div>
-                <p className="font-display text-base font-medium text-ink">{row.name}</p>
+                <p className="font-display text-base font-normal text-ink">{row.name}</p>
                 <p className="mt-1 text-xs text-ink-muted">
-                  <span className="font-mono text-ink">{row.sourceSymbol}</span>
+                  <span className="font-mono text-ink-muted">{row.sourceSymbol}</span>
                   <span className="mx-2 text-ink-soft">·</span>
                   <span className="font-mono">{formatQuantity(row.quantity)}</span>
                   <span className="mx-1 text-ink-soft">@</span>
@@ -216,7 +210,7 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                       decision: 'keep',
                     })
                   }
-                  label="Keep"
+                  label="keep"
                 />
                 <DecisionButton
                   active={decision === 'delete'}
@@ -227,7 +221,7 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                       decision: 'delete',
                     })
                   }
-                  label="Delete"
+                  label="delete"
                   destructive
                 />
               </div>
@@ -252,20 +246,16 @@ function DecisionButton({
 }) {
   let classes: string
   if (active && destructive) {
-    classes = 'border-b-2 border-oxblood pb-0.5 text-oxblood font-semibold'
+    classes = 'border-b-2 border-loss pb-0.5 text-loss font-medium'
   } else if (active) {
-    classes = 'border-b-2 border-ink pb-0.5 text-ink font-semibold'
+    classes = 'border-b-2 border-brass pb-0.5 text-ink font-medium'
   } else {
     classes =
       'border-b border-transparent pb-0.5 text-ink-muted hover:text-ink hover:border-rule'
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`smallcaps text-[0.65rem] ${classes}`}
-    >
+    <button type="button" onClick={onClick} className={`font-mono text-xs ${classes}`}>
       {label}
     </button>
   )
