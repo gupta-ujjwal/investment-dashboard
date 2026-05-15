@@ -1,8 +1,9 @@
-import type { AssetClass, CanonicalHolding, Currency, Source } from '../storage/holdings'
+import type { AssetClass, BaseCurrency, CanonicalHolding, Currency, Source } from '../storage/holdings'
 import { formatMoney, formatQuantity } from '../lib/format'
 
 type Props = {
   holdings: CanonicalHolding[]
+  baseCurrency: BaseCurrency
 }
 
 const sourceLabels: Record<Source, string> = {
@@ -26,7 +27,14 @@ const assetClassLabels: Record<AssetClass, string> = {
   other: 'Other',
 }
 
-export function HoldingsTable({ holdings }: Props) {
+const baseSymbol: Record<BaseCurrency, string> = { INR: '₹', USD: '$' }
+
+function baseCostLabel(h: CanonicalHolding, base: BaseCurrency): string {
+  if (h.avgBuyPriceBase === undefined) return '—'
+  return `≈ ${formatMoney(h.quantity * h.avgBuyPriceBase, base)}`
+}
+
+export function HoldingsTable({ holdings, baseCurrency }: Props) {
   const sorted = [...holdings].sort((a, b) => a.name.localeCompare(b.name))
 
   if (sorted.length === 0) {
@@ -52,6 +60,9 @@ export function HoldingsTable({ holdings }: Props) {
               <th scope="col" className="px-4 py-3 text-right font-medium">Quantity</th>
               <th scope="col" className="px-4 py-3 text-right font-medium">Avg buy</th>
               <th scope="col" className="px-4 py-3 text-right font-medium">Cost basis</th>
+              <th scope="col" className="px-4 py-3 text-right font-medium">
+                Cost {baseSymbol[baseCurrency]}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -95,6 +106,9 @@ export function HoldingsTable({ holdings }: Props) {
                   <td className="px-4 py-4 text-right font-mono text-sm text-bone-50 tabular-nums">
                     {formatMoney(cost, h.currency)}
                   </td>
+                  <td className="px-4 py-4 text-right font-mono text-sm text-bone-300 tabular-nums">
+                    {baseCostLabel(h, baseCurrency)}
+                  </td>
                 </tr>
               )
             })}
@@ -133,6 +147,9 @@ export function HoldingsTable({ holdings }: Props) {
                 <Cell label="Avg buy" value={formatMoney(h.avgBuyPrice, h.currency)} />
                 <Cell label="Cost" value={formatMoney(cost, h.currency)} emphasis />
               </dl>
+              <p className="mt-3 border-t border-bone-100/10 pt-3 text-right font-mono text-xs tabular-nums text-bone-300">
+                {baseCostLabel(h, baseCurrency)}
+              </p>
             </article>
           )
         })}
