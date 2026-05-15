@@ -1,0 +1,23 @@
+# Frame: base-currency-settings
+
+- **Kind**: feature
+- **One-line summary**: Add a user-configurable base currency (default INR), stored alongside other user settings; at import-time and on an explicit "Refresh FX" action, fetch a single USD↔INR rate from Frankfurter and stamp each holding with `fxRate`, `fxAsOf`, and pre-computed `avgBuyPriceBase`. Holdings + Analytics stay strict read-views over the cached base-currency values; the only math they do in render is `quantity * avgBuyPriceBase` per row and a trivial reduce for totals.
+- **Files/modules likely touched**:
+  - `src/storage/holdings.ts` — extend `CanonicalHolding` with three optional fields; bump `DB_VERSION` 1 → 2 to register a new `settings` object store; export a `BaseCurrency` type.
+  - `src/storage/settings.ts` (NEW) — singleton-row helpers `getSettings()` / `saveSettings()` / `updateMeta()` for the new store.
+  - `src/lib/fx.ts` (NEW) — thin `fetchUsdInrRate()` wrapper over Frankfurter (`api.frankfurter.dev`). No SDK; one `fetch` call, one parse, one number out. Returns rate + timestamp.
+  - `src/lib/format.ts` — accept the new `BaseCurrency` type (same shape as `Currency` today); optionally add a "Indian locale" formatter helper for the new locale radio.
+  - `src/routes/SettingsRoute.tsx` — replace the import-only screen with: profile form (name + base + locale) on top, FX meta panel (last rate, last refresh timestamp, "Refresh FX" / "Save & refresh FX" button) below, import wizard below that.
+  - `src/routes/import/PreviewStep.tsx` — in `handleCommit`, call `fetchUsdInrRate()` before `commitImport`; stamp every holding row with the resulting rate + `avgBuyPriceBase`. On fetch failure, fall back to `settings.lastFxRate`; if no cache either, commit with `undefined` base fields.
+  - `src/routes/import/wizardState.ts` — extend `commit-failed` to carry an FX-specific failure variant, OR fold it into the generic `commitError` string (preference: latter, simpler).
+  - `src/components/HoldingsTable.tsx` — add a `Cost (₹/$)` column on the desktop table (rightmost) and a `≈ ₹/$ …` line on the mobile card; render `—` when `avgBuyPriceBase` is undefined.
+  - `src/routes/AnalyticsRoute.tsx` — promote a "Total · base" KPI to slot 1; keep existing INR / USD sub-totals as-is. If any holding has undefined base, KPI renders `—` with a "Refresh needed" chip.
+  - `src/routes/HoldingsRoute.tsx` — loader gains a parallel `getSettings()` fetch so the table can render the base symbol in its column header; show "Refresh needed" banner above the table if any row has undefined base.
+  - `src/App.tsx` — `holdingsLoader` becomes `holdingsAndSettingsLoader` (returns `{ holdings, settings }`); Settings route gains a `settingsLoader`.
+- **External surface affected**: One new outbound HTTP call to `api.frankfurter.dev` (no key, no PII, no body). Triggered only by user action: clicking "Commit changes" in the import wizard, or clicking "Refresh FX" / "Save & refresh FX" in Settings. No auto-fetch on app boot.
+- **Out of scope**:
+  - Live unit prices (mark-to-market). Separate, larger problem.
+  - Currencies beyond INR + USD. Phase-1 markets only.
+  - Theme/avatar/email settings fields.
+  - Auto-fetching FX on app boot or on schema migration.
+  - Existing-data migration logic — user will wipe IDB and re-import after schema bump.
