@@ -1,0 +1,258 @@
+import { useEffect, useState } from 'react'
+import { useFetcher, useLoaderData } from 'react-router-dom'
+import type { BaseCurrency } from '../storage/holdings'
+import type { NumberLocale, Settings } from '../storage/settings'
+import { formatMoney } from '../lib/format'
+
+export type SettingsActionResult =
+  | { ok: true; mode: 'saved' | 'refreshed' | 'manual'; rate?: number; fetchedAt?: number }
+  | { ok: false; error: string }
+
+export function SettingsForm() {
+  const { settings } = useLoaderData() as { settings: Settings }
+  const fetcher = useFetcher<SettingsActionResult>()
+  const [name, setName] = useState(settings.name)
+  const [baseCurrency, setBaseCurrency] = useState<BaseCurrency>(settings.baseCurrency)
+  const [numberLocale, setNumberLocale] = useState<NumberLocale>(settings.numberLocale)
+  const [manualRate, setManualRate] = useState('')
+
+  useEffect(() => {
+    setName(settings.name)
+    setBaseCurrency(settings.baseCurrency)
+    setNumberLocale(settings.numberLocale)
+  }, [settings.name, settings.baseCurrency, settings.numberLocale])
+
+  const pendingBaseChange = baseCurrency !== settings.baseCurrency
+  const pendingProfileChange =
+    name !== settings.name || numberLocale !== settings.numberLocale || pendingBaseChange
+  const submitting = fetcher.state !== 'idle'
+  const result = fetcher.data
+  const buttonLabel = pendingBaseChange ? 'Save & refresh FX' : 'Refresh FX'
+
+  return (
+    <fetcher.Form method="post" className="space-y-8">
+      <fieldset className="space-y-6 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+        <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
+          Profile
+        </legend>
+
+        <label className="block space-y-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+            Display name
+          </span>
+          <input
+            type="text"
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-sans text-sm text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+          />
+        </label>
+
+        <fieldset className="space-y-3">
+          <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+            Base currency
+          </legend>
+          <div className="flex gap-2">
+            <RadioPill
+              checked={baseCurrency === 'INR'}
+              label="₹ INR"
+              onChange={() => setBaseCurrency('INR')}
+              name="baseCurrency"
+              value="INR"
+            />
+            <RadioPill
+              checked={baseCurrency === 'USD'}
+              label="$ USD"
+              onChange={() => setBaseCurrency('USD')}
+              name="baseCurrency"
+              value="USD"
+            />
+          </div>
+          <p className="font-sans text-[11px] text-bone-400">
+            All holdings show a base-currency equivalent. Foreign-currency holdings are
+            recomputed when you refresh.
+          </p>
+        </fieldset>
+
+        <fieldset className="space-y-3">
+          <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+            Number format
+          </legend>
+          <div className="flex gap-2">
+            <RadioPill
+              checked={numberLocale === 'en-IN'}
+              label="1,00,000 (Indian)"
+              onChange={() => setNumberLocale('en-IN')}
+              name="numberLocale"
+              value="en-IN"
+            />
+            <RadioPill
+              checked={numberLocale === 'en-US'}
+              label="100,000 (Western)"
+              onChange={() => setNumberLocale('en-US')}
+              name="numberLocale"
+              value="en-US"
+            />
+          </div>
+        </fieldset>
+      </fieldset>
+
+      <fieldset className="space-y-5 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+        <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
+          FX
+        </legend>
+
+        <dl className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-2">
+          <Meta
+            label="Last rate"
+            value={
+              settings.lastFxRate === null
+                ? '—'
+                : `1 USD = ${formatMoney(settings.lastFxRate, 'INR')}`
+            }
+            hint="USD → INR (Frankfurter / ECB)"
+          />
+          <Meta
+            label="Last refresh"
+            value={
+              settings.lastFxAsOf === null
+                ? '—'
+                : new Date(settings.lastFxAsOf).toLocaleString()
+            }
+            hint={settings.lastFxAsOf === null ? 'never refreshed' : 'local time'}
+          />
+        </dl>
+
+        <button
+          type="submit"
+          name="intent"
+          value="refresh"
+          disabled={submitting}
+          className="border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
+        >
+          {submitting && fetcher.formData?.get('intent') === 'refresh'
+            ? 'Refreshing…'
+            : buttonLabel}
+        </button>
+
+        {pendingProfileChange && !pendingBaseChange && (
+          <button
+            type="submit"
+            name="intent"
+            value="save"
+            disabled={submitting}
+            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
+          >
+            Save profile
+          </button>
+        )}
+
+        <details className="border-t border-bone-100/10 pt-5">
+          <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400 hover:text-bone-200">
+            Paste rate manually
+          </summary>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1 space-y-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                1 USD = … INR
+              </span>
+              <input
+                type="number"
+                step="any"
+                min="1"
+                max="999.99"
+                name="manualRate"
+                value={manualRate}
+                onChange={(e) => setManualRate(e.target.value)}
+                placeholder="e.g. 95.77"
+                className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+              />
+            </label>
+            <button
+              type="submit"
+              name="intent"
+              value="manual"
+              disabled={submitting || manualRate === ''}
+              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Apply manual rate
+            </button>
+          </div>
+          <p className="mt-2 font-sans text-[11px] text-bone-400">
+            Use when Frankfurter is unreachable. Rate must be between 1 and 1000.
+          </p>
+        </details>
+
+        {result && !result.ok && (
+          <div className="border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+              fx failed ·{' '}
+            </span>
+            {result.error}
+          </div>
+        )}
+        {result && result.ok && (
+          <div className="border border-jade-400/40 bg-jade-900/20 p-4 font-sans text-sm text-jade-300">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+              {result.mode === 'saved' ? 'saved' : 'refreshed'} ·{' '}
+            </span>
+            {result.mode === 'saved'
+              ? 'Profile saved.'
+              : `Rate ${result.rate} · ${
+                  result.fetchedAt ? new Date(result.fetchedAt).toLocaleTimeString() : ''
+                }`}
+          </div>
+        )}
+      </fieldset>
+    </fetcher.Form>
+  )
+}
+
+function RadioPill({
+  checked,
+  label,
+  onChange,
+  name,
+  value,
+}: {
+  checked: boolean
+  label: string
+  onChange: () => void
+  name: string
+  value: string
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition ${
+        checked
+          ? 'border-tick-400 bg-tick-400/10 text-bone-50'
+          : 'border-bone-100/15 bg-ink-850 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
+      }`}
+    >
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        className="sr-only"
+      />
+      {label}
+    </label>
+  )
+}
+
+function Meta({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="bg-ink-900 px-4 py-4">
+      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+        <span className="h-px w-3 bg-tick-400/60" />
+        {label}
+      </dt>
+      <dd className="mt-2 font-mono text-sm tabular-nums text-bone-50">{value}</dd>
+      <p className="mt-1 font-mono text-[10px] text-bone-400">{hint}</p>
+    </div>
+  )
+}

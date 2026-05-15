@@ -2,6 +2,9 @@ import type { Dispatch } from 'react'
 import { toDeleteKeys } from '../../parsers/diff'
 import { commitImport, exportSnapshot, type CanonicalHolding } from '../../storage/holdings'
 import { formatMoney, formatQuantity } from '../../lib/format'
+import { fetchUsdInrRate, FxFetchError } from '../../lib/fx'
+import { stampMany } from '../../lib/refreshFx'
+import { getSettings, updateFxMeta } from '../../storage/settings'
 import type { WizardAction, WizardState } from './wizardState'
 
 type Props = {
@@ -23,14 +26,35 @@ export function PreviewStep({ state, dispatch }: Props) {
     if (!state.diff) return
     dispatch({ type: 'commit-started' })
     try {
+      const settings = await getSettings()
+      let rate: number | null = settings.lastFxRate
+      let fetchedAt: number | null = settings.lastFxAsOf
+      let liveFxFailure: string | null = null
+      try {
+        const live = await fetchUsdInrRate()
+        rate = live.rate
+        fetchedAt = live.fetchedAt
+        await updateFxMeta(live.rate, live.fetchedAt)
+      } catch (fxErr) {
+        liveFxFailure = fxErr instanceof FxFetchError ? fxErr.message : String(fxErr)
+      }
+
+      const stamp = (rows: CanonicalHolding[]) =>
+        rate !== null && fetchedAt !== null
+          ? stampMany(rows, settings.baseCurrency, rate, fetchedAt)
+          : rows
+
       const toDelete = state.diff.missing.filter(
         (m) => decisions[m.sourceSymbol] === 'delete',
       )
       await commitImport({
-        inserts: state.diff.inserts,
-        updates: state.diff.updates,
+        inserts: stamp(state.diff.inserts),
+        updates: stamp(state.diff.updates),
         deletes: toDeleteKeys(toDelete),
       })
+      if (liveFxFailure && rate === null) {
+        console.warn(`[import] committed without FX: ${liveFxFailure}`)
+      }
       dispatch({ type: 'commit-ok' })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

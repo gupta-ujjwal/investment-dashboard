@@ -1,9 +1,15 @@
 import { Link, useLoaderData } from 'react-router-dom'
-import type { CanonicalHolding } from '../storage/holdings'
+import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
+import type { Settings } from '../storage/settings'
 import { formatMoney } from '../lib/format'
+import { RefreshBanner } from '../components/RefreshBanner'
+import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 
 export function AnalyticsRoute() {
-  const holdings = useLoaderData() as CanonicalHolding[]
+  const { holdings, settings } = useLoaderData() as {
+    holdings: CanonicalHolding[]
+    settings: Settings
+  }
 
   if (holdings.length === 0) {
     return <EmptyState />
@@ -15,11 +21,22 @@ export function AnalyticsRoute() {
     <div className="space-y-10">
       <PageHead title="Analytics" caption="Portfolio snapshot, on-device" />
 
+      {FEATURE_BASE_CURRENCY && totals.unstamped > 0 && (
+        <RefreshBanner unstamped={totals.unstamped} baseCurrency={settings.baseCurrency} />
+      )}
+
       <section
         aria-label="Key figures"
         className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
       >
-        <Kpi label="Holdings" value={String(holdings.length)} sub="positions" />
+        {FEATURE_BASE_CURRENCY && (
+          <Kpi
+            label={`Total · ${settings.baseCurrency}`}
+            value={baseTotalLabel(totals, settings.baseCurrency)}
+            sub={totals.unstamped > 0 ? 'refresh needed' : `${holdings.length} positions`}
+            tone={totals.unstamped > 0 ? 'mute' : 'tick'}
+          />
+        )}
         <Kpi
           label="India · INR"
           value={formatMoney(totals.inrCost, 'INR')}
@@ -67,11 +84,27 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
   )
 }
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub: string }) {
+type KpiTone = 'tick' | 'mute'
+const kpiRail: Record<KpiTone, string> = {
+  tick: 'bg-tick-400/60',
+  mute: 'bg-bone-300/40',
+}
+
+function Kpi({
+  label,
+  value,
+  sub,
+  tone = 'tick',
+}: {
+  label: string
+  value: string
+  sub: string
+  tone?: KpiTone
+}) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
       <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
-        <span className="h-px w-3 bg-tick-400/60" />
+        <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
       <div className="mt-3 break-words font-display text-xl leading-tight tracking-tight text-bone-50 tabular-nums lg:text-3xl xl:text-4xl">
@@ -150,14 +183,26 @@ function EmptyState() {
   )
 }
 
-function aggregate(holdings: CanonicalHolding[]) {
-  const totals: {
-    inrCost: number
-    usdCost: number
-    inrCount: number
-    usdCount: number
-    brokers: Set<string>
-  } = { inrCost: 0, usdCost: 0, inrCount: 0, usdCount: 0, brokers: new Set() }
+type Aggregate = {
+  inrCost: number
+  usdCost: number
+  inrCount: number
+  usdCount: number
+  brokers: Set<string>
+  baseCost: number
+  unstamped: number
+}
+
+function aggregate(holdings: CanonicalHolding[]): Aggregate {
+  const totals: Aggregate = {
+    inrCost: 0,
+    usdCost: 0,
+    inrCount: 0,
+    usdCount: 0,
+    brokers: new Set(),
+    baseCost: 0,
+    unstamped: 0,
+  }
   for (const h of holdings) {
     const cost = h.quantity * h.avgBuyPrice
     if (h.currency === 'INR') {
@@ -167,7 +212,17 @@ function aggregate(holdings: CanonicalHolding[]) {
       totals.usdCost += cost
       totals.usdCount += 1
     }
+    if (h.avgBuyPriceBase === undefined) {
+      totals.unstamped += 1
+    } else {
+      totals.baseCost += h.quantity * h.avgBuyPriceBase
+    }
     totals.brokers.add(h.source === 'vested' ? 'Vested' : 'Groww')
   }
   return totals
+}
+
+function baseTotalLabel(totals: Aggregate, base: BaseCurrency): string {
+  if (totals.unstamped > 0) return '—'
+  return formatMoney(totals.baseCost, base)
 }

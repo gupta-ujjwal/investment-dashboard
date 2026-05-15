@@ -1,9 +1,15 @@
 import { Link, useLoaderData } from 'react-router-dom'
 import type { CanonicalHolding } from '../storage/holdings'
+import type { Settings } from '../storage/settings'
 import { HoldingsTable } from '../components/HoldingsTable'
+import { RefreshBanner } from '../components/RefreshBanner'
+import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 
 export function HoldingsRoute() {
-  const holdings = useLoaderData() as CanonicalHolding[]
+  const { holdings, settings } = useLoaderData() as {
+    holdings: CanonicalHolding[]
+    settings: Settings
+  }
 
   if (holdings.length === 0) {
     return (
@@ -26,6 +32,7 @@ export function HoldingsRoute() {
 
   const inr = holdings.filter((h) => h.currency === 'INR').length
   const usd = holdings.filter((h) => h.currency === 'USD').length
+  const unstamped = holdings.filter((h) => h.avgBuyPriceBase === undefined).length
 
   return (
     <div className="space-y-6">
@@ -38,7 +45,10 @@ export function HoldingsRoute() {
           + Import
         </Link>
       </div>
-      <HoldingsTable holdings={holdings} />
+      {FEATURE_BASE_CURRENCY && unstamped > 0 && (
+        <RefreshBanner unstamped={unstamped} baseCurrency={settings.baseCurrency} />
+      )}
+      <HoldingsTable holdings={holdings} baseCurrency={settings.baseCurrency} />
     </div>
   )
 }
