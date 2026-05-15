@@ -21,6 +21,11 @@ export function stampHolding(
     fxRate: rate,
     fxAsOf: fetchedAt,
     avgBuyPriceBase: holding.avgBuyPrice * rate,
+    // Stamp the current price to base only when the export carried one —
+    // a missing price must stay `undefined`, never become a 0-valued total.
+    ...(holding.currentPrice !== undefined && {
+      currentPriceBase: holding.currentPrice * rate,
+    }),
   }
 }
 

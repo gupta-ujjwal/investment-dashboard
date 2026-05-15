@@ -22,6 +22,26 @@ export function cellNumber(cell: ExcelJS.Cell): number {
   return 0
 }
 
+/**
+ * Like `cellNumber`, but returns `undefined` for an empty / unparseable cell
+ * instead of the sentinel `0`. Use for optional numeric columns where `0` and
+ * "absent" must not collide — e.g. a broker's current-price column, where a
+ * sentinel `0` would render a false total loss.
+ */
+export function cellNumberOrUndefined(cell: ExcelJS.Cell): number | undefined {
+  const v = cell.value
+  if (v == null) return undefined
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') {
+    const trimmed = v.trim()
+    if (trimmed === '') return undefined
+    const n = Number(trimmed.replace(/,/g, ''))
+    return Number.isFinite(n) ? n : undefined
+  }
+  if (typeof v === 'object' && 'result' in v && typeof v.result === 'number') return v.result
+  return undefined
+}
+
 export function mapHeaderColumns(headerRow: ExcelJS.Row): Map<string, number> {
   const map = new Map<string, number>()
   headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
