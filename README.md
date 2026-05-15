@@ -57,5 +57,9 @@ See [`CLAUDE.md`](./CLAUDE.md) for the full spec. The short version:
 **Still open (later slices):**
 
 - **Price data**: Phase 1 plan is **manual paste** — the user pastes a price snapshot and every holding stores its `priceAsOf` timestamp. No CORS-proxy, no scraping, no third-party SDK.
-- **FX**: same manual-paste model for USD↔INR until a CORS-friendly source is picked.
 - **Analytics storage (SQLite-WASM?)**: when the analytics slice lands, the question of whether IndexedDB or SQLite-WASM is the right engine reopens. Two constraints captured in `implementation-docs/csv-import-vested-groww.md`: GitHub Pages can't set COOP/COEP headers (limits OPFS-VFS variants) and SQLite WASM is ~600 KB–1 MB (must be lazy-loaded behind the analytics route).
+
+**Settled (base-currency slice):**
+
+- **FX**: live fetch from [Frankfurter](https://frankfurter.dev) (`api.frankfurter.dev/v1/latest`) — ECB daily, CORS-open, no key. Single outbound HTTP call per import-commit and per user-clicked "Refresh FX". Range-validated (rate must be in `(1, 1000)`) and 3-second timed-out. Manual-rate paste in Settings is the offline fallback.
+- **Base currency**: configurable in Settings (default INR). Each holding stores `fxRate`/`fxAsOf`/`avgBuyPriceBase` so Holdings and Analytics are pure read-views — refresh is the only cache-invalidator.
