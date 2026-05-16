@@ -59,13 +59,13 @@ export function HoldingsRoute() {
         <PageHead title="Holdings" caption="Nothing imported yet" />
         <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
           <p className="font-sans text-base text-bone-200">
-            Import a broker file from Settings to see your positions here.
+            Import a broker file to see your positions here.
           </p>
           <Link
-            to="/settings"
+            to="/import"
             className="mt-6 inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
           >
-            Go to Settings →
+            Go to Import →
           </Link>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function HoldingsRoute() {
           caption={`${holdings.length} positions · ${inr} INR · ${usd} USD`}
         />
         <Link
-          to="/settings"
+          to="/import"
           className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
         >
           + Import

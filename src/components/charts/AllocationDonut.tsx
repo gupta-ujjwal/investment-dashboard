@@ -45,6 +45,17 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
   const total = slices.reduce((sum, s) => sum + s.valueBase, 0)
   const figure = total > 0 ? formatMoney(total, baseCurrency) : '—'
 
+  // Text alternative for the donut SVG. The legend below is real text and
+  // stays outside the `role="img"` wrapper, so it is not double-announced.
+  const summary =
+    slices.length === 0
+      ? 'Allocation chart, no priced holdings yet.'
+      : `Donut chart of allocation by ${mode}: ` +
+        slices
+          .map((s) => `${s.label} ${formatPercent(s.pct).replace('+', '')}`)
+          .join(', ') +
+        '.'
+
   const toggle = (
     <div className="flex border border-bone-100/15">
       {(['market', 'holding'] as const).map((m) => (
@@ -70,7 +81,7 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
         <ChartEmpty message="Allocation needs at least one holding with a current price in your base currency." />
       ) : (
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
-          <div className="relative h-44 w-44 shrink-0">
+          <div role="img" aria-label={summary} className="relative h-44 w-44 shrink-0">
             <ResponsiveContainer
               width="100%"
               height="100%"

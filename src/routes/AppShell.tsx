@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 const tabs = [
   { to: '/analytics', label: 'Analytics' },
   { to: '/holdings', label: 'Holdings' },
+  { to: '/import', label: 'Import' },
   { to: '/settings', label: 'Settings' },
 ]
 
@@ -29,7 +30,9 @@ export function AppShell() {
                   <NavLink
                     to={t.to}
                     className={({ isActive }) =>
-                      `relative inline-block px-3 py-2 font-sans text-[12px] font-medium uppercase tracking-[0.16em] transition sm:px-4 sm:text-[13px] ${
+                      // Mobile sizing is tightened so all four tabs fit a
+                      // 360px viewport without horizontal overflow.
+                      `relative inline-block px-2 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.14em] transition sm:px-4 sm:text-[13px] sm:tracking-[0.16em] ${
                         isActive
                           ? 'text-bone-50'
                           : 'text-bone-400 hover:text-bone-100'

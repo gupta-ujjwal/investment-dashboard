@@ -1,5 +1,4 @@
 import { useLoaderData } from 'react-router-dom'
-import { ImportWizard } from './import/ImportRoute'
 import { SettingsForm } from './SettingsForm'
 import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 import type { Settings } from '../storage/settings'
@@ -29,16 +28,6 @@ export function SettingsRoute() {
           <SettingsForm />
         </section>
       )}
-
-      <section aria-labelledby="import-heading" className="space-y-4">
-        <h2
-          id="import-heading"
-          className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300"
-        >
-          Import &amp; reconcile
-        </h2>
-        <ImportWizard />
-      </section>
     </div>
   )
 }

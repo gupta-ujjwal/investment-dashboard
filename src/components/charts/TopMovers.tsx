@@ -49,44 +49,54 @@ export function TopMovers({ rows }: Props) {
 
   const height = Math.max(200, data.length * 30 + 16)
 
+  // Text alternative for screen readers — `data` is ranked best-first.
+  const summary =
+    data.length === 0
+      ? 'Top movers chart, no priced holdings yet.'
+      : `Bar chart of ${data.length} holdings ranked by profit percent. ` +
+        `Best ${data[0].full} ${formatPercent(data[0].pct)}, ` +
+        `worst ${data[data.length - 1].full} ${formatPercent(data[data.length - 1].pct)}.`
+
   return (
     <ChartCard title="Top movers" chip="bars">
       {data.length === 0 ? (
         <ChartEmpty message="Movers appear once your holdings carry a current price — P&L % is computed from buy vs. current price." />
       ) : (
-        <ResponsiveContainer
-          width="100%"
-          height={height}
-          initialDimension={{ width: 320, height }}
-        >
-          <BarChart
-            layout="vertical"
-            data={data}
-            margin={{ top: 4, right: 52, bottom: 4, left: 4 }}
-            barCategoryGap="22%"
+        <div role="img" aria-label={summary}>
+          <ResponsiveContainer
+            width="100%"
+            height={height}
+            initialDimension={{ width: 320, height }}
           >
-            <XAxis type="number" hide tickFormatter={(v: number) => formatPercent(v)} />
-            <YAxis
-              type="category"
-              dataKey="label"
-              tick={axisTick}
-              tickLine={false}
-              axisLine={false}
-              width={120}
-            />
-            <Tooltip content={<Tip />} cursor={{ fill: 'rgba(242,235,219,0.04)' }} />
-            <ReferenceLine x={0} stroke={chartColor.axis} strokeWidth={1} />
-            <Bar dataKey="pct" isAnimationActive={false} radius={1}>
-              {data.map((d) => (
-                <Cell
-                  key={d.key}
-                  fill={d.pct >= 0 ? chartColor.gain : chartColor.loss}
-                />
-              ))}
-              <LabelList dataKey="pct" content={<PctLabel />} />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+            <BarChart
+              layout="vertical"
+              data={data}
+              margin={{ top: 4, right: 52, bottom: 4, left: 4 }}
+              barCategoryGap="22%"
+            >
+              <XAxis type="number" hide tickFormatter={(v: number) => formatPercent(v)} />
+              <YAxis
+                type="category"
+                dataKey="label"
+                tick={axisTick}
+                tickLine={false}
+                axisLine={false}
+                width={120}
+              />
+              <Tooltip content={<Tip />} cursor={{ fill: 'rgba(242,235,219,0.04)' }} />
+              <ReferenceLine x={0} stroke={chartColor.axis} strokeWidth={1} />
+              <Bar dataKey="pct" isAnimationActive={false} radius={1}>
+                {data.map((d) => (
+                  <Cell
+                    key={d.key}
+                    fill={d.pct >= 0 ? chartColor.gain : chartColor.loss}
+                  />
+                ))}
+                <LabelList dataKey="pct" content={<PctLabel />} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </ChartCard>
   )

@@ -17,6 +17,25 @@ const stepLabels: Record<WizardStep, string> = {
 }
 const stepOrder: WizardStep[] = ['pick-source', 'instructions', 'upload', 'preview', 'done']
 
+/** Route component for `/import` — the wizard on its own page, so a
+ *  focus-demanding multi-step flow is not stacked under Profile + FX. */
+export function ImportRoute() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="font-sans text-2xl font-semibold tracking-tight text-bone-50 sm:text-3xl">
+          Import
+        </h1>
+        <p className="font-sans text-sm text-bone-400">
+          Bring in a broker export. Parsed and reconciled on this device — nothing
+          leaves it.
+        </p>
+      </div>
+      <ImportWizard />
+    </div>
+  )
+}
+
 export function ImportWizard() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const navigate = useNavigate()
