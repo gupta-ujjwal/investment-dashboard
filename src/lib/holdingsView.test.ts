@@ -128,8 +128,20 @@ describe('applyFilters', () => {
 
 describe('sortRows', () => {
   const rows = deriveRows([
-    holding({ name: 'Charlie', currentPrice: 150, avgBuyPrice: 100, currentPriceBase: 150 }),
-    holding({ name: 'Alpha', currentPrice: 90, avgBuyPrice: 100, currentPriceBase: 90 }),
+    holding({
+      name: 'Charlie',
+      currentPrice: 150,
+      avgBuyPrice: 100,
+      avgBuyPriceBase: 100,
+      currentPriceBase: 150,
+    }),
+    holding({
+      name: 'Alpha',
+      currentPrice: 90,
+      avgBuyPrice: 100,
+      avgBuyPriceBase: 100,
+      currentPriceBase: 90,
+    }),
     holding({ name: 'Bravo', currentPrice: undefined, currentPriceBase: undefined }),
   ])
 
@@ -156,10 +168,38 @@ describe('sortRows', () => {
     expect(sorted[sorted.length - 1].holding.name).toBe('Bravo')
   })
 
-  it('sorts by profit percent', () => {
+  it('sorts by absolute base-currency profit', () => {
     const sorted = sortRows(rows, { key: 'profit', dir: 'desc' })
-    // Charlie +50%, Alpha −10%, Bravo undefined (bottom)
+    // Charlie +500, Alpha −100, Bravo undefined (bottom)
     expect(sorted.map((r) => r.holding.name)).toEqual(['Charlie', 'Alpha', 'Bravo'])
+  })
+
+  it('sorts profit by the ₹ amount shown, not the percent', () => {
+    // Small holding with a huge percent gain vs. a large holding with a
+    // modest percent gain. The Profit cell shows the ₹ amount large, so the
+    // sort must follow the ₹ amount: Big (+₹4000) outranks Tiny (+₹100).
+    const mixed = deriveRows([
+      holding({
+        name: 'Tiny',
+        quantity: 1,
+        currentPrice: 200,
+        avgBuyPrice: 100,
+        avgBuyPriceBase: 100,
+        currentPriceBase: 200,
+      }),
+      holding({
+        name: 'Big',
+        quantity: 100,
+        currentPrice: 140,
+        avgBuyPrice: 100,
+        avgBuyPriceBase: 100,
+        currentPriceBase: 140,
+      }),
+    ])
+    expect(sortRows(mixed, { key: 'profit', dir: 'desc' }).map((r) => r.holding.name)).toEqual([
+      'Big',
+      'Tiny',
+    ])
   })
 
   it('does not mutate the input array', () => {

@@ -130,7 +130,10 @@ function sortValue(r: DerivedRow, key: SortKey): number | string | undefined {
     case 'currentValue':
       return r.currentValueBase
     case 'profit':
-      return r.profitPct
+      // Sort by absolute base-currency profit — the figure shown large in the
+      // Profit cell. The percent is only the secondary line, so sorting by it
+      // makes the prominent ₹ column look unsorted.
+      return r.profitAbsBase
   }
 }
 
