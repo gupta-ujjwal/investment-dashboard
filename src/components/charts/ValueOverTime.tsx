@@ -28,12 +28,23 @@ function tipValue(payload: TipPayload[], key: string): number | undefined {
  * reading: the amber value line above, the dashed bone cost-basis line below,
  * and the gap between them is the unrealised P&L. The X axis is ordinal — one
  * tick per snapshot day, never a continuous time scale — so a sparse history
- * (imports weeks apart) is drawn honestly, not smoothed over missing days.
+ * (imports weeks apart) is drawn honestly, not smoothed over missing days. The
+ * Y axis is auto-bounded (no forced zero) so the lines use the full frame —
+ * a personal portfolio chart is read for change, not for an absolute floor.
  */
 export function ValueOverTime({ series, baseCurrency }: Props) {
   const latest = series[series.length - 1]
   const figure =
     latest?.value === undefined ? '—' : formatMoney(latest.value, baseCurrency)
+
+  // Text alternative for screen readers — the SVG itself is opaque to them.
+  const summary =
+    series.length < 2
+      ? 'Portfolio value chart, awaiting a second snapshot.'
+      : `Line chart of portfolio value versus invested cost across ${series.length} ` +
+        `snapshots, ${formatDateKey(series[0].date)} to ` +
+        `${formatDateKey(series[series.length - 1].date)}. Latest value ` +
+        `${latest?.value === undefined ? 'unavailable' : formatMoney(latest.value, baseCurrency)}.`
 
   function Tip({ active, payload, label }: TipProps) {
     if (!active || !payload || payload.length === 0) return null
@@ -64,54 +75,57 @@ export function ValueOverTime({ series, baseCurrency }: Props) {
       {series.length < 2 ? (
         <ChartEmpty message="A value trend appears once you've imported holdings on at least two different days." />
       ) : (
-        <ResponsiveContainer
-          width="100%"
-          height={224}
-          initialDimension={{ width: 320, height: 224 }}
-        >
-          <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid stroke={chartColor.grid} vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatDateKey}
-              tick={axisTick}
-              tickLine={false}
-              axisLine={{ stroke: chartColor.grid }}
-              interval="preserveStartEnd"
-              minTickGap={24}
-            />
-            <YAxis
-              tickFormatter={(v: number) => compactMoney(v, baseCurrency)}
-              tick={axisTick}
-              tickLine={false}
-              axisLine={false}
-              width={56}
-            />
-            <Tooltip content={<Tip />} cursor={{ stroke: chartColor.grid }} />
-            <Line
-              type="monotone"
-              dataKey="invested"
-              name="Invested"
-              stroke={chartColor.invested}
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              dot={false}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              name="Value"
-              stroke={chartColor.value}
-              strokeWidth={1.6}
-              dot={{ r: 2, fill: chartColor.value, strokeWidth: 0 }}
-              activeDot={{ r: 3.5 }}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div role="img" aria-label={summary}>
+          <ResponsiveContainer
+            width="100%"
+            height={224}
+            initialDimension={{ width: 320, height: 224 }}
+          >
+            <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <CartesianGrid stroke={chartColor.grid} vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateKey}
+                tick={axisTick}
+                tickLine={false}
+                axisLine={{ stroke: chartColor.grid }}
+                interval="preserveStartEnd"
+                minTickGap={24}
+              />
+              <YAxis
+                domain={['auto', 'auto']}
+                tickFormatter={(v: number) => compactMoney(v, baseCurrency)}
+                tick={axisTick}
+                tickLine={false}
+                axisLine={false}
+                width={56}
+              />
+              <Tooltip content={<Tip />} cursor={{ stroke: chartColor.grid }} />
+              <Line
+                type="monotone"
+                dataKey="invested"
+                name="Invested"
+                stroke={chartColor.invested}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                dot={false}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="value"
+                name="Value"
+                stroke={chartColor.value}
+                strokeWidth={1.6}
+                dot={{ r: 2, fill: chartColor.value, strokeWidth: 0 }}
+                activeDot={{ r: 3.5 }}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </ChartCard>
   )
