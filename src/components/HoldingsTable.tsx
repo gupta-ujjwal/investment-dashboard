@@ -17,10 +17,11 @@ const marketLabels: Record<Currency, string> = {
   INR: 'IN',
   USD: 'US',
 }
-const marketAccent: Record<Currency, string> = {
-  INR: 'text-jade-400 border-jade-400/40 bg-jade-900/40',
-  USD: 'text-tick-400 border-tick-400/40 bg-tick-900/40',
-}
+/** Market badges are intentionally neutral. Jade is reserved for gains and
+ *  ember for losses; a market tag must not borrow either, or a green `IN`
+ *  badge reads as a positive signal. The `IN`/`US` text and the market filter
+ *  carry the distinction. */
+const marketBadge = 'text-bone-300 border-bone-100/20 bg-bone-100/[0.06]'
 const assetClassLabels: Record<AssetClass, string> = {
   equity: 'Equity',
   mf: 'MF',
@@ -54,11 +55,7 @@ const profitColor: Record<ProfitTone, string> = {
 }
 
 function profitTone(row: DerivedRow): ProfitTone {
-  const v = row.profitPct ?? row.profitAbsBase
-  if (v === undefined) return 'flat'
-  if (v > 0) return 'gain'
-  if (v < 0) return 'loss'
-  return 'flat'
+  return toneOf(row.profitPct ?? row.profitAbsBase)
 }
 
 /** Money-or-dash. The `—` is the honest render for an uncomputable figure
@@ -67,8 +64,42 @@ function money(value: number | undefined, ccy: Currency | BaseCurrency): string 
   return value === undefined ? '—' : formatMoney(value, ccy)
 }
 
+/** Sum a derived figure across rows. `undefined` if any row's figure is
+ *  uncomputable — a partial total would silently misrepresent the portfolio. */
+function sumField(
+  rows: DerivedRow[],
+  pick: (r: DerivedRow) => number | undefined,
+): number | undefined {
+  let total = 0
+  for (const r of rows) {
+    const v = pick(r)
+    if (v === undefined) return undefined
+    total += v
+  }
+  return total
+}
+
+function toneOf(value: number | undefined): ProfitTone {
+  if (value === undefined) return 'flat'
+  if (value > 0) return 'gain'
+  if (value < 0) return 'loss'
+  return 'flat'
+}
+
 export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
   const cols = columns(baseCurrency)
+
+  // Totals reflect the rows actually shown — they re-sum when a filter narrows
+  // the set, so the footer always matches what's on screen.
+  const totalInvested = sumField(rows, (r) => r.investedBase)
+  const totalValue = sumField(rows, (r) => r.currentValueBase)
+  const totalProfit = sumField(rows, (r) => r.profitAbsBase)
+  const totalProfitPct =
+    totalProfit === undefined || totalInvested === undefined || totalInvested <= 0
+      ? undefined
+      : totalProfit / totalInvested
+  const totalTone = toneOf(totalProfit)
+  const positionLabel = `${rows.length} ${rows.length === 1 ? 'position' : 'positions'}`
 
   return (
     <>
@@ -107,7 +138,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
                   </td>
                   <td className="px-4 py-4">
                     <span
-                      className={`inline-flex items-center border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${marketAccent[h.currency]}`}
+                      className={`inline-flex items-center border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${marketBadge}`}
                     >
                       {marketLabels[h.currency]}
                     </span>
@@ -142,11 +173,62 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
               )
             })}
           </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-bone-100/15 bg-ink-850">
+              <td className="px-4 py-3.5" colSpan={5}>
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-300">
+                  Total · {positionLabel}
+                </span>
+              </td>
+              <td className="px-4 py-3.5 text-right font-mono text-sm text-bone-200 tabular-nums">
+                {money(totalInvested, baseCurrency)}
+              </td>
+              <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-bone-50 tabular-nums">
+                {money(totalValue, baseCurrency)}
+              </td>
+              <td
+                className={`px-4 py-3.5 text-right font-mono text-sm tabular-nums ${profitColor[totalTone]}`}
+              >
+                <div>{money(totalProfit, baseCurrency)}</div>
+                <div className="text-[11px]">
+                  {totalProfitPct === undefined ? '—' : formatPercent(totalProfitPct)}
+                </div>
+              </td>
+              <td className="px-4 py-3.5" />
+            </tr>
+          </tfoot>
         </table>
       </section>
 
-      {/* Mobile — stacked cards */}
+      {/* Mobile — stacked cards, totals first */}
       <section className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 md:hidden">
+        <article className="bg-ink-850 px-5 py-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-300">
+            Total · {positionLabel}
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-3">
+            <Cell
+              label={`Invested ${baseSymbol[baseCurrency]}`}
+              value={money(totalInvested, baseCurrency)}
+            />
+            <Cell
+              label={`Value ${baseSymbol[baseCurrency]}`}
+              value={money(totalValue, baseCurrency)}
+              emphasis
+            />
+            <div>
+              <dt className="font-mono text-[9px] uppercase tracking-[0.18em] text-bone-400">
+                Profit
+              </dt>
+              <dd className={`mt-1 font-mono tabular-nums ${profitColor[totalTone]}`}>
+                <div className="text-sm">{money(totalProfit, baseCurrency)}</div>
+                <div className="text-[11px]">
+                  {totalProfitPct === undefined ? '—' : formatPercent(totalProfitPct)}
+                </div>
+              </dd>
+            </div>
+          </dl>
+        </article>
         {rows.map((row) => {
           const h = row.holding
           const tone = profitTone(row)
@@ -156,7 +238,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
                     <span
-                      className={`inline-flex items-center border px-1.5 py-0.5 ${marketAccent[h.currency]}`}
+                      className={`inline-flex items-center border px-1.5 py-0.5 ${marketBadge}`}
                     >
                       {marketLabels[h.currency]}
                     </span>
@@ -170,7 +252,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
                 </div>
                 <span className="font-sans text-xs text-bone-300">{sourceLabels[h.source]}</span>
               </div>
-              <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-bone-100/10 pt-3">
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-bone-100/10 pt-3">
                 <Cell label="Qty" value={formatQuantity(h.quantity)} />
                 <Cell label="Avg buy" value={money(h.avgBuyPrice, h.currency)} />
                 <Cell label="Current" value={money(h.currentPrice, h.currency)} />
@@ -214,14 +296,16 @@ function SortHeader({
 }) {
   const active = sort.key === col.key
   return (
+    // `aria-sort` belongs on the column-header cell, not the button inside it
+    // (WCAG / ARIA): screen readers query the `th` for sort state.
     <th
       scope="col"
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
       className={`px-4 py-3 font-medium ${col.numeric ? 'text-right' : 'text-left'}`}
     >
       <button
         type="button"
         onClick={() => onSort(col.key)}
-        aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
         className={`inline-flex items-center gap-1 uppercase tracking-[0.18em] transition ${
           active ? 'text-tick-400' : 'text-bone-400 hover:text-bone-100'
         }`}
@@ -236,9 +320,13 @@ function SortHeader({
 }
 
 function StaleMarker({ importedAt }: { importedAt: number }) {
+  const detail = `Priced as of ${formatDate(importedAt)} — older than your latest import`
   return (
+    // `aria-label` carries the full detail to screen readers (and keyboard
+    // users), since the native `title` tooltip is mouse-hover-only.
     <span
-      title={`Priced as of ${formatDate(importedAt)} — older than your latest import`}
+      title={detail}
+      aria-label={`Stale price. ${detail}`}
       className="border border-ember-400/25 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-ember-400/70"
     >
       stale
