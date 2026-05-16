@@ -34,10 +34,12 @@ export type HoldingKey = {
 }
 
 export const DB_NAME = 'investment-dashboard'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 const STORE = 'holdings'
 const IDX_BY_SOURCE = 'by-source'
 export const SETTINGS_STORE = 'settings'
+/** Per-day portfolio snapshots — see `storage/history.ts`. Added in v3. */
+export const HISTORY_STORE = 'historySnapshots'
 
 let dbPromise: Promise<IDBPDatabase> | null = null
 
@@ -53,6 +55,12 @@ export function getDB(): Promise<IDBPDatabase> {
         }
         if (oldVersion < 2) {
           db.createObjectStore(SETTINGS_STORE)
+        }
+        if (oldVersion < 3) {
+          // Additive only — one store, keyed by `YYYY-MM-DD`. No backfill in
+          // the upgrade callback (keeps the app-open critical path simple);
+          // snapshots populate lazily on the next import.
+          db.createObjectStore(HISTORY_STORE, { keyPath: 'date' })
         }
       },
     })
