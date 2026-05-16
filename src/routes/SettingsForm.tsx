@@ -224,10 +224,15 @@ function RadioPill({
   value: string
 }) {
   return (
+    // The radio input is `sr-only`, so the global focus ring would render on a
+    // 0×0 element (invisible). `has-[:focus-visible]` lifts the ring onto the
+    // label instead, restoring a keyboard focus indicator. Selected state uses
+    // the solid amber fill — the same active treatment as every other
+    // segmented control in the app — rather than a faint 10% wash.
     <label
-      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition ${
+      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-tick-400 has-[:focus-visible]:outline-offset-2 ${
         checked
-          ? 'border-tick-400 bg-tick-400/10 text-bone-50'
+          ? 'border-tick-400 bg-tick-400 text-ink-950'
           : 'border-bone-100/15 bg-ink-850 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
       }`}
     >

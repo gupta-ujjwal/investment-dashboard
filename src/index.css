@@ -166,4 +166,15 @@
       transform: rotate(360deg);
     }
   }
+
+  /* Honour reduced-motion: the staggered entrance is purely decorative, so
+     skip the animation and render the final state immediately. The loading
+     spinner is left alone — it is functional feedback, not decoration. */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
