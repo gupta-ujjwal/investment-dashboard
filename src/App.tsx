@@ -5,12 +5,14 @@ import {
   type ActionFunctionArgs,
 } from 'react-router-dom'
 import { getAll, type BaseCurrency } from './storage/holdings'
+import { getHistory } from './storage/history'
 import {
   getSettings,
   saveSettings,
   type NumberLocale,
   type Settings,
 } from './storage/settings'
+import { FEATURE_HISTORY } from './featureFlags'
 import { applyManualRate, refreshFx } from './lib/refreshFx'
 import { FxFetchError } from './lib/fx'
 import { AppShell } from './routes/AppShell'
@@ -20,8 +22,12 @@ import { SettingsRoute } from './routes/SettingsRoute'
 import type { SettingsActionResult } from './routes/SettingsForm'
 
 const dashboardLoader = async () => {
-  const [holdings, settings] = await Promise.all([getAll(), getSettings()])
-  return { holdings, settings }
+  const [holdings, settings, history] = await Promise.all([
+    getAll(),
+    getSettings(),
+    FEATURE_HISTORY ? getHistory() : Promise.resolve([]),
+  ])
+  return { holdings, settings, history }
 }
 
 const settingsLoader = async () => {

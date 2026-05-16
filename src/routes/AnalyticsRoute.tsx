@@ -1,56 +1,80 @@
+import { lazy, Suspense } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
+import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
-import { formatMoney } from '../lib/format'
+import { portfolioTotals } from '../lib/analytics'
+import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
-import { FEATURE_BASE_CURRENCY } from '../featureFlags'
+import { FEATURE_BASE_CURRENCY, FEATURE_HISTORY } from '../featureFlags'
+
+/** Recharts is heavy (~100KB+); keep it out of the initial bundle so the KPI
+ *  row paints first. The Suspense fallback covers the chunk load. */
+const ChartsPanel = lazy(() => import('../components/charts/ChartsPanel'))
+
+type LoaderData = {
+  holdings: CanonicalHolding[]
+  settings: Settings
+  history: HistoryRecord[]
+}
 
 export function AnalyticsRoute() {
-  const { holdings, settings } = useLoaderData() as {
-    holdings: CanonicalHolding[]
-    settings: Settings
-  }
+  const { holdings, settings, history } = useLoaderData() as LoaderData
 
   if (holdings.length === 0) {
     return <EmptyState />
   }
 
-  const totals = aggregate(holdings)
+  const base = settings.baseCurrency
+  const totals = portfolioTotals(holdings)
+  const inrCount = holdings.filter((h) => h.currency === 'INR').length
+  const usdCount = holdings.length - inrCount
+  const pnlTone: KpiTone =
+    totals.totalProfitBase === undefined
+      ? 'mute'
+      : totals.totalProfitBase >= 0
+        ? 'gain'
+        : 'loss'
 
   return (
     <div className="space-y-10">
       <PageHead title="Analytics" caption="Portfolio snapshot, on-device" />
 
       {FEATURE_BASE_CURRENCY && totals.unstamped > 0 && (
-        <RefreshBanner unstamped={totals.unstamped} baseCurrency={settings.baseCurrency} />
+        <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
       <section
         aria-label="Key figures"
         className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
       >
-        {FEATURE_BASE_CURRENCY && (
-          <Kpi
-            label={`Total · ${settings.baseCurrency}`}
-            value={baseTotalLabel(totals, settings.baseCurrency)}
-            sub={totals.unstamped > 0 ? 'refresh needed' : `${holdings.length} positions`}
-            tone={totals.unstamped > 0 ? 'mute' : 'tick'}
-          />
-        )}
         <Kpi
-          label="India · INR"
-          value={formatMoney(totals.inrCost, 'INR')}
-          sub={`${totals.inrCount} positions`}
+          label={`Value · ${base}`}
+          value={money(totals.totalValueBase, base)}
+          sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
+          tone="tick"
         />
         <Kpi
-          label="US · USD"
-          value={formatMoney(totals.usdCost, 'USD')}
-          sub={`${totals.usdCount} positions`}
+          label={`Invested · ${base}`}
+          value={money(totals.totalInvestedBase, base)}
+          sub="cost basis"
+          tone="mute"
         />
         <Kpi
-          label="Brokers"
-          value={String(totals.brokers.size)}
-          sub={[...totals.brokers].join(' · ') || '—'}
+          label={`P&L · ${base}`}
+          value={money(totals.totalProfitBase, base)}
+          sub={
+            totals.totalProfitPct === undefined
+              ? '—'
+              : formatPercent(totals.totalProfitPct)
+          }
+          tone={pnlTone}
+        />
+        <Kpi
+          label="Positions"
+          value={String(totals.positions)}
+          sub={`${inrCount} India · ${usdCount} US`}
+          tone="mute"
         />
       </section>
 
@@ -59,18 +83,24 @@ export function AnalyticsRoute() {
           <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
             Charts
           </h3>
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-            Coming online
-          </span>
+          {FEATURE_HISTORY && (
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+              {history.length} snapshot{history.length === 1 ? '' : 's'}
+            </span>
+          )}
         </div>
-        <div className="mt-4 grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-3">
-          <ChartFrame title="Allocation" hint="By market · by asset class" chip="donut" />
-          <ChartFrame title="Performance" hint="Cost basis vs. live value over time" chip="line" />
-          <ChartFrame title="P&L" hint="Per-position realised & unrealised" chip="bars" />
+        <div className="mt-4">
+          <Suspense fallback={<ChartsFallback />}>
+            <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+          </Suspense>
         </div>
       </section>
     </div>
   )
+}
+
+function money(value: number | undefined, currency: BaseCurrency): string {
+  return value === undefined ? '—' : formatMoney(value, currency)
 }
 
 function PageHead({ title, caption }: { title: string; caption: string }) {
@@ -84,10 +114,20 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
   )
 }
 
-type KpiTone = 'tick' | 'mute'
+type KpiTone = 'tick' | 'mute' | 'gain' | 'loss'
+
 const kpiRail: Record<KpiTone, string> = {
   tick: 'bg-tick-400/60',
   mute: 'bg-bone-300/40',
+  gain: 'bg-jade-400/70',
+  loss: 'bg-ember-400/70',
+}
+
+const kpiValueColor: Record<KpiTone, string> = {
+  tick: 'text-bone-50',
+  mute: 'text-bone-50',
+  gain: 'text-jade-300',
+  loss: 'text-ember-300',
 }
 
 function Kpi({
@@ -107,7 +147,9 @@ function Kpi({
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
-      <div className="mt-3 break-words font-display text-xl leading-tight tracking-tight text-bone-50 tabular-nums lg:text-3xl xl:text-4xl">
+      <div
+        className={`mt-3 break-words font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+      >
         {value}
       </div>
       <div className="mt-2 font-mono text-[11px] text-bone-400">{sub}</div>
@@ -115,51 +157,18 @@ function Kpi({
   )
 }
 
-function ChartFrame({
-  title,
-  hint,
-  chip,
-}: {
-  title: string
-  hint: string
-  chip: string
-}) {
+function ChartsFallback() {
   return (
-    <div className="group relative flex min-h-[220px] flex-col justify-between bg-ink-900 p-6 transition hover:bg-ink-850">
-      <div className="flex items-start justify-between">
-        <h3 className="font-sans text-base font-semibold tracking-tight text-bone-100">
-          {title}
-        </h3>
-        <span className="border border-bone-100/15 bg-ink-800 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-          {chip}
+    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400"
+        />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          Loading charts
         </span>
       </div>
-      <div
-        aria-hidden="true"
-        className="relative my-6 h-20 w-full opacity-60"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(242, 235, 219, 0.08) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(242, 235, 219, 0.06) 1px, transparent 1px)
-          `,
-          backgroundSize: '12px 100%, 100% 10px',
-        }}
-      >
-        <svg
-          viewBox="0 0 200 60"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
-        >
-          <path
-            d="M0 45 L25 38 L50 42 L75 28 L100 32 L125 20 L150 26 L175 14 L200 18"
-            fill="none"
-            stroke="var(--color-tick-400)"
-            strokeWidth="1.2"
-            opacity="0.7"
-          />
-        </svg>
-      </div>
-      <p className="font-sans text-xs text-bone-400">{hint}</p>
     </div>
   )
 }
@@ -181,48 +190,4 @@ function EmptyState() {
       </div>
     </div>
   )
-}
-
-type Aggregate = {
-  inrCost: number
-  usdCost: number
-  inrCount: number
-  usdCount: number
-  brokers: Set<string>
-  baseCost: number
-  unstamped: number
-}
-
-function aggregate(holdings: CanonicalHolding[]): Aggregate {
-  const totals: Aggregate = {
-    inrCost: 0,
-    usdCost: 0,
-    inrCount: 0,
-    usdCount: 0,
-    brokers: new Set(),
-    baseCost: 0,
-    unstamped: 0,
-  }
-  for (const h of holdings) {
-    const cost = h.quantity * h.avgBuyPrice
-    if (h.currency === 'INR') {
-      totals.inrCost += cost
-      totals.inrCount += 1
-    } else {
-      totals.usdCost += cost
-      totals.usdCount += 1
-    }
-    if (h.avgBuyPriceBase === undefined) {
-      totals.unstamped += 1
-    } else {
-      totals.baseCost += h.quantity * h.avgBuyPriceBase
-    }
-    totals.brokers.add(h.source === 'vested' ? 'Vested' : 'Groww')
-  }
-  return totals
-}
-
-function baseTotalLabel(totals: Aggregate, base: BaseCurrency): string {
-  if (totals.unstamped > 0) return '—'
-  return formatMoney(totals.baseCost, base)
 }

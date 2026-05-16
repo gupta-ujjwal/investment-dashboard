@@ -1,10 +1,12 @@
 import type { Dispatch } from 'react'
 import { toDeleteKeys } from '../../parsers/diff'
 import { commitImport, exportSnapshot, type CanonicalHolding } from '../../storage/holdings'
+import { recordSnapshot } from '../../storage/history'
 import { formatMoney, formatQuantity } from '../../lib/format'
 import { fetchUsdInrRate, FxFetchError } from '../../lib/fx'
 import { stampMany } from '../../lib/refreshFx'
 import { getSettings, updateFxMeta } from '../../storage/settings'
+import { FEATURE_HISTORY } from '../../featureFlags'
 import type { WizardAction, WizardState } from './wizardState'
 
 type Props = {
@@ -54,6 +56,18 @@ export function PreviewStep({ state, dispatch }: Props) {
       })
       if (liveFxFailure && rate === null) {
         console.warn(`[import] committed without FX: ${liveFxFailure}`)
+      }
+      // History snapshot is best-effort — holdings are the source of truth,
+      // a missed snapshot is a cosmetic one-day gap in the charts, never a
+      // reason to fail the import. Written here (not inside `commitImport`)
+      // so the FX re-stamp path in refreshFx.ts cannot forge phantom history.
+      if (FEATURE_HISTORY) {
+        try {
+          await recordSnapshot(settings.baseCurrency)
+        } catch (histErr) {
+          const reason = histErr instanceof Error ? histErr.message : String(histErr)
+          console.warn(`[import] history snapshot failed: ${reason}`)
+        }
       }
       dispatch({ type: 'commit-ok' })
     } catch (err) {
