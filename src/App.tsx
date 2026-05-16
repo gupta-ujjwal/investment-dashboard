@@ -18,6 +18,7 @@ import { FxFetchError } from './lib/fx'
 import { AppShell } from './routes/AppShell'
 import { AnalyticsRoute } from './routes/AnalyticsRoute'
 import { HoldingsRoute } from './routes/HoldingsRoute'
+import { ImportRoute } from './routes/import/ImportRoute'
 import { SettingsRoute } from './routes/SettingsRoute'
 import type { SettingsActionResult } from './routes/SettingsForm'
 
@@ -96,11 +97,13 @@ const router = createBrowserRouter(
           index: true,
           loader: async () => {
             const holdings = await getAll()
-            throw redirect(holdings.length === 0 ? '/settings' : '/analytics')
+            // First run lands on Import — the one thing a new user must do.
+            throw redirect(holdings.length === 0 ? '/import' : '/analytics')
           },
         },
         { path: 'analytics', Component: AnalyticsRoute, loader: dashboardLoader },
         { path: 'holdings', Component: HoldingsRoute, loader: dashboardLoader },
+        { path: 'import', Component: ImportRoute },
         {
           path: 'settings',
           Component: SettingsRoute,

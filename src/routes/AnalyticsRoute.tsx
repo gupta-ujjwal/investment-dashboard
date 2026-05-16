@@ -182,10 +182,10 @@ function EmptyState() {
           Once you import your first file, this page will fill with charts and totals.
         </p>
         <Link
-          to="/settings"
+          to="/import"
           className="mt-6 inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
         >
-          Go to Settings →
+          Go to Import →
         </Link>
       </div>
     </div>
