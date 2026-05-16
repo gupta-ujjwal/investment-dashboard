@@ -4,6 +4,7 @@ import type { ParseResult } from './types'
 import { ParseError } from './types'
 import {
   cellNumber,
+  cellNumberOrUndefined,
   cellString,
   findHeaderRowBySignature,
   mapHeaderColumns,
@@ -55,6 +56,9 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
   const isinCol = colIndexByName.get('ISIN')!
   const qtyCol = colIndexByName.get('Quantity')!
   const avgPriceCol = colIndexByName.get('Average buy price')!
+  // Optional: current per-unit price. Not in REQUIRED_COLUMNS — a Groww export
+  // without it still imports, the holding just lands with no `currentPrice`.
+  const closingPriceCol = colIndexByName.get('Closing price')
 
   const rows: CanonicalHolding[] = []
   let skipped = 0
@@ -66,6 +70,10 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
     const isin = cellString(row.getCell(isinCol))
     const quantity = cellNumber(row.getCell(qtyCol))
     const avgBuyPrice = cellNumber(row.getCell(avgPriceCol))
+    const currentPrice =
+      closingPriceCol === undefined
+        ? undefined
+        : cellNumberOrUndefined(row.getCell(closingPriceCol))
 
     const ghost = !name || name === 'NA' || quantity === 0
     if (ghost) {
@@ -86,6 +94,7 @@ export async function parseGroww(file: ArrayBuffer): Promise<ParseResult> {
       currency: 'INR',
       assetClass: assetClassFromGroww(isin, name),
       importedAt,
+      ...(currentPrice !== undefined && { currentPrice }),
     })
   }
 

@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
 import { parseVested } from './vested'
 import { ParseError } from './types'
@@ -6,6 +7,16 @@ import { ParseError } from './types'
 async function loadFixture(name: string): Promise<ArrayBuffer> {
   const buf = await readFile(`tests/fixtures/${name}`)
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+}
+
+/** A minimal Vested-shaped workbook missing the optional `Current Price (USD)`
+ *  column — exercises the column-absent path without a binary fixture. */
+async function vestedWorkbookWithoutCurrentPrice(): Promise<ArrayBuffer> {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Holdings')
+  ws.addRow(['Name', 'Ticker', 'Total Shares Held', 'Average Cost (USD)'])
+  ws.addRow(['Apple, Inc.', 'AAPL', 2.7, 215.72])
+  return (await wb.xlsx.writeBuffer()) as ArrayBuffer
 }
 
 describe('parseVested — real sample', () => {
@@ -44,6 +55,24 @@ describe('parseVested — real sample', () => {
     expect(voo?.assetClass).toBe('etf')
     const aapl = result.rows.find((r) => r.sourceSymbol === 'AAPL')
     expect(aapl?.assetClass).toBe('equity')
+  })
+
+  it('captures the current price from the "Current Price (USD)" column', async () => {
+    const buf = await loadFixture('vested-sample.xlsx')
+    const result = await parseVested(buf)
+    const apple = result.rows.find((r) => r.sourceSymbol === 'AAPL')
+    expect(apple!.currentPrice).toBe(298.87)
+    for (const row of result.rows) {
+      expect(row.currentPrice).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('parseVested — optional current-price column', () => {
+  it('leaves currentPrice undefined (not 0) when "Current Price (USD)" is absent', async () => {
+    const result = await parseVested(await vestedWorkbookWithoutCurrentPrice())
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].currentPrice).toBeUndefined()
   })
 })
 

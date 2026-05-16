@@ -18,6 +18,14 @@ export type CanonicalHolding = {
   fxRate?: number
   fxAsOf?: number
   avgBuyPriceBase?: number
+  /** Current per-unit market price, native currency. Snapshot captured at
+   *  import from the broker export. `undefined` when the export had no
+   *  current-price column (old imports, or a future export drops it). */
+  currentPrice?: number
+  /** `currentPrice` converted to the base currency, stamped at import
+   *  alongside `avgBuyPriceBase`. `undefined` when `currentPrice` is absent
+   *  or import-time FX was unavailable. */
+  currentPriceBase?: number
 }
 
 export type HoldingKey = {

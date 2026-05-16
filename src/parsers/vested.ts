@@ -4,6 +4,7 @@ import type { ParseResult } from './types'
 import { ParseError } from './types'
 import {
   cellNumber,
+  cellNumberOrUndefined,
   cellString,
   findSheetBySignature,
   mapHeaderColumns,
@@ -56,6 +57,9 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
   const tickerCol = colIndexByName.get('Ticker')!
   const qtyCol = colIndexByName.get('Total Shares Held')!
   const avgCostCol = colIndexByName.get('Average Cost (USD)')!
+  // Optional: current per-unit price. Not in REQUIRED_COLUMNS — a Vested export
+  // without it still imports, the holding just lands with no `currentPrice`.
+  const currentPriceCol = colIndexByName.get('Current Price (USD)')
 
   const rows: CanonicalHolding[] = []
   let skipped = 0
@@ -67,6 +71,10 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
     const ticker = cellString(row.getCell(tickerCol))
     const quantity = cellNumber(row.getCell(qtyCol))
     const avgBuyPrice = cellNumber(row.getCell(avgCostCol))
+    const currentPrice =
+      currentPriceCol === undefined
+        ? undefined
+        : cellNumberOrUndefined(row.getCell(currentPriceCol))
 
     const ghost = !name || quantity === 0
     if (ghost) {
@@ -87,6 +95,7 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
       currency: 'USD',
       assetClass: assetClassFromVested(name),
       importedAt,
+      ...(currentPrice !== undefined && { currentPrice }),
     })
   }
 

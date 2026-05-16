@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
 import { parseGroww } from './groww'
 import { ParseError } from './types'
@@ -6,6 +7,16 @@ import { ParseError } from './types'
 async function loadFixture(name: string): Promise<ArrayBuffer> {
   const buf = await readFile(`tests/fixtures/${name}`)
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+}
+
+/** A minimal Groww-shaped workbook missing the optional `Closing price`
+ *  column — exercises the column-absent path without a binary fixture. */
+async function growwWorkbookWithoutClosingPrice(): Promise<ArrayBuffer> {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Sheet1')
+  ws.addRow(['Stock Name', 'ISIN', 'Quantity', 'Average buy price'])
+  ws.addRow(['ASIAN PAINTS LIMITED', 'INE021A01026', 22, 2410.04])
+  return (await wb.xlsx.writeBuffer()) as ArrayBuffer
 }
 
 describe('parseGroww — real sample', () => {
@@ -54,6 +65,25 @@ describe('parseGroww — real sample', () => {
     const asianPaints = result.rows.find((r) => r.name === 'ASIAN PAINTS LIMITED')
     expect(asianPaints).toBeDefined()
     expect(asianPaints!.sourceSymbol).toBe('INE021A01026')
+  })
+
+  it('captures the current price from the "Closing price" column', async () => {
+    const buf = await loadFixture('groww-sample.xlsx')
+    const result = await parseGroww(buf)
+    const asianPaints = result.rows.find((r) => r.name === 'ASIAN PAINTS LIMITED')
+    expect(asianPaints!.currentPrice).toBe(2617.6)
+    // every row in this sample has a closing price
+    for (const row of result.rows) {
+      expect(row.currentPrice).toBeGreaterThan(0)
+    }
+  })
+})
+
+describe('parseGroww — optional current-price column', () => {
+  it('leaves currentPrice undefined (not 0) when "Closing price" is absent', async () => {
+    const result = await parseGroww(await growwWorkbookWithoutClosingPrice())
+    expect(result.rows).toHaveLength(1)
+    expect(result.rows[0].currentPrice).toBeUndefined()
   })
 })
 
