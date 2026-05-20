@@ -79,6 +79,9 @@ A holding is stale if its `importedAt` is older than the maximum `importedAt` ac
 ### R10. External API calls follow the opt-in consent model
 Live prices, news, and the AI agent are the only sanctioned external-egress features. Each is **off by default**, requires a user-supplied API key stored in IndexedDB, and is gated by both a global "External APIs" master switch and a per-feature toggle in Settings (`CLAUDE.md` — Privacy first). The AI agent sends holdings (not just tickers) and additionally requires a separate explicit consent dialog before first use. No code path may originate an external request without satisfying these gates. Today's only external call (Frankfurter FX) is exempt because it sends no portfolio data — only currency codes; if that ever changes, it falls under the doctrine.
 
+### R11. Holdings are positional; transactions are an additive future store
+The primary rendering path is **positional**: `CanonicalHolding` stores current quantity + avg buy price, and each import overwrites the previous snapshot (`storage/holdings.ts:9-29`, `holdings.ts:87-97`). The decision (issue #19) is to keep this as the rendering path and add an **optional `transactions` store alongside `holdings`** — populated only when a transaction-flavoured broker export is provided. Transactions unlock realized P&L, dividend ledger, STCG/LTCG split, and XIRR (#23 and the XIRR slice of #24); they never replace positional rendering. Today's analytics (unrealized P&L, allocation, top movers, value-over-time) stay positional and are unaffected. Implementation is tracked in a follow-up issue; this rule exists so the dependency is visible before either store grows.
+
 <a id="dsl-decision-guide"></a>
 ## 3. Reviewer Decision Guide
 
