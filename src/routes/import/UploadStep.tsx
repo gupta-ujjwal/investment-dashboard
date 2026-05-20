@@ -3,16 +3,16 @@ import { diffHoldings } from '../../parsers/diff'
 import { parseGroww } from '../../parsers/groww'
 import { parseVested } from '../../parsers/vested'
 import { ParseError } from '../../parsers/types'
-import { getForSource, type Source } from '../../storage/holdings'
+import { getForSource, type BrokerSource } from '../../storage/holdings'
 import type { WizardAction } from './wizardState'
 
 type Props = {
-  source: Source
+  source: BrokerSource
   parseError: string | null
   dispatch: Dispatch<WizardAction>
 }
 
-const parserBySource = {
+const parserByBrokerSource = {
   vested: parseVested,
   groww: parseGroww,
 }
@@ -28,7 +28,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
     setBusy(true)
     try {
       const buf = await file.arrayBuffer()
-      const result = await parserBySource[source](buf)
+      const result = await parserByBrokerSource[source](buf)
       const existing = await getForSource(source)
       const diff = diffHoldings(existing, result.rows, source)
       dispatch({ type: 'parse-ok', result, diff })

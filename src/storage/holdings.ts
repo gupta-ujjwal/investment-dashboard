@@ -2,6 +2,10 @@ import { openDB } from 'idb'
 import type { IDBPDatabase } from 'idb'
 
 export type Source = 'vested' | 'groww' | 'manual'
+/** Broker sources only — every `Source` except `'manual'`. The import wizard
+ *  uses this because `'manual'` rows are direct-CRUD and never flow through
+ *  a parser or the diff path (R7 source containment). */
+export type BrokerSource = Exclude<Source, 'manual'>
 export type Currency = 'INR' | 'USD'
 export type BaseCurrency = Currency
 export type AssetClass = 'equity' | 'mf' | 'etf' | 'invit' | 'other'

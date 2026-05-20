@@ -1,13 +1,13 @@
 import type { Dispatch } from 'react'
-import type { Source } from '../../storage/holdings'
+import type { BrokerSource } from '../../storage/holdings'
 import type { WizardAction } from './wizardState'
 
 type Props = {
-  source: Source
+  source: BrokerSource
   dispatch: Dispatch<WizardAction>
 }
 
-const instructions: Record<Source, { title: string; steps: string[] }> = {
+const instructions: Record<BrokerSource, { title: string; steps: string[] }> = {
   vested: {
     title: 'Download your Vested holdings',
     steps: [

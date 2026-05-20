@@ -1,6 +1,6 @@
 import type { DiffResult } from '../../parsers/diff'
 import type { ParseResult } from '../../parsers/types'
-import type { Source } from '../../storage/holdings'
+import type { BrokerSource } from '../../storage/holdings'
 
 export type WizardStep = 'pick-source' | 'instructions' | 'upload' | 'preview' | 'committing' | 'done'
 
@@ -8,7 +8,7 @@ export type MissingDecision = 'keep' | 'delete'
 
 export type WizardState = {
   step: WizardStep
-  source: Source | null
+  source: BrokerSource | null
   parseError: string | null
   parseResult: ParseResult | null
   diff: DiffResult | null
@@ -17,7 +17,7 @@ export type WizardState = {
 }
 
 export type WizardAction =
-  | { type: 'pick-source'; source: Source }
+  | { type: 'pick-source'; source: BrokerSource }
   | { type: 'back-to-source' }
   | { type: 'instructions-acknowledged' }
   | { type: 'parse-failed'; message: string }
