@@ -64,23 +64,32 @@ export function HoldingsRoute() {
   )
 
   // Imperative fetcher for row-level actions (delete, setStatus, revert).
-  // Edit goes through the modal's own fetcher; here we only fire-and-forget
-  // for actions that don't need a form UI to surface field-level errors.
+  // Inline-edit's fetcher lives inside HoldingRow; modal-edit's lives inside
+  // HoldingForm. Both flow through the same /holdings action.
   const fetcher = useFetcher()
   const revalidator = useRevalidator()
 
-  // Restore the deleted/pre-edit row via direct IDB write (bypasses the
-  // action layer because the snapshot is by definition already-validated).
-  // Pre-merge integration test in diff.test.ts covers the override-survives
-  // scenario; this restore path mirrors that: upsert + revalidate.
-  const undoableDelete = useUndoableAction<CanonicalHolding>({
+  // Single undo hook handles both delete-undo and inline-edit-save-undo —
+  // restore path is identical (upsert the snapshot + revalidate). The
+  // toast's message differentiates the two for the user. Reliability Tenet
+  // 3 (blast radius) on irreplaceable single-user data.
+  const undoable = useUndoableAction<CanonicalHolding>({
     onUndo: async (snapshot) => {
       await upsertHolding(snapshot)
       revalidator.revalidate()
     },
   })
 
-  const onEdit = useCallback((h: CanonicalHolding) => setEditing(h), [])
+  const onEditModal = useCallback((h: CanonicalHolding) => setEditing(h), [])
+  const onEditSaved = useCallback(
+    (snapshot: CanonicalHolding) => {
+      undoable.show(snapshot, {
+        message: `Edited ${snapshot.name}`,
+        detail: 'Undo to restore previous values',
+      })
+    },
+    [undoable],
+  )
 
   const onDelete = useCallback(
     (h: CanonicalHolding) => {
@@ -89,12 +98,12 @@ export function HoldingsRoute() {
       formData.set('source', h.source)
       formData.set('sourceSymbol', h.sourceSymbol)
       fetcher.submit(formData, { method: 'post', action: '/holdings' })
-      undoableDelete.show(h, {
+      undoable.show(h, {
         message: `Deleted ${h.name}`,
         detail: `${h.sourceSymbol} · ${h.source}`,
       })
     },
-    [fetcher, undoableDelete],
+    [fetcher, undoable],
   )
 
   const onMarkClosed = useCallback(
@@ -134,13 +143,14 @@ export function HoldingsRoute() {
 
   const actions: RowActions = useMemo(
     () => ({
-      onEdit,
+      onEditModal,
+      onEditSaved,
       onDelete,
       onMarkClosed,
       onReopen,
       onRevertOverrides,
     }),
-    [onEdit, onDelete, onMarkClosed, onReopen, onRevertOverrides],
+    [onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides],
   )
 
   if (holdings.length === 0) {
@@ -268,9 +278,9 @@ export function HoldingsRoute() {
         onClose={() => setEditing(null)}
       />
       <UndoToast
-        toast={undoableDelete.active}
-        onUndo={undoableDelete.undo}
-        onDismiss={undoableDelete.dismiss}
+        toast={undoable.active}
+        onUndo={undoable.undo}
+        onDismiss={undoable.dismiss}
       />
     </div>
   )
