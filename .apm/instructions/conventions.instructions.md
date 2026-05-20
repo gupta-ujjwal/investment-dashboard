@@ -20,7 +20,7 @@ Later phases may add other markets, asset classes (crypto, MF, bonds), or instru
 
 - **Edge-only / no server.** No backend, no auth service, no user accounts, no analytics pixel. All portfolio data lives in the browser (IndexedDB / localStorage / OPFS — to be chosen). Any "API call" is the user's browser hitting a public data provider directly.
 - **GitHub Pages hosting.** The deployed artifact must be a static bundle. No SSR, no server-side routes, no Node-at-runtime. Build-time tooling is fine.
-- **Privacy first.** Never send the user's holdings off-device. Be wary of third-party scripts, telemetry SDKs, and any "free" service whose ToS implies data collection.
+- **Privacy first (opt-in egress).** No portfolio data leaves the device by default. Features that require external API calls — live prices, news, AI agent — are **opt-in**, default to off on fresh installs, and require user-supplied API keys stored in IndexedDB (the user spends their own quota on their own account). Consent is two-layer: a global "External APIs: on/off" master switch in Settings, plus per-feature toggles. Disclosure of what data is sent, and to whom, appears at the toggle in Settings and again in a first-run onboarding banner. The AI agent — which sends holdings, not just tickers — requires a separate explicit consent dialog before first use. No first-party telemetry under any condition; be wary of third-party scripts whose ToS implies data collection.
 - **Two markets, one app.** India (NSE/BSE, INR) and US (NYSE/NASDAQ, USD) must coexist in a single portfolio view. Currency conversion and per-market quirks (lot sizes, trading hours, ticker formats) are first-class concerns, not afterthoughts.
 
 ## Open decisions (not yet made — ask before assuming)

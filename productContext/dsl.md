@@ -76,8 +76,8 @@ A holding is stale if its `importedAt` is older than the maximum `importedAt` ac
 ### R9. Feature flags are compile-time constants
 `FEATURE_BASE_CURRENCY` and `FEATURE_HISTORY` (`featureFlags.ts:1-2`) are boolean exports, not runtime config. Disabling hides UI but does not revert schema. The v3 `historySnapshots` store exists regardless of the flag.
 
-### R10. No live price API in Phase 1
-The current price comes from broker export snapshots only. Any mention of fetching live prices from Yahoo Finance, Alpha Vantage, etc. must be flagged as out of scope (`CLAUDE.md:28`).
+### R10. External API calls follow the opt-in consent model
+Live prices, news, and the AI agent are the only sanctioned external-egress features. Each is **off by default**, requires a user-supplied API key stored in IndexedDB, and is gated by both a global "External APIs" master switch and a per-feature toggle in Settings (`CLAUDE.md` — Privacy first). The AI agent sends holdings (not just tickers) and additionally requires a separate explicit consent dialog before first use. No code path may originate an external request without satisfying these gates. Today's only external call (Frankfurter FX) is exempt because it sends no portfolio data — only currency codes; if that ever changes, it falls under the doctrine.
 
 <a id="dsl-decision-guide"></a>
 ## 3. Reviewer Decision Guide
@@ -122,7 +122,7 @@ The current price comes from broker export snapshots only. Any mention of fetchi
 <a id="dsl-gaps"></a>
 ## 4. Gaps / Unverified
 
-1. **Live price feed decision** — `CLAUDE.md:28` and `holdings-filters-sort-columns.md:11` both defer live prices to a future slice. No design exists yet.
+1. **Live price feed implementation** — the privacy doctrine now permits opt-in external calls (see R10 and `CLAUDE.md` — Privacy first), but the live-price feature itself is still undesigned. Provider choice (Alpha Vantage was the lone survivor of the May 2026 survey, 25 req/day free tier) and quota strategy are open. Tracked by issue #10.
 2. **Broker parser expansion** — Only Vested and Groww are implemented. The architecture supports more sources but no roadmap is documented.
 3. **SQLite-WASM vs IndexedDB for analytics** — `csv-import-vested-groww.md:37` flags this as an open question for a future analytics-heavy phase. Not decided.
 4. **Restore-from-backup UX** — Backup download exists (`PreviewStep.tsx:79-89`), but restore is mentioned as deferred in `csv-import-vested-groww.md:25` with no design.
