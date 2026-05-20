@@ -4,7 +4,12 @@ import type { BrokerSource } from '../../storage/holdings'
 
 export type WizardStep = 'pick-source' | 'instructions' | 'upload' | 'preview' | 'committing' | 'done'
 
-export type MissingDecision = 'keep' | 'delete'
+/** How to handle an existing row that's absent from the new broker upload.
+ *  `'keep'` leaves it untouched (the user might still hold it, the broker
+ *  just didn't include it). `'close'` marks it as exited (preserves the row
+ *  for time-series fidelity — historical snapshots keep their copy too).
+ *  `'delete'` removes it permanently. */
+export type MissingDecision = 'keep' | 'close' | 'delete'
 
 export type WizardState = {
   step: WizardStep
