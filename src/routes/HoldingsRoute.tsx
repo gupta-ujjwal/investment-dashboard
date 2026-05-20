@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
-import { Link, useLoaderData } from 'react-router-dom'
-import type { CanonicalHolding } from '../storage/holdings'
+import { useCallback, useMemo, useState } from 'react'
+import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
+import { upsertHolding, type CanonicalHolding } from '../storage/holdings'
 import type { Settings } from '../storage/settings'
 import {
   DEFAULT_FILTERS,
@@ -15,7 +15,10 @@ import {
 import { formatDate } from '../lib/format'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
+import type { RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
+import { useUndoableAction } from '../components/useUndoableAction'
+import { UndoToast } from '../components/UndoToast'
 import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 
 /** Columns whose natural first-click direction is ascending (text-like). */
@@ -52,11 +55,92 @@ export function HoldingsRoute() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT)
   const [addOpen, setAddOpen] = useState(false)
+  const [editing, setEditing] = useState<CanonicalHolding | null>(null)
 
   const rows = useMemo(() => viewRows(holdings, filters, sort), [holdings, filters, sort])
   const existingKeys = useMemo(
     () => holdings.map((h) => ({ source: h.source, sourceSymbol: h.sourceSymbol })),
     [holdings],
+  )
+
+  // Imperative fetcher for row-level actions (delete, setStatus, revert).
+  // Edit goes through the modal's own fetcher; here we only fire-and-forget
+  // for actions that don't need a form UI to surface field-level errors.
+  const fetcher = useFetcher()
+  const revalidator = useRevalidator()
+
+  // Restore the deleted/pre-edit row via direct IDB write (bypasses the
+  // action layer because the snapshot is by definition already-validated).
+  // Pre-merge integration test in diff.test.ts covers the override-survives
+  // scenario; this restore path mirrors that: upsert + revalidate.
+  const undoableDelete = useUndoableAction<CanonicalHolding>({
+    onUndo: async (snapshot) => {
+      await upsertHolding(snapshot)
+      revalidator.revalidate()
+    },
+  })
+
+  const onEdit = useCallback((h: CanonicalHolding) => setEditing(h), [])
+
+  const onDelete = useCallback(
+    (h: CanonicalHolding) => {
+      const formData = new FormData()
+      formData.set('intent', 'delete')
+      formData.set('source', h.source)
+      formData.set('sourceSymbol', h.sourceSymbol)
+      fetcher.submit(formData, { method: 'post', action: '/holdings' })
+      undoableDelete.show(h, {
+        message: `Deleted ${h.name}`,
+        detail: `${h.sourceSymbol} · ${h.source}`,
+      })
+    },
+    [fetcher, undoableDelete],
+  )
+
+  const onMarkClosed = useCallback(
+    (h: CanonicalHolding) => {
+      const formData = new FormData()
+      formData.set('intent', 'setStatus')
+      formData.set('source', h.source)
+      formData.set('sourceSymbol', h.sourceSymbol)
+      formData.set('status', 'closed')
+      fetcher.submit(formData, { method: 'post', action: '/holdings' })
+    },
+    [fetcher],
+  )
+
+  const onReopen = useCallback(
+    (h: CanonicalHolding) => {
+      const formData = new FormData()
+      formData.set('intent', 'setStatus')
+      formData.set('source', h.source)
+      formData.set('sourceSymbol', h.sourceSymbol)
+      formData.set('status', 'open')
+      fetcher.submit(formData, { method: 'post', action: '/holdings' })
+    },
+    [fetcher],
+  )
+
+  const onRevertOverrides = useCallback(
+    (h: CanonicalHolding) => {
+      const formData = new FormData()
+      formData.set('intent', 'revertOverrides')
+      formData.set('source', h.source)
+      formData.set('sourceSymbol', h.sourceSymbol)
+      fetcher.submit(formData, { method: 'post', action: '/holdings' })
+    },
+    [fetcher],
+  )
+
+  const actions: RowActions = useMemo(
+    () => ({
+      onEdit,
+      onDelete,
+      onMarkClosed,
+      onReopen,
+      onRevertOverrides,
+    }),
+    [onEdit, onDelete, onMarkClosed, onReopen, onRevertOverrides],
   )
 
   if (holdings.length === 0) {
@@ -93,10 +177,17 @@ export function HoldingsRoute() {
     )
   }
 
-  const inr = holdings.filter((h) => h.currency === 'INR').length
-  const usd = holdings.filter((h) => h.currency === 'USD').length
-  const unstamped = holdings.filter((h) => h.avgBuyPriceBase === undefined).length
-  const pricedAt = newestImport(holdings)
+  // Tallies use the *open* set so "5 positions · 3 INR · 2 USD" matches the
+  // default view. Closed-position count is surfaced in the filter toggle
+  // label and the page caption.
+  const openHoldings = holdings.filter((h) => h.status !== 'closed')
+  const inr = openHoldings.filter((h) => h.currency === 'INR').length
+  const usd = openHoldings.filter((h) => h.currency === 'USD').length
+  const closedCount = holdings.length - openHoldings.length
+  const unstamped = holdings.filter(
+    (h) => h.avgBuyPriceBase === undefined && h.status !== 'closed',
+  ).length
+  const pricedAt = newestImport(openHoldings)
 
   function onSort(key: SortKey) {
     setSort((prev) =>
@@ -111,7 +202,7 @@ export function HoldingsRoute() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageHead
           title="Holdings"
-          caption={`${holdings.length} positions · ${inr} INR · ${usd} USD`}
+          caption={`${openHoldings.length} open · ${inr} INR · ${usd} USD${closedCount > 0 ? ` · ${closedCount} closed` : ''}`}
         />
         <div className="flex items-center gap-2">
           <button
@@ -143,6 +234,7 @@ export function HoldingsRoute() {
       <HoldingsControls
         filters={filters}
         sort={sort}
+        closedCount={closedCount}
         onFilters={setFilters}
         onSortKey={onSort}
         onToggleDir={() =>
@@ -158,6 +250,7 @@ export function HoldingsRoute() {
           baseCurrency={settings.baseCurrency}
           sort={sort}
           onSort={onSort}
+          actions={actions}
         />
       )}
 
@@ -167,6 +260,18 @@ export function HoldingsRoute() {
         existingKeys={existingKeys}
         onClose={() => setAddOpen(false)}
       />
+      <HoldingForm
+        open={editing !== null}
+        mode="edit"
+        holding={editing ?? undefined}
+        existingKeys={existingKeys}
+        onClose={() => setEditing(null)}
+      />
+      <UndoToast
+        toast={undoableDelete.active}
+        onUndo={undoableDelete.undo}
+        onDismiss={undoableDelete.dismiss}
+      />
     </div>
   )
 }
@@ -174,18 +279,20 @@ export function HoldingsRoute() {
 function HoldingsControls({
   filters,
   sort,
+  closedCount,
   onFilters,
   onSortKey,
   onToggleDir,
 }: {
   filters: Filters
   sort: Sort
+  closedCount: number
   onFilters: (next: Filters) => void
   onSortKey: (key: SortKey) => void
   onToggleDir: () => void
 }) {
   return (
-    <section className="flex flex-col gap-3 border border-bone-100/10 bg-ink-900 p-3 sm:flex-row sm:items-center sm:justify-between">
+    <section className="flex flex-col gap-3 border border-bone-100/10 bg-ink-900 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       {/* Market segmented control */}
       <div
         role="group"
@@ -226,6 +333,20 @@ function HoldingsControls({
           className="w-full bg-transparent font-mono text-xs text-bone-100 placeholder:text-bone-400 focus:outline-none"
         />
       </label>
+
+      {/* Closed-positions toggle. Hidden when there are no closed rows to
+          show — keeps the control surface honest with the data. */}
+      {closedCount > 0 && (
+        <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-tick-400 has-[:checked]:text-tick-400">
+          <input
+            type="checkbox"
+            checked={filters.showClosed === true}
+            onChange={(e) => onFilters({ ...filters, showClosed: e.target.checked })}
+            className="h-3 w-3 accent-tick-400"
+          />
+          Show closed ({closedCount})
+        </label>
+      )}
 
       {/* Mobile sort — desktop sorts via column headers */}
       <div className="flex items-center gap-2 md:hidden">

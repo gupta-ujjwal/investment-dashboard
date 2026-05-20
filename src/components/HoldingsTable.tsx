@@ -9,6 +9,7 @@ import {
   money,
   profitColor,
   toneOf,
+  type RowActions,
 } from './HoldingRow'
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
   baseCurrency: BaseCurrency
   sort: Sort
   onSort: (key: SortKey) => void
+  actions: RowActions
 }
 
 type Column = { key: SortKey; label: string; numeric: boolean }
@@ -49,7 +51,7 @@ function sumField(
   return total
 }
 
-export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
+export function HoldingsTable({ rows, baseCurrency, sort, onSort, actions }: Props) {
   const cols = columns(baseCurrency)
 
   // Totals reflect the rows actually shown — they re-sum when a filter narrows
@@ -74,6 +76,13 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
               {cols.map((col) => (
                 <SortHeader key={col.key} col={col} sort={sort} onSort={onSort} />
               ))}
+              <th
+                scope="col"
+                aria-label="Row actions"
+                className="px-2 py-3 text-right font-mono text-bone-400"
+              >
+                <span aria-hidden="true">⋯</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -82,6 +91,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
                 key={`${row.holding.source}-${row.holding.sourceSymbol}`}
                 row={row}
                 baseCurrency={baseCurrency}
+                actions={actions}
               />
             ))}
           </tbody>
@@ -107,6 +117,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
                 </div>
               </td>
               <td className="px-4 py-3.5" />
+              <td className="px-2 py-3.5" />
             </tr>
           </tfoot>
         </table>
@@ -146,6 +157,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort }: Props) {
             key={`${row.holding.source}-${row.holding.sourceSymbol}`}
             row={row}
             baseCurrency={baseCurrency}
+            actions={actions}
           />
         ))}
       </section>
