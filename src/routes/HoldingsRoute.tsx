@@ -14,6 +14,7 @@ import {
 } from '../lib/holdingsView'
 import { formatDate } from '../lib/format'
 import { HoldingsTable } from '../components/HoldingsTable'
+import { HoldingForm } from '../components/HoldingForm'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 
@@ -50,8 +51,13 @@ export function HoldingsRoute() {
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT)
+  const [addOpen, setAddOpen] = useState(false)
 
   const rows = useMemo(() => viewRows(holdings, filters, sort), [holdings, filters, sort])
+  const existingKeys = useMemo(
+    () => holdings.map((h) => ({ source: h.source, sourceSymbol: h.sourceSymbol })),
+    [holdings],
+  )
 
   if (holdings.length === 0) {
     return (
@@ -59,15 +65,30 @@ export function HoldingsRoute() {
         <PageHead title="Holdings" caption="Nothing imported yet" />
         <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
           <p className="font-sans text-base text-bone-200">
-            Import a broker file to see your positions here.
+            Import a broker file to see your positions here — or add one manually below.
           </p>
-          <Link
-            to="/import"
-            className="mt-6 inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
-          >
-            Go to Import →
-          </Link>
+          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              to="/import"
+              className="inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+            >
+              Go to Import →
+            </Link>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-tick-400 hover:text-tick-400"
+            >
+              + Add manually
+            </button>
+          </div>
         </div>
+        <HoldingForm
+          open={addOpen}
+          mode="add"
+          existingKeys={existingKeys}
+          onClose={() => setAddOpen(false)}
+        />
       </div>
     )
   }
@@ -92,12 +113,21 @@ export function HoldingsRoute() {
           title="Holdings"
           caption={`${holdings.length} positions · ${inr} INR · ${usd} USD`}
         />
-        <Link
-          to="/import"
-          className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
-        >
-          + Import
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex w-fit items-center gap-2 border border-tick-400 bg-tick-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-tick-400 transition hover:bg-tick-400 hover:text-ink-950"
+          >
+            + Add holding
+          </button>
+          <Link
+            to="/import"
+            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+          >
+            + Import
+          </Link>
+        </div>
       </div>
 
       {pricedAt !== undefined && (
@@ -130,6 +160,13 @@ export function HoldingsRoute() {
           onSort={onSort}
         />
       )}
+
+      <HoldingForm
+        open={addOpen}
+        mode="add"
+        existingKeys={existingKeys}
+        onClose={() => setAddOpen(false)}
+      />
     </div>
   )
 }
