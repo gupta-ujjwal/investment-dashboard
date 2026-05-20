@@ -1,10 +1,15 @@
 import { useLoaderData } from 'react-router-dom'
 import { SettingsForm } from './SettingsForm'
+import { DataBackupSection } from './DataBackupSection'
 import { FEATURE_BASE_CURRENCY } from '../featureFlags'
 import type { Settings } from '../storage/settings'
+import type { CanonicalHolding } from '../storage/holdings'
 
 export function SettingsRoute() {
-  const { settings } = useLoaderData() as { settings: Settings }
+  const { settings, holdings } = useLoaderData() as {
+    settings: Settings
+    holdings: CanonicalHolding[]
+  }
   return (
     <div className="space-y-10">
       <div className="flex flex-col gap-1">
@@ -28,6 +33,16 @@ export function SettingsRoute() {
           <SettingsForm />
         </section>
       )}
+
+      <section aria-labelledby="data-heading" className="space-y-4">
+        <h2
+          id="data-heading"
+          className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300"
+        >
+          Data
+        </h2>
+        <DataBackupSection currentHoldings={holdings} />
+      </section>
     </div>
   )
 }

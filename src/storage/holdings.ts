@@ -96,6 +96,21 @@ export async function commitImport(args: CommitImportArgs): Promise<void> {
   ])
 }
 
+/**
+ * Replace every holding on this device with the supplied set, atomically.
+ * One readwrite transaction — the clear and the adds either all succeed or
+ * all roll back. Used by the Restore-from-backup flow; do not use for
+ * normal import (which is diff-driven via `commitImport`).
+ */
+export async function restoreAllHoldings(holdings: CanonicalHolding[]): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(STORE, 'readwrite')
+  const store = tx.objectStore(STORE)
+  store.clear()
+  for (const row of holdings) store.add(row)
+  await tx.done
+}
+
 export async function exportSnapshot(): Promise<string> {
   const holdings = await getAll()
   return JSON.stringify(
