@@ -79,6 +79,9 @@ A holding is stale if its `importedAt` is older than the maximum `importedAt` ac
 ### R10. No live price API in Phase 1
 The current price comes from broker export snapshots only. Any mention of fetching live prices from Yahoo Finance, Alpha Vantage, etc. must be flagged as out of scope (`CLAUDE.md:28`).
 
+### R11. Holdings are positional; transactions are an additive future store
+The primary rendering path is **positional**: `CanonicalHolding` stores current quantity + avg buy price, and each import overwrites the previous snapshot (`storage/holdings.ts:9-29`, `holdings.ts:87-97`). The decision (issue #19) is to keep this as the rendering path and add an **optional `transactions` store alongside `holdings`** — populated only when a transaction-flavoured broker export is provided. Transactions unlock realized P&L, dividend ledger, STCG/LTCG split, and XIRR (#23 and the XIRR slice of #24); they never replace positional rendering. Today's analytics (unrealized P&L, allocation, top movers, value-over-time) stay positional and are unaffected. Implementation is tracked in a follow-up issue; this rule exists so the dependency is visible before either store grows.
+
 <a id="dsl-decision-guide"></a>
 ## 3. Reviewer Decision Guide
 
