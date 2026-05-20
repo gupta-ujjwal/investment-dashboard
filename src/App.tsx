@@ -32,8 +32,8 @@ const dashboardLoader = async () => {
 }
 
 const settingsLoader = async () => {
-  const settings = await getSettings()
-  return { settings }
+  const [settings, holdings] = await Promise.all([getSettings(), getAll()])
+  return { settings, holdings }
 }
 
 function isBaseCurrency(v: FormDataEntryValue | null): v is BaseCurrency {
