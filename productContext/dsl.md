@@ -125,4 +125,4 @@ The current price comes from broker export snapshots only. Any mention of fetchi
 1. **Live price feed decision** — `CLAUDE.md:28` and `holdings-filters-sort-columns.md:11` both defer live prices to a future slice. No design exists yet.
 2. **Broker parser expansion** — Only Vested and Groww are implemented. The architecture supports more sources but no roadmap is documented.
 3. **SQLite-WASM vs IndexedDB for analytics** — `csv-import-vested-groww.md:37` flags this as an open question for a future analytics-heavy phase. Not decided.
-4. **Restore-from-backup UX** — Backup download exists (`PreviewStep.tsx:79-89`), but restore is mentioned as deferred in `csv-import-vested-groww.md:25` with no design.
+4. ~~**Restore-from-backup UX**~~ — Resolved. Settings → Data → Restore picks a backup `.json`, validates the schema, previews a 3-up diff, and atomically replaces every holding on confirm (`routes/DataBackupSection.tsx`, `lib/restoreBackup.ts`, `storage/holdings.ts:restoreAllHoldings`). Replace-only semantics: merge-on-restore is a future option, not the current behaviour.
