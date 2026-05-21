@@ -3,10 +3,20 @@ import { Link, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
-import { portfolioTotals } from '../lib/analytics'
+import {
+  concentration,
+  portfolioTotals,
+  type Concentration,
+  type HhiBand,
+} from '../lib/analytics'
+import { deriveRows } from '../lib/holdingsView'
 import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
-import { FEATURE_BASE_CURRENCY, FEATURE_HISTORY } from '../featureFlags'
+import {
+  FEATURE_ANALYTICS_DEPTH,
+  FEATURE_BASE_CURRENCY,
+  FEATURE_HISTORY,
+} from '../featureFlags'
 
 /** Recharts is heavy (~100KB+); keep it out of the initial bundle so the KPI
  *  row paints first. The Suspense fallback covers the chunk load. */
@@ -35,6 +45,9 @@ export function AnalyticsRoute() {
       : totals.totalProfitBase >= 0
         ? 'gain'
         : 'loss'
+  const conc: Concentration | undefined = FEATURE_ANALYTICS_DEPTH
+    ? concentration(deriveRows(holdings))
+    : undefined
 
   return (
     <div className="space-y-10">
@@ -77,6 +90,8 @@ export function AnalyticsRoute() {
           tone="mute"
         />
       </section>
+
+      {conc && <RiskRow concentration={conc} />}
 
       <section aria-label="Charts">
         <div className="flex items-end justify-between">
@@ -190,4 +205,51 @@ function EmptyState() {
       </div>
     </div>
   )
+}
+
+/** Risk sub-row beneath the main KPIs — concentration metrics derived from
+ *  the priced holdings. Only the `high` HHI band and a firing single-stock
+ *  flag get an ember tone; everything else stays mute so the row reads as
+ *  context rather than alarm. */
+function RiskRow({ concentration: c }: { concentration: Concentration }) {
+  const hhiBandLabel: Record<HhiBand, string> = {
+    low: 'Low',
+    moderate: 'Moderate',
+    high: 'High',
+  }
+  return (
+    <section
+      aria-label="Risk"
+      className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
+    >
+      <Kpi
+        label="Top-5 weight"
+        value={c.top5Pct === undefined ? '—' : pctNoSign(c.top5Pct)}
+        sub={c.top5Pct === undefined ? 'no priced holdings' : 'of portfolio value'}
+        tone="mute"
+      />
+      <Kpi
+        label="Concentration"
+        value={c.hhiBand === undefined ? '—' : hhiBandLabel[c.hhiBand]}
+        sub={c.hhi === undefined ? 'HHI unavailable' : `HHI ${c.hhi.toFixed(2)}`}
+        tone={c.hhiBand === 'high' ? 'loss' : 'mute'}
+      />
+      <Kpi
+        label="Single-stock risk"
+        value={c.singleStockRisk === undefined ? '—' : c.singleStockRisk.holding.name}
+        sub={
+          c.singleStockRisk === undefined
+            ? 'no position >10%'
+            : `${pctNoSign(c.singleStockRisk.weight)} of portfolio`
+        }
+        tone={c.singleStockRisk === undefined ? 'mute' : 'loss'}
+      />
+    </section>
+  )
+}
+
+/** `formatPercent` includes a leading `+` for positive values; the Risk row
+ *  reads weights as magnitudes, not directional changes, so the sign is noise. */
+function pctNoSign(value: number): string {
+  return formatPercent(value).replace('+', '')
 }
