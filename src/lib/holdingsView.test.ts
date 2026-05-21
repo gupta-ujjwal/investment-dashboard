@@ -217,7 +217,45 @@ describe('viewRows — full pipeline', () => {
       holding({ name: 'Microsoft', currency: 'USD', currentPrice: 100, currentPriceBase: 8000 }),
     ]
     const sort: Sort = { key: 'currentValue', dir: 'desc' }
-    const out = viewRows(holdings, { market: 'USD', search: '', }, sort)
+    const out = viewRows(holdings, { market: 'USD', search: '' }, sort)
     expect(out.map((r) => r.holding.name)).toEqual(['Apple', 'Microsoft'])
+  })
+})
+
+describe('closed-position handling', () => {
+  it('hides closed rows by default', () => {
+    const rows = deriveRows([
+      holding({ name: 'Open', status: 'open' }),
+      holding({ name: 'Closed', sourceSymbol: 'XYZ', status: 'closed' }),
+    ])
+    const visible = applyFilters(rows, { market: 'all', search: '' })
+    expect(visible.map((r) => r.holding.name)).toEqual(['Open'])
+  })
+
+  it('reveals closed rows when showClosed is true', () => {
+    const rows = deriveRows([
+      holding({ name: 'Open', status: 'open' }),
+      holding({ name: 'Closed', sourceSymbol: 'XYZ', status: 'closed' }),
+    ])
+    const visible = applyFilters(rows, { market: 'all', search: '', showClosed: true })
+    expect(visible.map((r) => r.holding.name).sort()).toEqual(['Closed', 'Open'])
+  })
+
+  it('treats absent status as open (legacy rows stay visible)', () => {
+    const rows = deriveRows([holding({ name: 'Legacy', status: undefined })])
+    const visible = applyFilters(rows, { market: 'all', search: '' })
+    expect(visible).toHaveLength(1)
+  })
+
+  it('isStale is always false for closed rows even when older than newest import', () => {
+    const rows = deriveRows([
+      holding({ sourceSymbol: 'CLOSED', importedAt: 1000, status: 'closed' }),
+      holding({ sourceSymbol: 'OPEN', importedAt: 2000, status: 'open' }),
+    ])
+    const byKey = new Map(rows.map((r) => [r.holding.sourceSymbol, r]))
+    // The closed row's importedAt is older than OPEN's — it would be stale
+    // under the open-row rule. The status:'closed' guard suppresses it.
+    expect(byKey.get('CLOSED')!.isStale).toBe(false)
+    expect(byKey.get('OPEN')!.isStale).toBe(false)
   })
 })

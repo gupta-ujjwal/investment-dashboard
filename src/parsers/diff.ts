@@ -1,8 +1,17 @@
 import type { CanonicalHolding, HoldingKey, Source } from '../storage/holdings'
+import { mergeWithOverrides } from '../storage/holdingMerge'
 
 export type DiffResult = {
   inserts: CanonicalHolding[]
+  /** Update rows already reflect `mergeWithOverrides` (per-field sticky
+   *  overrides honored) and `closed → open` flips for re-imported closed
+   *  rows. The caller writes these via `commitImport.updates` directly. */
   updates: CanonicalHolding[]
+  /** Existing rows the broker didn't re-deliver. Closed rows are NOT included
+   *  here — a `status:'closed'` row that's "missing" from the new export is
+   *  not news (the user already exited the position). Excluding them keeps
+   *  the PreviewStep prompt focused on rows the user still needs to decide
+   *  about. */
   missing: CanonicalHolding[]
 }
 
@@ -35,11 +44,25 @@ export function diffHoldings(
 
   for (const row of incoming) {
     incomingKeys.add(row.sourceSymbol)
-    if (existingByKey.has(row.sourceSymbol)) updates.push(row)
-    else inserts.push(row)
+    const existing = existingByKey.get(row.sourceSymbol)
+    if (!existing) {
+      inserts.push(row)
+      continue
+    }
+    // Update path: merge sticky overrides + flip closed→open if the row
+    // came back from the broker (a re-import implies the user re-opened the
+    // position). The `closed→open` flip is independent of overrides — a
+    // closed row with no overrides still flips back to open on re-import.
+    const merged = mergeWithOverrides(existing, row)
+    if (merged.status === 'closed') merged.status = 'open'
+    updates.push(merged)
   }
 
-  const missing = existingForSource.filter((row) => !incomingKeys.has(row.sourceSymbol))
+  // Missing rows: existing entries the broker didn't re-deliver. Skip closed
+  // ones — the user has already exited; no decision to ask about.
+  const missing = existingForSource.filter(
+    (row) => !incomingKeys.has(row.sourceSymbol) && row.status !== 'closed',
+  )
   return { inserts, updates, missing }
 }
 

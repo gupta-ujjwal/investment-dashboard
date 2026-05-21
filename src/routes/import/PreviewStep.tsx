@@ -49,9 +49,18 @@ export function PreviewStep({ state, dispatch }: Props) {
       const toDelete = state.diff.missing.filter(
         (m) => decisions[m.sourceSymbol] === 'delete',
       )
+      // Rows the user chose to "mark closed" become status:'closed' updates
+      // — the row stays in storage (and in historySnapshots that captured
+      // it), but drops out of current views by default. Touching updatedAt
+      // keeps audit timestamps honest. R3 (atomic commit) still holds: this
+      // happens inside the same commitImport txn as inserts/updates/deletes.
+      const now = Date.now()
+      const toClose: CanonicalHolding[] = state.diff.missing
+        .filter((m) => decisions[m.sourceSymbol] === 'close')
+        .map((m) => ({ ...m, status: 'closed', updatedAt: now }))
       await commitImport({
         inserts: stamp(state.diff.inserts),
-        updates: stamp(state.diff.updates),
+        updates: [...stamp(state.diff.updates), ...stamp(toClose)],
         deletes: toDeleteKeys(toDelete),
       })
       if (liveFxFailure && rate === null) {
@@ -204,18 +213,27 @@ function MissingRowsPanel({ state, dispatch }: Props) {
           <p className="mt-1 max-w-xl font-sans text-sm text-ember-300/70">
             Pick{' '}
             <span className="font-mono text-[11px] uppercase tracking-[0.16em]">keep</span>{' '}
-            (unchanged) or{' '}
+            (unchanged),{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em]">mark closed</span>{' '}
+            (you sold it — preserves history), or{' '}
             <span className="font-mono text-[11px] uppercase tracking-[0.16em]">delete</span>{' '}
-            (removed on commit).
+            (gone after commit).
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
             className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
           >
             Keep all
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'set-all-decisions', decision: 'close' })}
+            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+          >
+            Close all
           </button>
           <button
             type="button"
@@ -244,7 +262,7 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                   {formatMoney(row.avgBuyPrice, row.currency)}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <DecisionButton
                   active={decision === 'keep'}
                   onClick={() =>
@@ -255,6 +273,19 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                     })
                   }
                   label="Keep"
+                  tone="default"
+                />
+                <DecisionButton
+                  active={decision === 'close'}
+                  onClick={() =>
+                    dispatch({
+                      type: 'set-decision',
+                      sourceSymbol: row.sourceSymbol,
+                      decision: 'close',
+                    })
+                  }
+                  label="Mark closed"
+                  tone="tick"
                 />
                 <DecisionButton
                   active={decision === 'delete'}
@@ -266,7 +297,7 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                     })
                   }
                   label="Delete"
-                  destructive
+                  tone="ember"
                 />
               </div>
             </li>
@@ -281,17 +312,19 @@ function DecisionButton({
   active,
   onClick,
   label,
-  destructive = false,
+  tone,
 }: {
   active: boolean
   onClick: () => void
   label: string
-  destructive?: boolean
+  tone: 'default' | 'tick' | 'ember'
 }) {
-  const base = 'border px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] transition'
+  const base =
+    'border px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] transition'
   let classes: string
-  if (active && destructive) classes = 'border-ember-400 bg-ember-400 text-ink-950'
-  else if (active) classes = 'border-tick-400 bg-tick-400 text-ink-950'
+  if (active && tone === 'ember') classes = 'border-ember-400 bg-ember-400 text-ink-950'
+  else if (active && tone === 'tick') classes = 'border-tick-400 bg-tick-400 text-ink-950'
+  else if (active) classes = 'border-bone-100/40 bg-bone-100/10 text-bone-50'
   else classes = 'border-bone-100/15 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
 
   return (

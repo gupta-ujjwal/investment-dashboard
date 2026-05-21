@@ -1,5 +1,5 @@
 import type { Dispatch } from 'react'
-import type { Source } from '../../storage/holdings'
+import type { BrokerSource } from '../../storage/holdings'
 import type { WizardAction } from './wizardState'
 
 type Props = {
@@ -7,7 +7,7 @@ type Props = {
 }
 
 const options: Array<{
-  source: Source
+  source: BrokerSource
   title: string
   subtitle: string
   market: string

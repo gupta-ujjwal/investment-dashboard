@@ -37,3 +37,11 @@ coverage/
 
 # APM dependencies
 apm_modules/
+
+# Agent scratch — /brainstorm and /develop working notes per topic. The
+# canonical PR artifact is `implementation-docs/<topic-slug>.md`; `notes/`
+# is intermediate state and not committed.
+notes/
+
+# Playwright MCP scratch (browser-context dumps from ad-hoc verification runs).
+.playwright-mcp/

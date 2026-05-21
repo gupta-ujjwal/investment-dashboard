@@ -16,11 +16,18 @@ export type SortDir = 'asc' | 'desc'
 export type MarketFilter = 'all' | 'INR' | 'USD'
 
 export type Sort = { key: SortKey; dir: SortDir }
-export type Filters = { market: MarketFilter; search: string }
+export type Filters = {
+  market: MarketFilter
+  search: string
+  /** Whether `status:'closed'` rows are visible. Defaults to false at the
+   *  call site (the `Show closed positions` toggle in HoldingsRoute) so a
+   *  fresh user landing on the page sees only open positions. */
+  showClosed?: boolean
+}
 
 /** Default landing sort: largest current position first. */
 export const DEFAULT_SORT: Sort = { key: 'currentValue', dir: 'desc' }
-export const DEFAULT_FILTERS: Filters = { market: 'all', search: '' }
+export const DEFAULT_FILTERS: Filters = { market: 'all', search: '', showClosed: false }
 
 /**
  * A holding with its derived per-row figures. Every derived field is a partial
@@ -43,7 +50,8 @@ export type DerivedRow = {
    *  only a current price and a non-zero buy price. */
   profitPct: number | undefined
   /** True when this row was imported before the newest import in the set —
-   *  its snapshot price is older than another broker's. */
+   *  its snapshot price is older than another broker's. Always `false` for
+   *  `status:'closed'` rows (a closed row can't go stale). */
   isStale: boolean
 }
 
@@ -71,6 +79,11 @@ function deriveRow(holding: CanonicalHolding, newestImportedAt: number): Derived
       ? undefined
       : (currentPrice - avgBuyPrice) / avgBuyPrice
 
+  // A closed position is by definition not "stale" — the user marked it
+  // exited; older `importedAt` is just historical. Suppresses the stale
+  // badge on closed rows when they're surfaced via the Show-closed toggle.
+  const isStale = holding.status === 'closed' ? false : holding.importedAt < newestImportedAt
+
   return {
     holding,
     investedNative,
@@ -79,12 +92,13 @@ function deriveRow(holding: CanonicalHolding, newestImportedAt: number): Derived
     currentValueBase,
     profitAbsBase,
     profitPct,
-    isStale: holding.importedAt < newestImportedAt,
+    isStale,
   }
 }
 
 /** Project raw holdings into derived rows. Staleness is relative to the
- *  newest `importedAt` across the whole set. */
+ *  newest `importedAt` across the whole set. Closed rows are included — the
+ *  *visibility* filter is `applyFilters.showClosed`, not this projection. */
 export function deriveRows(holdings: CanonicalHolding[]): DerivedRow[] {
   const newestImportedAt = holdings.reduce((max, h) => Math.max(max, h.importedAt), 0)
   return holdings.map((h) => deriveRow(h, newestImportedAt))
@@ -99,6 +113,7 @@ export function newestImport(holdings: CanonicalHolding[]): number | undefined {
 export function applyFilters(rows: DerivedRow[], filters: Filters): DerivedRow[] {
   const q = filters.search.trim().toLowerCase()
   return rows.filter((r) => {
+    if (r.holding.status === 'closed' && !filters.showClosed) return false
     if (filters.market !== 'all' && r.holding.currency !== filters.market) return false
     if (q) {
       const name = r.holding.name.toLowerCase()
