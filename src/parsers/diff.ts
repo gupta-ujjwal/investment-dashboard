@@ -1,4 +1,4 @@
-import type { CanonicalHolding, HoldingKey, Source } from '../storage/holdings'
+import type { BrokerSource, CanonicalHolding, HoldingKey } from '../storage/holdings'
 import { mergeWithOverrides } from '../storage/holdingMerge'
 
 export type DiffResult = {
@@ -18,7 +18,7 @@ export type DiffResult = {
 export function diffHoldings(
   existingForSource: CanonicalHolding[],
   incoming: CanonicalHolding[],
-  source: Source,
+  source: BrokerSource,
 ): DiffResult {
   for (const row of existingForSource) {
     if (row.source !== source) {
