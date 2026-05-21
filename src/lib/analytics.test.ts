@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { CanonicalHolding } from '../storage/holdings'
+import type { CanonicalHolding, Currency } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import { deriveRows } from './holdingsView'
-import { allocation, portfolioTotals, topMovers, valueSeries } from './analytics'
+import {
+  allocation,
+  concentration,
+  portfolioTotals,
+  topMovers,
+  valueSeries,
+} from './analytics'
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
   return {
@@ -184,5 +190,161 @@ describe('valueSeries', () => {
   it('handles a single-snapshot history without error', () => {
     const series = valueSeries([record({ holdings: [stamped()] })], 'INR')
     expect(series).toHaveLength(1)
+  })
+})
+
+/** Equally-weighted holding (base value 100). Each contributes a uniform 1/n
+ *  slice to allocation and to concentration math. */
+function equalUnit(symbol: string, currency: Currency = 'INR'): CanonicalHolding {
+  return holding({
+    sourceSymbol: symbol,
+    name: symbol,
+    currency,
+    quantity: 1,
+    avgBuyPrice: 100,
+    avgBuyPriceBase: 100,
+    currentPrice: 100,
+    currentPriceBase: 100,
+  })
+}
+
+/** Mirror of the production threshold so band-edge tests don't drift if the
+ *  threshold ever changes — the test would then need an intentional update. */
+const SINGLE_STOCK_THRESHOLD = 0.10
+
+describe('concentration — empty / unpriced inputs', () => {
+  it('returns all-undefined for an empty portfolio', () => {
+    const c = concentration([])
+    expect(c.top5Pct).toBeUndefined()
+    expect(c.hhi).toBeUndefined()
+    expect(c.hhiBand).toBeUndefined()
+    expect(c.singleStockRisk).toBeUndefined()
+  })
+
+  it('returns all-undefined when no holding has a base-currency price', () => {
+    const rows = deriveRows([
+      holding({ sourceSymbol: 'A', avgBuyPriceBase: undefined, currentPriceBase: undefined }),
+      holding({ sourceSymbol: 'B', avgBuyPriceBase: undefined, currentPriceBase: undefined }),
+    ])
+    const c = concentration(rows)
+    expect(c.top5Pct).toBeUndefined()
+    expect(c.hhi).toBeUndefined()
+    expect(c.hhiBand).toBeUndefined()
+    expect(c.singleStockRisk).toBeUndefined()
+  })
+})
+
+describe('concentration — degenerate single holding', () => {
+  it('single priced holding gives top5=1, HHI=1, band=high, flag fires', () => {
+    const rows = deriveRows([equalUnit('AAPL', 'USD')])
+    const c = concentration(rows)
+    expect(c.top5Pct).toBe(1)
+    expect(c.hhi).toBe(1)
+    expect(c.hhiBand).toBe('high')
+    expect(c.singleStockRisk).toBeDefined()
+    expect(c.singleStockRisk!.holding.sourceSymbol).toBe('AAPL')
+    expect(c.singleStockRisk!.weight).toBe(1)
+  })
+})
+
+describe('concentration — HHI bands match DOJ thresholds', () => {
+  it('10 equal positions: HHI 0.10 → low band; single-stock flag stays off at the 10% threshold', () => {
+    // Each position is exactly 1/10 = 0.10 weight, which is NOT strictly
+    // greater than the SINGLE_STOCK_THRESHOLD. Flag must stay off.
+    const rows = deriveRows(
+      Array.from({ length: 10 }, (_, i) => equalUnit(`TICK${i}`)),
+    )
+    const c = concentration(rows)
+    expect(c.hhi).toBeCloseTo(0.1)
+    expect(c.hhiBand).toBe('low')
+    expect(c.singleStockRisk).toBeUndefined()
+    expect(c.top5Pct).toBeCloseTo(0.5)
+  })
+
+  it('5 equal positions: HHI 0.20 → moderate band; top5 = 1', () => {
+    const rows = deriveRows(
+      Array.from({ length: 5 }, (_, i) => equalUnit(`TICK${i}`)),
+    )
+    const c = concentration(rows)
+    expect(c.hhi).toBeCloseTo(0.2)
+    expect(c.hhiBand).toBe('moderate')
+    expect(c.top5Pct).toBe(1)
+  })
+
+  it('4 equal positions: HHI 0.25 → high band (boundary inclusive on the high side)', () => {
+    const rows = deriveRows(
+      Array.from({ length: 4 }, (_, i) => equalUnit(`TICK${i}`)),
+    )
+    const c = concentration(rows)
+    expect(c.hhi).toBeCloseTo(0.25)
+    expect(c.hhiBand).toBe('high')
+  })
+})
+
+describe('concentration — single-stock-risk flag', () => {
+  it('fires when one position strictly exceeds 10% of portfolio value', () => {
+    // BIG: 100 × 100 = 10,000 base value.  9 × SMALL: each 1 × 100 = 100, so
+    // 900 base value total. Portfolio = 10,900. BIG weight ≈ 0.917, well over
+    // the threshold → flag names BIG.
+    const rows = deriveRows([
+      holding({
+        sourceSymbol: 'BIG',
+        name: 'Big Co',
+        quantity: 100,
+        avgBuyPrice: 100,
+        avgBuyPriceBase: 100,
+        currentPrice: 100,
+        currentPriceBase: 100,
+      }),
+      ...Array.from({ length: 9 }, (_, i) => equalUnit(`SMALL${i}`)),
+    ])
+    const c = concentration(rows)
+    expect(c.singleStockRisk).toBeDefined()
+    expect(c.singleStockRisk!.holding.sourceSymbol).toBe('BIG')
+    expect(c.singleStockRisk!.weight).toBeGreaterThan(SINGLE_STOCK_THRESHOLD)
+  })
+
+  it('does not fire when all positions are at or below 10%', () => {
+    const rows = deriveRows(
+      Array.from({ length: 11 }, (_, i) => equalUnit(`TICK${i}`)),
+    )
+    const c = concentration(rows)
+    expect(c.singleStockRisk).toBeUndefined()
+  })
+
+  it('skips unpriced holdings when computing weights', () => {
+    // Two priced equal-weighted holdings (50/50). One unpriced row exists
+    // but does not participate in the concentration math.
+    const rows = deriveRows([
+      equalUnit('A'),
+      equalUnit('B'),
+      holding({
+        sourceSymbol: 'UNPRICED',
+        currentPrice: undefined,
+        currentPriceBase: undefined,
+      }),
+    ])
+    const c = concentration(rows)
+    expect(c.hhi).toBeCloseTo(0.5)
+    expect(c.singleStockRisk).toBeDefined()
+    expect(c.singleStockRisk!.weight).toBeCloseTo(0.5)
+  })
+})
+
+describe('currency exposure (via allocation(rows, "market") — degenerate cases)', () => {
+  it('all-INR portfolio yields a single "India" slice at 100%', () => {
+    const rows = deriveRows([equalUnit('A', 'INR'), equalUnit('B', 'INR')])
+    const slices = allocation(rows, 'market')
+    expect(slices).toHaveLength(1)
+    expect(slices[0].label).toBe('India')
+    expect(slices[0].pct).toBe(1)
+  })
+
+  it('all-USD portfolio yields a single "US" slice at 100%', () => {
+    const rows = deriveRows([equalUnit('AAPL', 'USD'), equalUnit('MSFT', 'USD')])
+    const slices = allocation(rows, 'market')
+    expect(slices).toHaveLength(1)
+    expect(slices[0].label).toBe('US')
+    expect(slices[0].pct).toBe(1)
   })
 })

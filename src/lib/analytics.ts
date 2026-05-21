@@ -161,3 +161,76 @@ export function valueSeries(
     })
     .sort((a, b) => a.date.localeCompare(b.date))
 }
+
+// ── Concentration (Risk KPI sub-row) ────────────────────────────────────────
+
+/** US DOJ Horizontal Merger Guidelines band. Boundaries follow public
+ *  convention with explicit half-open intervals so reviewers don't have to
+ *  re-derive what happens at the seams:
+ *    - `low`       : `hhi < 0.15` (unconcentrated)
+ *    - `moderate`  : `0.15 ≤ hhi < 0.25` (moderately concentrated)
+ *    - `high`      : `hhi ≥ 0.25` (highly concentrated)
+ *  The high-side boundary at exactly `0.25` reads as `high` — the standard
+ *  DOJ practice places the 2500 threshold itself in the highly-concentrated
+ *  bucket, not in moderate. Adopting this convention avoids inventing
+ *  thresholds. */
+export type HhiBand = 'low' | 'moderate' | 'high'
+
+export type Concentration = {
+  /** Top-5 holdings as a share of total priced base-currency value, `0..1`.
+   *  `undefined` when there is no priced value to divide by. */
+  top5Pct: number | undefined
+  /** Herfindahl-Hirschman Index over normalized weights, `0..1`. */
+  hhi: number | undefined
+  /** Band label for the HHI under the DOJ convention. `undefined` when `hhi`
+   *  is `undefined` (no priced holdings). */
+  hhiBand: HhiBand | undefined
+  /** The largest single position when its weight strictly exceeds 10%.
+   *  `undefined` when nothing crosses the threshold (or no priced holdings).
+   *  Carries the holding so the UI can name it. */
+  singleStockRisk: { holding: CanonicalHolding; weight: number } | undefined
+}
+
+const HHI_BAND_LOW_CEIL = 0.15
+const HHI_BAND_HIGH_FLOOR = 0.25
+const SINGLE_STOCK_THRESHOLD = 0.10
+
+/**
+ * Concentration metrics over priced holdings. Folds by current base-currency
+ * value: top-5 weight (rank by value, sum top 5, divide by total), HHI (sum
+ * of squared weights), and the largest single holding when its weight
+ * strictly exceeds 10%. Every figure propagates `undefined` when nothing is
+ * priced — never a sentinel `0` (R1).
+ */
+export function concentration(rows: DerivedRow[]): Concentration {
+  const priced = rows.filter(
+    (r): r is DerivedRow & { currentValueBase: number } =>
+      r.currentValueBase !== undefined && r.currentValueBase > 0,
+  )
+  const total = priced.reduce((sum, r) => sum + r.currentValueBase, 0)
+  if (priced.length === 0 || total <= 0) {
+    return {
+      top5Pct: undefined,
+      hhi: undefined,
+      hhiBand: undefined,
+      singleStockRisk: undefined,
+    }
+  }
+  const weights = priced
+    .map((r) => ({ holding: r.holding, weight: r.currentValueBase / total }))
+    .sort((a, b) => b.weight - a.weight)
+  const top5Pct = weights.slice(0, 5).reduce((sum, w) => sum + w.weight, 0)
+  const hhi = weights.reduce((sum, w) => sum + w.weight * w.weight, 0)
+  const hhiBand: HhiBand =
+    hhi < HHI_BAND_LOW_CEIL
+      ? 'low'
+      : hhi < HHI_BAND_HIGH_FLOOR
+        ? 'moderate'
+        : 'high'
+  const top = weights[0]
+  const singleStockRisk =
+    top.weight > SINGLE_STOCK_THRESHOLD
+      ? { holding: top.holding, weight: top.weight }
+      : undefined
+  return { top5Pct, hhi, hhiBand, singleStockRisk }
+}
