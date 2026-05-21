@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { CanonicalHolding, OverridableField } from '../storage/holdings'
+import type { BrokerSource, CanonicalHolding, OverridableField } from '../storage/holdings'
 import { diffHoldings, toDeleteKeys } from './diff'
 
 function holding(
-  source: 'vested' | 'groww',
+  source: BrokerSource,
   symbol: string,
   quantity: number,
   avgBuyPrice: number,
