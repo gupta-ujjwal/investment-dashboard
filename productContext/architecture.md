@@ -109,25 +109,36 @@ Single IndexedDB database (`investment-dashboard`, version 3) opened via `idb`'s
 
 | Store | Key | Created | Description |
 |---|---|---|---|
-| `holdings` | `[source, sourceSymbol]` | v1 | Canonical holdings; index `by-source` on `source` (`holdings.ts:51-54`) |
+| `holdings` | `[source, sourceSymbol]` | v1 | Canonical holdings; index `by-source` on `source` (`holdings.ts:77-83`). `source` is `'vested' \| 'groww' \| 'manual'`. |
 | `settings` | `'app'` (singleton) | v2 | User profile: name, baseCurrency, numberLocale, lastFxRate, lastFxAsOf (`settings.ts:5-19`) |
 | `historySnapshots` | `date` (YYYY-MM-DD) | v3 | Daily portfolio snapshots for time-series charts (`history.ts:16-25`) |
 
-Migrations are additive-only, guarded by `oldVersion < N` (`holdings.ts:49-65`). No data backfill or migration transforms inside the upgrade callback — future schema changes must continue this pattern.
+Migrations are additive-only, guarded by `oldVersion < N` (`holdings.ts:75-104`). No data backfill or migration transforms inside the upgrade callback — future schema changes must continue this pattern. Optional scalar additions on `CanonicalHolding` do not bump `DB_VERSION` (`dsl.md § dsl-decision-guide` → "When changing storage / IndexedDB").
 
 **Key types:**
 
-- `CanonicalHolding` (`holdings.ts:9-29`): flat record with optional FX fields (`fxRate`, `fxAsOf`, `avgBuyPriceBase`, `currentPrice`, `currentPriceBase`).
+- `CanonicalHolding` (`holdings.ts:25-58`): flat record. Always: `name`, `source`, `sourceSymbol`, `quantity`, `avgBuyPrice`, `currency`, `assetClass`, `importedAt`. Optional FX fields: `fxRate`, `fxAsOf`, `avgBuyPriceBase`, `currentPrice`, `currentPriceBase`. Optional status + audit fields: `status?: 'open' \| 'closed'` (default `'open'` — see dsl.md § R12), `createdAt?: number`, `updatedAt?: number`. Optional `manualOverrides?: OverridableField[]` (sticky per-field overrides — dsl.md § R13).
+- `BrokerSource` (`holdings.ts:7-10`): `Exclude<Source, 'manual'>`. The import wizard, parser map, and `diffHoldings` are typed against this so the compiler enforces that no manual row reaches the broker path (preserves R7).
+- `OverridableField` (`holdings.ts:14-19`): the set of fields a user can override (`'quantity' | 'avgBuyPrice' | 'currentPrice' | 'name' | 'assetClass'`). Identity-shape fields (`source`, `sourceSymbol`, `currency`) are deliberately excluded.
 - `Settings` (`settings.ts:5-11`): baseCurrency (`'INR'|'USD'`), numberLocale (`'en-IN'|'en-US'`), FX metadata.
 - `HistoryRecord` (`history.ts:16-25`): date, capturedAt, baseCurrency, embedded holdings array.
 
 **CRUD primitives:**
 
-- `getAll()` / `getForSource(source)` — read all or per-source holdings.
-- `commitImport({ inserts, updates, deletes })` — single readwrite transaction atomic write (`holdings.ts:87-97`).
-- `exportSnapshot()` — JSON backup of all holdings (`holdings.ts:99-110`).
+- `getAll()` / `getForSource(source)` / `getHolding(key)` — read all, per-source, or one row.
+- `commitImport({ inserts, updates, deletes })` — single readwrite transaction atomic write for the bulk import path (`holdings.ts:117-128`).
+- `upsertHolding(row, opts?: { addOverrides? })` — single-row atomic write. When `addOverrides` is supplied, the field names are unioned into `row.manualOverrides` inside the same tx, so a broker-row edit's value-write and override-extend are atomic by construction (dsl.md § R3, R13). Used by the holdings action (add / update) and the undo-toast restore path.
+- `deleteHolding(key)` — single-row delete in one readwrite tx.
+- `setHoldingStatus(key, status)` — flip `status` on a single row; touches `updatedAt`. Used by Mark closed / Re-open.
+- `revertHoldingOverrides(key)` — clear a row's `manualOverrides` set; touches `updatedAt`. Used by the per-row Revert to broker action.
+- `restoreAllHoldings(holdings)` — atomic clear-then-add for the Restore-from-backup flow.
+- `exportSnapshot()` — JSON backup of all holdings.
 - `getSettings()` / `saveSettings()` / `updateFxMeta()` — settings singleton (`settings.ts:23-37`).
 - `recordSnapshot(baseCurrency)` / `getHistory()` — history write/read (`history.ts:54-66`).
+
+**Pure helpers (no IDB):**
+
+- `mergeWithOverrides(existing, incoming)` (`storage/holdingMerge.ts`) — the per-field write-priority lattice (`manual > broker` for fields in `existing.manualOverrides`, `broker > manual` otherwise). Called by `diffHoldings`'s update path; unit-tested in `holdingMerge.test.ts`. The `closed → open` flip on re-import is the caller's responsibility, not the merge function's.
 
 <a id="arch-import-pipeline"></a>
 ## 5. Import Pipeline

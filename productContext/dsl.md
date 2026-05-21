@@ -18,14 +18,16 @@ This file is built for section-targeted reads. When a skill is told to read `dsl
 <a id="dsl-terminology"></a>
 ## 1. Terminology
 
-**Holding** — A single position in the portfolio. Represented by `CanonicalHolding` (`storage/holdings.ts:9-29`):
-- `source`: broker origin (`'vested'` | `'groww'`)
-- `sourceSymbol`: ticker (Vested) or ISIN (Groww) — compound key with `source`
+**Holding** — A single position in the portfolio. Represented by `CanonicalHolding` (`storage/holdings.ts:25-58`):
+- `source`: origin (`'vested'` | `'groww'` | `'manual'`) — see **Source** and **BrokerSource** below
+- `sourceSymbol`: ticker (Vested, manual) or ISIN (Groww) — compound key with `source`
 - `quantity`, `avgBuyPrice`: native currency figures
 - `currency`: `'INR'` or `'USD'`
 - `assetClass`: `'equity' | 'mf' | 'etf' | 'invit' | 'other'`
-- `importedAt`: ms timestamp of last import
+- `importedAt`: ms timestamp of last import (for manual rows this mirrors `createdAt`)
 - Optional FX fields: `fxRate`, `fxAsOf`, `avgBuyPriceBase`, `currentPrice`, `currentPriceBase`
+- Optional status + audit fields: `status?: 'open' | 'closed'` (default `'open'` when absent — see **R12**), `createdAt?: number` (immutable first-write), `updatedAt?: number` (every-write)
+- `manualOverrides?: OverridableField[]` — sticky per-field overrides for broker rows. Fields listed here win over future broker re-imports (see **R13**). `undefined` or absent when no overrides; never `[]` (R1).
 
 **Derived Row** — A holding augmented with computed view figures (`lib/holdingsView.ts:30-48`):
 - `investedNative` = quantity × avgBuyPrice (always defined)
@@ -34,7 +36,7 @@ This file is built for section-targeted reads. When a skill is told to read `dsl
 - `currentValueBase` = quantity × currentPriceBase (undefined if no price or FX)
 - `profitAbsBase` = currentValueBase − investedBase (undefined if either is)
 - `profitPct` = (currentPrice − avgBuyPrice) / avgBuyPrice (undefined if no price or zero buy price)
-- `isStale` = importedAt < newest import in the set
+- `isStale` = importedAt < newest import in the set (always `false` when `status === 'closed'` — a closed position cannot go stale)
 
 **Partial value** — Any field whose type is `number | undefined`. `undefined` means "not computable", never a sentinel `0` or `NaN`. Rendered as `—` in the UI (`HoldingsTable.tsx:63`, `format.ts:15`).
 
@@ -44,7 +46,13 @@ This file is built for section-targeted reads. When a skill is told to read `dsl
 
 **FX stamp** — The act of attaching `fxRate`/`fxAsOf`/`avgBuyPriceBase`/`currentPriceBase` to a holding. Happens at import commit and on explicit "Refresh FX" click. Destructive overwrite — previous stamps are lost (`refreshFx.ts:12-30`).
 
-**Source** — A broker data origin. Currently `'vested'` (US, ticker-keyed, 3-sheet XLSX) and `'groww'` (India, ISIN-keyed, row-11 header XLSX). The parser set is extensible but each source needs its own parser.
+**Source** — A holding's origin. Three values today: `'vested'` (US, ticker-keyed, 3-sheet XLSX), `'groww'` (India, ISIN-keyed, row-11 header XLSX), and `'manual'` (direct-CRUD via the holdings page form — never flows through a parser). The parser set is extensible but each broker source needs its own parser.
+
+**BrokerSource** — `Exclude<Source, 'manual'>` (`storage/holdings.ts:7-10`). The import wizard and diff path are typed against `BrokerSource`, not `Source`, so the compiler enforces that no `'manual'` row reaches a parser or `diffHoldings` (preserves R7 by construction).
+
+**OverridableField** — One of `'quantity' | 'avgBuyPrice' | 'currentPrice' | 'name' | 'assetClass'` (`storage/holdings.ts:14-19`). The set of fields a user can override on a broker-imported row; listed fields are sticky across re-imports (R13). Identity-shape fields (`source`, `sourceSymbol`, `currency`) are deliberately not in the set — changing them produces a different row.
+
+**Status** — `'open'` (default; absent → treated as `'open'`) or `'closed'`. Closed rows persist in storage and in any `historySnapshots` that captured them (R12), drop out of `/holdings` and analytics by default, and can be re-opened via the row menu or by a re-import that delivers the row again (`diff.ts` flips `closed → open` on a re-import update).
 
 <a id="dsl-domain-rules"></a>
 ## 2. Domain Rules
@@ -80,7 +88,16 @@ A holding is stale if its `importedAt` is older than the maximum `importedAt` ac
 Live prices, news, and the AI agent are the only sanctioned external-egress features. Each is **off by default**, requires a user-supplied API key stored in IndexedDB, and is gated by both a global "External APIs" master switch and a per-feature toggle in Settings (`CLAUDE.md` — Privacy first). The AI agent sends holdings (not just tickers) and additionally requires a separate explicit consent dialog before first use. No code path may originate an external request without satisfying these gates. Today's only external call (Frankfurter FX) is exempt because it sends no portfolio data — only currency codes; if that ever changes, it falls under the doctrine.
 
 ### R11. Holdings are positional; transactions are an additive future store
-The primary rendering path is **positional**: `CanonicalHolding` stores current quantity + avg buy price, and each import overwrites the previous snapshot (`storage/holdings.ts:9-29`, `holdings.ts:87-97`). The decision (issue #19) is to keep this as the rendering path and add an **optional `transactions` store alongside `holdings`** — populated only when a transaction-flavoured broker export is provided. Transactions unlock realized P&L, dividend ledger, STCG/LTCG split, and XIRR (#23 and the XIRR slice of #24); they never replace positional rendering. Today's analytics (unrealized P&L, allocation, top movers, value-over-time) stay positional and are unaffected. Implementation is tracked in a follow-up issue; this rule exists so the dependency is visible before either store grows.
+The primary rendering path is **positional**: `CanonicalHolding` stores current quantity + avg buy price, and each import overwrites the previous snapshot (`storage/holdings.ts:25-58`, `holdings.ts:117-128`). The decision (issue #19) is to keep this as the rendering path and add an **optional `transactions` store alongside `holdings`** — populated only when a transaction-flavoured broker export is provided. Transactions unlock realized P&L, dividend ledger, STCG/LTCG split, and XIRR (#23 and the XIRR slice of #24); they never replace positional rendering. Today's analytics (unrealized P&L, allocation, top movers, value-over-time) stay positional and are unaffected. Implementation is tracked in a follow-up issue; this rule exists so the dependency is visible before either store grows.
+
+### R12. Closed rows persist indefinitely; the only removal verb is Delete forever
+`status:'closed'` rows stay in the `holdings` store and in any `historySnapshots` that captured them — they are never auto-purged or expired (`storage/holdings.ts:52-55`). `isStale` is suppressed on closed rows (`holdingsView.ts:84`). The user-facing removal paths are: (a) overflow-menu **Delete forever** (with confirm panel + 5s undo toast), and (b) the import wizard's missing-row prompt choosing **Delete** for a still-missing row. **Mark as closed** and the `closed → open` re-import flip are the reversible paths; neither destroys data. Snapshots are deliberately untouched so historical valuations of closed positions stay reconstructable for analytics (R6 still applies — base-currency containment).
+
+### R13. Manual overrides are sticky across broker re-imports
+When a user edits a broker-imported row (inline-cell on desktop, modal on mobile, or the row's `update` action), every changed field is unioned into `manualOverrides` inside the same IDB readwrite tx via `upsertHolding(row, { addOverrides })` (`storage/holdings.ts:139-157`). On the next broker import, `diffHoldings`'s update path calls `mergeWithOverrides(existing, incoming)` (`storage/holdingMerge.ts`, `parsers/diff.ts:46-58`); fields listed in `existing.manualOverrides` keep the user's value; non-overridden fields take the broker's. The `✎ edited` badge marks affected rows; the only restoration to broker truth is the per-row **Revert to broker** action, which clears the set via `revertHoldingOverrides`. The set is `undefined` or absent when empty — never `[]` (R1).
+
+### R14. Live-price refresh must respect `manualOverrides` (forward-compat for issue #10)
+Issue #10's live-price fetch is not yet implemented, but when it lands it MUST skip the `currentPrice` field on any row where `'currentPrice' ∈ row.manualOverrides`. The user's asserted price wins over a provider-asserted price — the sticky-override lattice from R13 extends to the live-price path even though no broker import is involved. Equivalently: live-price is a third write path for `currentPrice` (after parser-stamped + user-edited), and the override set sits above it. Today's only `currentPrice` writer is the broker parser, so the rule has no enforcement site yet — it exists so #10's design respects it from day one.
 
 <a id="dsl-decision-guide"></a>
 ## 3. Reviewer Decision Guide
