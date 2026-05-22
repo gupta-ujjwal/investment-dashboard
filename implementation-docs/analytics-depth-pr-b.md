@@ -12,11 +12,11 @@ Adds two analytics-page widgets that depend on bundled JSON data, plus the build
 Refresh pipeline:
 - `scripts/refresh-benchmarks.mjs` — Node script fetching `^NSEI` and `^GSPC` from Yahoo Finance's `/v8/finance/chart` JSON endpoint, validating each series (non-empty, ≥1000 points, monotonic ascending dates, finite closes, latest date within 7 days of today), writing `src/data/benchmarks/*.json` (each ~80KB).
 - `scripts/validateData.mjs` — build-time shape check wired to `prebuild`, asserts the same minimum-point floor (via `scripts/benchmarkConfig.mjs` shared constant), monotonic dates, finite closes, the sectors map's shape.
-- `.github/workflows/refresh-benchmarks.yml` — weekly cron (`0 6 * * 0` UTC Sundays), runs the refresh script then validator, opens a PR via `peter-evans/create-pull-request@v6` when content changes. `concurrency: refresh-benchmarks` prevents pile-up on hung runs.
+- `refresh-benchmarks.workflow.yml` (engineer-installed) — weekly cron (`0 6 * * 0` UTC Sundays), runs the refresh script then validator, opens a PR via `peter-evans/create-pull-request@v6` when content changes. `concurrency: refresh-benchmarks` prevents pile-up on hung runs.
 
 Files (7 modified + 11 new, +692 lines):
 - Modified: `src/lib/analytics.ts`, `src/lib/analytics.test.ts`, `src/components/charts/ValueOverTime.tsx`, `src/components/charts/ChartsPanel.tsx`, `src/components/charts/chartTheme.ts`, `src/featureFlags.ts`, `package.json` (prebuild hook + two new scripts).
-- New: `src/components/charts/SectorDonut.tsx`, `src/data/sectors.json` (43 tickers), `src/data/benchmarks/nifty50.json` (1236 points), `src/data/benchmarks/sp500.json` (1256 points), `scripts/refresh-benchmarks.mjs`, `scripts/validateData.mjs`, `scripts/benchmarkConfig.mjs`, `.github/workflows/refresh-benchmarks.yml`, `implementation-docs/analytics-depth-pr-b.md` (this doc).
+- New: `src/components/charts/SectorDonut.tsx`, `src/data/sectors.json` (43 tickers), `src/data/benchmarks/nifty50.json` (1236 points), `src/data/benchmarks/sp500.json` (1256 points), `scripts/refresh-benchmarks.mjs`, `scripts/validateData.mjs`, `scripts/benchmarkConfig.mjs`, `refresh-benchmarks.workflow.yml` (engineer-installed), `implementation-docs/analytics-depth-pr-b.md` (this doc).
 
 External surface: **no runtime external calls** — R10 (privacy doctrine) unaffected; the bundled JSONs ship to the browser, no per-user egress. **One new build-time external dependency** — the weekly CI workflow fetches Yahoo Finance from GH Actions IPs.
 
@@ -133,9 +133,22 @@ Eight tests cover: sub-2-point portfolio rejected (returns `[]`), exact rebasing
 
 Both JSON imports are static — Vite bundles them into the `ChartsPanel` lazy chunk (the same chunk Recharts already lives in), so the initial bundle is unaffected.
 
-### Slice 9 — CI refresh workflow
+### Slice 9 — CI refresh workflow (engineer-installed)
 
-`.github/workflows/refresh-benchmarks.yml`: weekly cron (`0 6 * * 0` UTC), checks out, sets up Node 22, runs the refresh script, runs the validator, opens a PR via `peter-evans/create-pull-request@v6` with branch `chore/refresh-benchmarks`, title `chore(data): weekly benchmark refresh`, scoped to `src/data/benchmarks/*.json` only (`add-paths`). `concurrency: refresh-benchmarks` prevents pile-up. Standard `contents: write` + `pull-requests: write` permissions.
+`refresh-benchmarks.workflow.yml` ships at the **repo root**, not under `.github/workflows/`. The local GitHub credential `/develop` used to push this branch lacked the OAuth `workflow` scope (it carried `repo` + `gist` + `read:org`), which GitHub requires for any commit that adds or modifies files under `.github/workflows/`. Rather than block the PR, the workflow content lives at root and the engineer installs it manually with their own credential:
+
+```sh
+mkdir -p .github/workflows
+git mv refresh-benchmarks.workflow.yml .github/workflows/refresh-benchmarks.yml
+git commit -m "ci(benchmarks): weekly refresh workflow opens PR on update (#24)"
+git push
+```
+
+(Alternative: `gh auth refresh -h github.com -s workflow` adds the missing scope to the local CLI; subsequent `git push` works directly.)
+
+Until the engineer moves the file, the workflow does NOT run. The analytics surface is unaffected — `src/data/benchmarks/*.json` is already committed with fresh data (see `chore(data): bundled sectors map + initial benchmark history`), so the benchmark overlay (once `FEATURE_BENCHMARK_OVERLAY` is flipped on) renders correctly. The weekly refresh becomes active the first Sunday 06:00 UTC after the workflow file lands at its real path.
+
+Workflow behaviour itself (when installed): Sundays 06:00 UTC cron, checks out, sets up Node 22, runs the refresh script, runs the validator, opens a PR via `peter-evans/create-pull-request@v6` with branch `chore/refresh-benchmarks`, title `chore(data): weekly benchmark refresh`, scoped to `src/data/benchmarks/*.json` only (`add-paths`). `concurrency: refresh-benchmarks` prevents pile-up. Standard `contents: write` + `pull-requests: write` permissions.
 
 Failure escalation: red workflow is acceptable. No alert, no auto-retry beyond GH's default. The previous-good JSON stays in the bundle until a successful refresh produces a PR. The 30-day stale chip on `ValueOverTime`'s legend is the user-facing signal.
 
