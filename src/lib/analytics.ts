@@ -234,3 +234,195 @@ export function concentration(rows: DerivedRow[]): Concentration {
       : undefined
   return { top5Pct, hhi, hhiBand, singleStockRisk }
 }
+
+// ── Sector allocation (donut, PR B) ─────────────────────────────────────────
+
+/** One entry in `src/data/sectors.json`. Keyed by `sourceSymbol` — ticker
+ *  for Vested (USD), ISIN for Groww (INR). `name` is a maintainer-friendly
+ *  hint only; the fold reads `sector` + `market`. */
+export type SectorEntry = {
+  sector: string
+  market: Currency
+  name?: string
+}
+
+/** The shape of `src/data/sectors.json` — a `Record<sourceSymbol, SectorEntry>`.
+ *  Holdings whose `sourceSymbol` is not in the map fall into an explicit
+ *  `Unknown` bucket; the donut still renders honestly. */
+export type SectorMap = Record<string, SectorEntry>
+
+export type SectorSlice = {
+  /** Stable identity — the sector name, or `__unknown` for unmapped rows. */
+  key: string
+  label: string
+  /** Current base-currency value summed across rows in this sector. */
+  valueBase: number
+  /** Share of the allocated total, 0..1. */
+  pct: number
+}
+
+/** Slice key for holdings whose `sourceSymbol` has no sectors.json entry. */
+export const UNKNOWN_SECTOR_KEY = '__unknown'
+
+/**
+ * Sector-bucketed allocation over priced holdings. The lookup is by
+ * `sourceSymbol` so the same fold handles Vested (US ticker) and Groww
+ * (Indian ISIN) keys without a unifying ontology. The slices respect the
+ * sector taxonomy as authored — GICS labels for US holdings will appear
+ * alongside NSE labels for Indian holdings, which is more honest than
+ * forcing them into a shared bucket they don't share in reality.
+ *
+ * Only holdings with a computable `currentValueBase` are counted (R1 —
+ * unpriced rows can't honestly claim a wedge). Returns slices sorted
+ * largest-first; `[]` when nothing is allocatable.
+ */
+export function sectorAllocation(
+  rows: DerivedRow[],
+  sectors: SectorMap,
+): SectorSlice[] {
+  const buckets = new Map<string, { label: string; valueBase: number }>()
+  for (const r of rows) {
+    if (r.currentValueBase === undefined) continue
+    const entry = sectors[r.holding.sourceSymbol]
+    const key = entry ? entry.sector : UNKNOWN_SECTOR_KEY
+    const label = entry ? entry.sector : 'Unknown'
+    const bucket = buckets.get(key) ?? { label, valueBase: 0 }
+    bucket.valueBase += r.currentValueBase
+    buckets.set(key, bucket)
+  }
+  const total = [...buckets.values()].reduce((s, b) => s + b.valueBase, 0)
+  if (total <= 0) return []
+  return [...buckets.entries()]
+    .map(([key, b]) => ({
+      key,
+      label: b.label,
+      valueBase: b.valueBase,
+      pct: b.valueBase / total,
+    }))
+    .sort((a, b) => b.valueBase - a.valueBase)
+}
+
+// ── Benchmark overlay (ValueOverTime, PR B) ─────────────────────────────────
+
+/** One row in a bundled benchmark JSON (`src/data/benchmarks/*.json`).
+ *  Refreshed weekly via `.github/workflows/refresh-benchmarks.yml`. */
+export type BenchmarkPoint = {
+  /** `YYYY-MM-DD`. */
+  date: string
+  /** Index close, native currency (INR for NIFTY, USD for S&P). */
+  close: number
+}
+
+/** The shape of each bundled benchmark JSON. The `rebaseLabel` is what the
+ *  chart legend renders (e.g. `NIFTY 50 (rebased)`) so the rebase semantics
+ *  are visible to the reader, not hidden in code. */
+export type BenchmarkData = {
+  index: string
+  rebaseLabel: string
+  series: BenchmarkPoint[]
+}
+
+/** Rebased benchmark series aligned to portfolio snapshot dates — the shape
+ *  consumed by `ValueOverTime`'s overlay `<Line>`. */
+export type BenchmarkOverlayPoint = { date: string; value: number }
+
+/**
+ * Align and rebase a benchmark close series to a portfolio value series.
+ * The benchmark is normalized so its first portfolio-aligned point equals
+ * the portfolio's first value — both lines start at the same Y and diverge
+ * thereafter by relative performance. This is the "did I beat the index"
+ * framing every consumer broker (Robinhood, Groww, Zerodha Console)
+ * defaults to.
+ *
+ * Date alignment:
+ * - Clip benchmark to portfolio's date range (portfolio snapshots outside
+ *   the bundled benchmark window are kept as portfolio-only points by the
+ *   caller — the overlay just doesn't extend that far).
+ * - Forward-fill the benchmark close on portfolio dates where the index
+ *   itself doesn't have a close (weekend snapshots, India holidays, US
+ *   holidays — the two markets close on different calendars so a strict
+ *   zipper join would drop honest portfolio points).
+ *
+ * Returns `[]` when there is no usable overlap (portfolio has <2 points,
+ * the bundled benchmark predates every portfolio snapshot, or the anchor
+ * benchmark close is non-positive).
+ */
+export function benchmarkSeries(
+  portfolioSeries: readonly ValuePoint[],
+  benchmark: BenchmarkData,
+): BenchmarkOverlayPoint[] {
+  if (portfolioSeries.length < 2) return []
+  const benchPoints = benchmark.series
+  if (benchPoints.length === 0) return []
+
+  const firstBenchDate = benchPoints[0].date
+  const lastBenchDate = benchPoints[benchPoints.length - 1].date
+
+  // Anchor: first portfolio point inside the benchmark window with a
+  // defined `value`. The rebase factor is `portfolio.value / benchmark.close`
+  // at this anchor.
+  let anchorIdx = -1
+  for (let i = 0; i < portfolioSeries.length; i++) {
+    const p = portfolioSeries[i]
+    if (p.value === undefined) continue
+    if (p.date < firstBenchDate) continue
+    if (p.date > lastBenchDate) break
+    anchorIdx = i
+    break
+  }
+  if (anchorIdx === -1) return []
+
+  const anchorPortfolioValue = portfolioSeries[anchorIdx].value as number
+  const anchorBenchClose = lookupBenchmarkClose(
+    benchPoints,
+    portfolioSeries[anchorIdx].date,
+  )
+  // `<= 0` covers zero (would zero-divide) and negative (impossible for a
+  // close price); `!Number.isFinite` is defence-in-depth — `validateData`
+  // catches NaN/Infinity at build time, but trusting only the validator
+  // means a malformed JSON that slipped past `prebuild` would propagate
+  // NaN through the multiplication. Guarding here keeps the render path
+  // honest even if the validator regresses.
+  if (
+    anchorBenchClose === undefined ||
+    !Number.isFinite(anchorBenchClose) ||
+    anchorBenchClose <= 0
+  ) {
+    return []
+  }
+  const rebaseFactor = anchorPortfolioValue / anchorBenchClose
+  if (!Number.isFinite(rebaseFactor)) return []
+
+  const out: BenchmarkOverlayPoint[] = []
+  for (let i = anchorIdx; i < portfolioSeries.length; i++) {
+    const p = portfolioSeries[i]
+    if (p.date > lastBenchDate) break
+    const close = lookupBenchmarkClose(benchPoints, p.date)
+    if (close === undefined || !Number.isFinite(close)) continue
+    out.push({ date: p.date, value: close * rebaseFactor })
+  }
+  return out
+}
+
+/** Last benchmark close on or before `date`. Binary search — the series is
+ *  date-sorted ascending by `refresh-benchmarks.mjs` and asserted by
+ *  `scripts/validateData.mjs` in `prebuild`. Returns `undefined` when
+ *  `date` precedes every series entry. */
+function lookupBenchmarkClose(
+  series: readonly BenchmarkPoint[],
+  date: string,
+): number | undefined {
+  let lo = 0
+  let hi = series.length - 1
+  let best = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1
+    if (series[mid].date <= date) {
+      best = mid
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+  return best === -1 ? undefined : series[best].close
+}

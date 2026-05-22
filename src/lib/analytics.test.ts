@@ -4,10 +4,15 @@ import type { HistoryRecord } from '../storage/history'
 import { deriveRows } from './holdingsView'
 import {
   allocation,
+  benchmarkSeries,
   concentration,
   portfolioTotals,
+  sectorAllocation,
   topMovers,
   valueSeries,
+  type BenchmarkData,
+  type SectorMap,
+  type ValuePoint,
 } from './analytics'
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
@@ -346,5 +351,178 @@ describe('currency exposure (via allocation(rows, "market") — degenerate cases
     expect(slices).toHaveLength(1)
     expect(slices[0].label).toBe('US')
     expect(slices[0].pct).toBe(1)
+  })
+})
+
+describe('sectorAllocation', () => {
+  const sectors: SectorMap = {
+    AAPL: { sector: 'Information Technology', market: 'USD', name: 'Apple' },
+    MSFT: { sector: 'Information Technology', market: 'USD', name: 'Microsoft' },
+    JPM: { sector: 'Financials', market: 'USD', name: 'JPMorgan' },
+    INE002A01018: { sector: 'Energy', market: 'INR', name: 'Reliance' },
+  }
+
+  it('returns [] for an empty portfolio', () => {
+    expect(sectorAllocation([], sectors)).toEqual([])
+  })
+
+  it('returns [] when no holding is priced', () => {
+    const rows = deriveRows([
+      holding({
+        sourceSymbol: 'AAPL',
+        currentPrice: undefined,
+        currentPriceBase: undefined,
+      }),
+    ])
+    expect(sectorAllocation(rows, sectors)).toEqual([])
+  })
+
+  it('buckets priced holdings by sector and sorts largest-first', () => {
+    const rows = deriveRows([
+      equalUnit('AAPL', 'USD'), // IT — 100
+      equalUnit('MSFT', 'USD'), // IT — 100
+      equalUnit('JPM', 'USD'),  // Financials — 100
+    ])
+    const slices = sectorAllocation(rows, sectors)
+    expect(slices.map((s) => s.label)).toEqual(['Information Technology', 'Financials'])
+    expect(slices[0].pct).toBeCloseTo(2 / 3)
+    expect(slices[1].pct).toBeCloseTo(1 / 3)
+  })
+
+  it('groups tickers missing from the sector map into the "Unknown" bucket', () => {
+    const rows = deriveRows([
+      equalUnit('AAPL', 'USD'),      // mapped → IT
+      equalUnit('NEW_TICKER', 'USD'), // unmapped → Unknown
+      equalUnit('OTHER_NEW', 'USD'),  // unmapped → Unknown (same bucket)
+    ])
+    const slices = sectorAllocation(rows, sectors)
+    const byLabel = new Map(slices.map((s) => [s.label, s]))
+    expect(byLabel.get('Unknown')!.pct).toBeCloseTo(2 / 3)
+    expect(byLabel.get('Information Technology')!.pct).toBeCloseTo(1 / 3)
+    // Stable key for the Unknown bucket — not "Unknown" the string.
+    expect(byLabel.get('Unknown')!.key).toBe('__unknown')
+  })
+
+  it('coexists with INR ISIN keys and USD ticker keys honestly (no unified ontology)', () => {
+    const rows = deriveRows([
+      equalUnit('AAPL', 'USD'),
+      equalUnit('INE002A01018', 'INR'),
+    ])
+    const slices = sectorAllocation(rows, sectors)
+    const labels = slices.map((s) => s.label).sort()
+    expect(labels).toEqual(['Energy', 'Information Technology'])
+  })
+
+  it('excludes unpriced rows from the sector denominator', () => {
+    const rows = deriveRows([
+      equalUnit('AAPL', 'USD'),
+      holding({
+        sourceSymbol: 'MSFT',
+        currentPrice: undefined,
+        currentPriceBase: undefined,
+      }),
+    ])
+    const slices = sectorAllocation(rows, sectors)
+    expect(slices).toHaveLength(1)
+    expect(slices[0].label).toBe('Information Technology')
+    expect(slices[0].pct).toBe(1)
+  })
+})
+
+describe('benchmarkSeries', () => {
+  /** Synthetic benchmark — five points at 1000/1100/1200/1300/1400. */
+  const benchmark: BenchmarkData = {
+    index: 'TEST',
+    rebaseLabel: 'TEST (rebased)',
+    series: [
+      { date: '2026-01-01', close: 1000 },
+      { date: '2026-01-08', close: 1100 },
+      { date: '2026-01-15', close: 1200 },
+      { date: '2026-01-22', close: 1300 },
+      { date: '2026-01-29', close: 1400 },
+    ],
+  }
+
+  function value(date: string, v: number | undefined): ValuePoint {
+    return { date, value: v, invested: v, profit: 0 }
+  }
+
+  it('returns [] when portfolio has fewer than 2 points', () => {
+    expect(benchmarkSeries([value('2026-01-01', 100)], benchmark)).toEqual([])
+  })
+
+  it('rebases the benchmark so the first overlay point matches portfolio anchor', () => {
+    const portfolio: ValuePoint[] = [
+      value('2026-01-01', 5000),
+      value('2026-01-29', 7000),
+    ]
+    const overlay = benchmarkSeries(portfolio, benchmark)
+    expect(overlay).toHaveLength(2)
+    expect(overlay[0]).toEqual({ date: '2026-01-01', value: 5000 })
+    // Benchmark rose 1000 → 1400 (40%) over the range; rebased to 5000 → 7000.
+    expect(overlay[1].value).toBeCloseTo(7000, 1)
+  })
+
+  it('forward-fills the benchmark across non-trading days', () => {
+    // Portfolio has a snapshot on 2026-01-05 (Mon — but benchmark has no
+    // point that day). The overlay must use 2026-01-01's close (1000).
+    const portfolio: ValuePoint[] = [
+      value('2026-01-01', 1000),
+      value('2026-01-05', 1100),
+      value('2026-01-29', 1400),
+    ]
+    const overlay = benchmarkSeries(portfolio, benchmark)
+    const at0105 = overlay.find((p) => p.date === '2026-01-05')
+    expect(at0105).toBeDefined()
+    // Rebase factor = 1000/1000 = 1; close on 2026-01-05 forward-filled to
+    // 1000 (from 2026-01-01) → overlay value 1000.
+    expect(at0105!.value).toBeCloseTo(1000)
+  })
+
+  it('clips portfolio dates that precede the bundled benchmark range', () => {
+    const portfolio: ValuePoint[] = [
+      value('2025-12-01', 100), // before benchmark start — clipped
+      value('2026-01-15', 6000),
+      value('2026-01-29', 7000),
+    ]
+    const overlay = benchmarkSeries(portfolio, benchmark)
+    expect(overlay.map((p) => p.date)).toEqual(['2026-01-15', '2026-01-29'])
+  })
+
+  it('clips portfolio dates that follow the bundled benchmark range', () => {
+    const portfolio: ValuePoint[] = [
+      value('2026-01-01', 5000),
+      value('2026-01-15', 6000),
+      value('2026-02-15', 8000), // after benchmark end — clipped
+    ]
+    const overlay = benchmarkSeries(portfolio, benchmark)
+    expect(overlay.map((p) => p.date)).toEqual(['2026-01-01', '2026-01-15'])
+  })
+
+  it('returns [] when portfolio is entirely outside benchmark range', () => {
+    const portfolio: ValuePoint[] = [
+      value('2024-01-01', 100),
+      value('2024-02-01', 200),
+    ]
+    expect(benchmarkSeries(portfolio, benchmark)).toEqual([])
+  })
+
+  it('returns [] when portfolio anchor value is undefined for every covered date', () => {
+    const portfolio: ValuePoint[] = [
+      value('2026-01-01', undefined),
+      value('2026-01-29', undefined),
+    ]
+    expect(benchmarkSeries(portfolio, benchmark)).toEqual([])
+  })
+
+  it('skips a leading undefined-value portfolio point to anchor the rebase later', () => {
+    const portfolio: ValuePoint[] = [
+      value('2026-01-01', undefined), // skipped as anchor
+      value('2026-01-08', 1100),       // becomes the anchor
+      value('2026-01-29', 1400),
+    ]
+    const overlay = benchmarkSeries(portfolio, benchmark)
+    expect(overlay).toHaveLength(2)
+    expect(overlay[0]).toEqual({ date: '2026-01-08', value: 1100 })
   })
 })

@@ -12,6 +12,11 @@ export const chartColor = {
   invested: 'var(--color-bone-400)',
   gain: 'var(--color-jade-400)',
   loss: 'var(--color-ember-400)',
+  /** Benchmark overlay (issue #24, PR B). Reuses the existing `bone-500`
+   *  neutral so we don't introduce a fifth chart token; the line is a thin
+   *  dashed stroke so it reads as "reference, not portfolio" even though
+   *  it shares a hue with the `invested` cost-basis line. */
+  benchmark: 'var(--color-bone-500)',
   axis: 'var(--color-bone-400)',
   grid: 'rgba(242, 235, 219, 0.07)',
 } as const

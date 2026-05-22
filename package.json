@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/validateData.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "validate:data": "node scripts/validateData.mjs",
+    "refresh:benchmarks": "node scripts/refresh-benchmarks.mjs"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
