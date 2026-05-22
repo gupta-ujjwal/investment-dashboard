@@ -33,13 +33,13 @@ For the all-INR capture (#03), the fixture filters out the USD holdings so the m
 
 ## Console messages
 
-`console-messages.txt` carries 81 messages captured across all 8 navigations. Filtered for severity:
+The capture script attached console listeners across all 8 navigations and recorded 81 messages total. Filtered for severity:
 
 - **Errors (1 type):** `Failed to load resource: 404 (Not Found)` — the favicon 404, pre-existing on `main` (called out by the #20 evidence commit too).
 - **Warnings (2 types):** react-router v7 `Matched leaf route at location "/" does not have an element` and `No HydrateFallback element provided` — both about the `/` index route's loader-only redirect to `/analytics` or `/import`. Pre-existing in `main`; the analytics-depth PRs don't touch routing.
 - **Info:** React DevTools download tip (dev-mode only).
 
-**No new errors or warnings** were introduced by either PR.
+**No new errors or warnings** were introduced by either PR. The raw console dump is intentionally NOT committed (per the no-raw-dump rule in `.claude/rules/frontend-design.md` — summary belongs here and in the commit/PR comment; the dump itself is dev-time scratch).
 
 ## Empty state
 
