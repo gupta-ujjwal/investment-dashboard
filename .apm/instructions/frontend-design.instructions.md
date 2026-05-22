@@ -31,6 +31,12 @@ UI changes are not done when `tsc` is green. They are done when the rendered out
 3. If anything looks wrong — visual regression in unrelated areas, console errors, broken interaction — fix it before proceeding. Don't paper over it with a screenshot caveat.
 4. Tear down the dev server.
 
+#### What gets committed to the repo
+
+- **Screenshots** (PNGs) — yes, under `evidence-pr-issue-<N>/`. They are the artifact reviewers actually look at.
+- **Console messages** — only as a *categorized summary* inside the evidence `README.md` (and in the `## Evidence` PR comment + the commit body). The summary names each error/warning class observed, whether it is new or pre-existing on `main`, and the conclusion ("no new errors introduced by this PR"). **Do not commit the raw console dump** (a `console-messages.txt` or any verbatim listener output) — it's dev-time scratch, ships noise into `main`, and the summary is what reviewers read. If the script that captures screenshots also writes the raw log, write it to a gitignored path (`notes/<topic-slug>/`, `.playwright-mcp/`, or similar), not to the evidence directory.
+- **Capture scripts / IDB seeders / `.envrc` workarounds** — gitignored scratch. Keep under `notes/<topic-slug>/` for re-runnability; never ship to `main`. The evidence directory holds only the human-reviewable artifacts (PNGs + README).
+
 The draft PR stays draft until this evidence is captured. The `evidence` step in `/do` (which reads `.agency/do.md`'s `## PR evidence` section) is the canonical place this runs — see that file for the exact capture-and-post procedure. The user marks the PR ready-for-review manually after reviewing the `## Evidence` comment.
 
 ### Why this ordering
