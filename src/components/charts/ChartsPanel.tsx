@@ -2,10 +2,11 @@ import type { BaseCurrency, CanonicalHolding } from '../../storage/holdings'
 import type { HistoryRecord } from '../../storage/history'
 import { deriveRows } from '../../lib/holdingsView'
 import { valueSeries } from '../../lib/analytics'
-import { FEATURE_HISTORY } from '../../featureFlags'
+import { FEATURE_ANALYTICS_DEPTH, FEATURE_HISTORY } from '../../featureFlags'
 import { ValueOverTime } from './ValueOverTime'
 import { PnlOverTime } from './PnlOverTime'
 import { AllocationDonut } from './AllocationDonut'
+import { CurrencyExposureDonut } from './CurrencyExposureDonut'
 import { TopMovers } from './TopMovers'
 
 type Props = {
@@ -38,6 +39,9 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
         </>
       )}
       <AllocationDonut rows={rows} baseCurrency={baseCurrency} />
+      {FEATURE_ANALYTICS_DEPTH && (
+        <CurrencyExposureDonut rows={rows} baseCurrency={baseCurrency} />
+      )}
       <TopMovers rows={rows} />
     </div>
   )
