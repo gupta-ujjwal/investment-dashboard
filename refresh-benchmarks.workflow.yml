@@ -1,0 +1,92 @@
+# Weekly benchmark-history refresh workflow for the analytics-depth feature
+# (issue #24, PR B). Ships at repo ROOT (not under `.github/workflows/`)
+# because the local credential used by `/develop` lacked the GitHub OAuth
+# `workflow` scope needed to push a CI workflow file. The engineer installs
+# this file manually with their own credential:
+#
+#   mkdir -p .github/workflows
+#   git mv refresh-benchmarks.workflow.yml .github/workflows/refresh-benchmarks.yml
+#   git commit -m "ci(benchmarks): weekly refresh workflow opens PR on update (#24)"
+#   git push
+#
+# Until the engineer moves the file, the workflow does NOT run. The
+# analytics surface is unaffected — `src/data/benchmarks/*.json` is already
+# committed with fresh data (see `chore(data): bundled sectors map +
+# initial benchmark history`), so the benchmark overlay (once
+# `FEATURE_BENCHMARK_OVERLAY` is flipped on) renders correctly. The weekly
+# refresh becomes active the first Sunday 06:00 UTC after the workflow
+# file lands at its real path.
+#
+# ── Workflow itself ─────────────────────────────────────────────────────────
+#
+# Sundays at 06:00 UTC — well after Friday's US/India market close, before
+# the upcoming Monday session opens. Each PR's diff is a clean
+# "past-week-of-data" delta.
+#
+# Escalation policy (analytics-depth plan, /deep-review finding 6):
+#  - A red run is acceptable. No alert, no auto-retry beyond GitHub's
+#    workflow_dispatch retry. The previous-good JSON stays in the bundle.
+#  - The UI signals staleness via the `as of YYYY-MM-DD` legend + 30-day
+#    ember "stale" chip on the benchmark line — that is the user-facing
+#    signal, by design (R10 forbids runtime telemetry).
+#  - `concurrency` prevents a hung run from piling up retries on the next
+#    cron tick.
+
+name: Refresh benchmark history
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-benchmarks
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch benchmark history
+        run: node scripts/refresh-benchmarks.mjs
+
+      - name: Validate updated JSON
+        run: node scripts/validateData.mjs
+
+      - name: Open PR if changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/refresh-benchmarks
+          commit-message: 'chore(data): weekly benchmark refresh'
+          title: 'chore(data): weekly benchmark refresh'
+          body: |
+            Automated weekly refresh of `src/data/benchmarks/*.json`.
+
+            Both files re-fetched from Yahoo Finance and re-validated
+            (non-empty, monotonic dates, finite closes, latest date within
+            7 days). If this PR exists it means the fetch + validation
+            passed and the JSON delta is non-empty.
+
+            Review checklist before merging:
+            - Diff size looks like ~5 trading days of appended rows.
+            - No mid-series reshuffling (only appended dates at the end).
+            - `npm run validate:data` is green in CI.
+
+            Rolling back: just `git revert` this PR. The previous-good
+            JSON returns to `main` and the existing `deploy.yml`
+            redeploys.
+          labels: |
+            chore
+            data
+          add-paths: |
+            src/data/benchmarks/*.json
