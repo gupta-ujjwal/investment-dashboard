@@ -33,7 +33,7 @@ export const FEATURE_ANALYTICS_DEPTH = true
  *  evidence + unit fixtures pass (the canary gate). Pre-merge dark-
  *  shipping switch, not a post-deploy kill switch — once deployed,
  *  rollback is `git revert` → redeploy via `deploy.yml`. */
-export const FEATURE_SECTOR_DONUT = false
+export const FEATURE_SECTOR_DONUT = true
 
 /** Benchmark overlay on `ValueOverTime` (issue #24, PR B). Reads
  *  `src/data/benchmarks/{nifty50,sp500}.json`, refreshed weekly via
