@@ -18,7 +18,7 @@ export const FEATURE_HISTORY = true
  *  gate" the analytics-depth plan calls out — the flag is the pre-merge
  *  dark-shipping switch, not a post-deploy kill switch (rollback after
  *  deploy is `git revert` → redeploy via the existing `deploy.yml`). */
-export const FEATURE_ANALYTICS_DEPTH = false
+export const FEATURE_ANALYTICS_DEPTH = true
 
 /** Sector-allocation donut (issue #24, PR B). Reads
  *  `src/data/sectors.json` (hand-curated ticker → sector map: GICS for
