@@ -18,7 +18,7 @@ export const FEATURE_HISTORY = true
  *  gate" the analytics-depth plan calls out — the flag is the pre-merge
  *  dark-shipping switch, not a post-deploy kill switch (rollback after
  *  deploy is `git revert` → redeploy via the existing `deploy.yml`). */
-export const FEATURE_ANALYTICS_DEPTH = false
+export const FEATURE_ANALYTICS_DEPTH = true
 
 /** Sector-allocation donut (issue #24, PR B). Reads
  *  `src/data/sectors.json` (hand-curated ticker → sector map: GICS for
@@ -33,7 +33,7 @@ export const FEATURE_ANALYTICS_DEPTH = false
  *  evidence + unit fixtures pass (the canary gate). Pre-merge dark-
  *  shipping switch, not a post-deploy kill switch — once deployed,
  *  rollback is `git revert` → redeploy via `deploy.yml`. */
-export const FEATURE_SECTOR_DONUT = false
+export const FEATURE_SECTOR_DONUT = true
 
 /** Benchmark overlay on `ValueOverTime` (issue #24, PR B). Reads
  *  `src/data/benchmarks/{nifty50,sp500}.json`, refreshed weekly via
@@ -47,4 +47,4 @@ export const FEATURE_SECTOR_DONUT = false
  *  fixtures pass. Pre-merge dark-shipping switch, not a post-deploy kill
  *  switch — once deployed, rollback is `git revert` → redeploy via
  *  `deploy.yml`. */
-export const FEATURE_BENCHMARK_OVERLAY = false
+export const FEATURE_BENCHMARK_OVERLAY = true
