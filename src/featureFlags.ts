@@ -47,4 +47,4 @@ export const FEATURE_SECTOR_DONUT = true
  *  fixtures pass. Pre-merge dark-shipping switch, not a post-deploy kill
  *  switch — once deployed, rollback is `git revert` → redeploy via
  *  `deploy.yml`. */
-export const FEATURE_BENCHMARK_OVERLAY = false
+export const FEATURE_BENCHMARK_OVERLAY = true
