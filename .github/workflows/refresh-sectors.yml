@@ -1,4 +1,4 @@
-Cron: 1st and 15th of each month at 06:00 UTC — bi-weekly, on
+# Cron: 1st and 15th of each month at 06:00 UTC — bi-weekly, on
 # predictable dates (vs. every-14-days which drifts). Index constituents
 # change ~once per quarter, so this is a deliberately quiet cadence; a
 # refresh that finds zero deltas exits without opening a PR.
