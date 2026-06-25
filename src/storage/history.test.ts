@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CanonicalHolding } from './holdings'
+import type { ManualAsset } from './assets'
 import { buildRecord, toDateKey } from './history'
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
@@ -12,6 +13,20 @@ function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
     currency: 'INR',
     assetClass: 'equity',
     importedAt: 1000,
+    ...over,
+  }
+}
+
+function asset(over: Partial<ManualAsset> = {}): ManualAsset {
+  return {
+    id: 'a1',
+    name: 'Gold',
+    assetClass: 'gold',
+    currency: 'INR',
+    currentValue: 500000,
+    currentValueBase: 500000,
+    createdAt: 1000,
+    updatedAt: 1000,
     ...over,
   }
 }
@@ -31,20 +46,23 @@ describe('toDateKey', () => {
 })
 
 describe('buildRecord', () => {
-  it('stamps the record with date, capturedAt, base currency and holdings', () => {
+  it('stamps the record with date, capturedAt, base currency, holdings and assets', () => {
     const capturedAt = new Date(2026, 4, 16, 12, 0, 0).getTime()
     const holdings = [holding(), holding({ sourceSymbol: 'INE000000002' })]
-    const record = buildRecord(holdings, 'USD', capturedAt)
+    const record = buildRecord(holdings, [asset()], 'USD', capturedAt)
     expect(record.date).toBe('2026-05-16')
     expect(record.capturedAt).toBe(capturedAt)
     expect(record.baseCurrency).toBe('USD')
     expect(record.holdings).toHaveLength(2)
+    expect(record.assets).toHaveLength(1)
+    expect(record.assets?.[0].name).toBe('Gold')
   })
 
   it('keys two same-day snapshots identically — a re-import overwrites', () => {
-    const first = buildRecord([holding()], 'INR', new Date(2026, 4, 16, 9).getTime())
+    const first = buildRecord([holding()], [], 'INR', new Date(2026, 4, 16, 9).getTime())
     const second = buildRecord(
       [holding(), holding({ sourceSymbol: 'INE000000002' })],
+      [],
       'INR',
       new Date(2026, 4, 16, 17).getTime(),
     )
@@ -53,13 +71,14 @@ describe('buildRecord', () => {
   })
 
   it('keys snapshots on different days distinctly', () => {
-    const day1 = buildRecord([holding()], 'INR', new Date(2026, 4, 16).getTime())
-    const day2 = buildRecord([holding()], 'INR', new Date(2026, 4, 17).getTime())
+    const day1 = buildRecord([holding()], [], 'INR', new Date(2026, 4, 16).getTime())
+    const day2 = buildRecord([holding()], [], 'INR', new Date(2026, 4, 17).getTime())
     expect(day1.date).not.toBe(day2.date)
   })
 
   it('captures an empty portfolio (a commit that deleted everything)', () => {
-    const record = buildRecord([], 'INR', Date.now())
+    const record = buildRecord([], [], 'INR', Date.now())
     expect(record.holdings).toEqual([])
+    expect(record.assets).toEqual([])
   })
 })

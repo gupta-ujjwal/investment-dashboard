@@ -5,6 +5,7 @@ import {
   type BaseCurrency,
   type CanonicalHolding,
 } from './holdings'
+import { getAllAssets, type ManualAsset } from './assets'
 
 /**
  * A portfolio snapshot for one calendar day. The full per-holding state is
@@ -22,6 +23,12 @@ export type HistoryRecord = {
   baseCurrency: BaseCurrency
   /** Every holding as of `capturedAt`. */
   holdings: CanonicalHolding[]
+  /** Every manual asset as of `capturedAt`. Optional for backward-compat: a
+   *  record written before the revamp has no `assets` key (reads as `[]`).
+   *  Embedded so net-worth-over-time is reconstructable, and so any snapshot
+   *  trigger (import, FX refresh, asset edit) writes a *complete* portfolio
+   *  picture rather than holdings-only — the fix for the two-writers gap. */
+  assets?: ManualAsset[]
 }
 
 /** `YYYY-MM-DD` for a millisecond timestamp, in the browser's local zone. */
@@ -39,21 +46,26 @@ export function toDateKey(ts: number): string {
  *  the same primary key, hence an overwrite on `put`. */
 export function buildRecord(
   holdings: CanonicalHolding[],
+  assets: ManualAsset[],
   baseCurrency: BaseCurrency,
   capturedAt: number,
 ): HistoryRecord {
-  return { date: toDateKey(capturedAt), capturedAt, baseCurrency, holdings }
+  return { date: toDateKey(capturedAt), capturedAt, baseCurrency, holdings, assets }
 }
 
 /**
- * Capture the current portfolio as today's history record. Idempotent per day:
- * a second call on the same calendar day overwrites that day's record (`put`
- * on a `date`-keyed store). Reads holdings itself, so the caller only has to
- * have committed first.
+ * Capture the current portfolio (holdings + assets) as today's history record.
+ * Idempotent per day: a second call on the same calendar day overwrites that
+ * day's record (`put` on a `date`-keyed store). Reads BOTH stores itself, so
+ * whichever net-worth-moving event triggers it (import commit, FX refresh, or
+ * an asset add/edit/delete) produces a complete record — a same-day asset edit
+ * after an FX refresh no longer overwrites the holdings snapshot with a
+ * holdings-only one. Budget edits deliberately do NOT trigger a snapshot: a
+ * budget moves spending, not net worth.
  */
 export async function recordSnapshot(baseCurrency: BaseCurrency): Promise<void> {
-  const holdings = await getAll()
-  const record = buildRecord(holdings, baseCurrency, Date.now())
+  const [holdings, assets] = await Promise.all([getAll(), getAllAssets()])
+  const record = buildRecord(holdings, assets, baseCurrency, Date.now())
   const db = await getDB()
   await db.put(HISTORY_STORE, record)
 }

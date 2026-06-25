@@ -1,5 +1,6 @@
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import { commitImport, getAll } from '../storage/holdings'
+import { getAllAssets, upsertAsset, type ManualAsset } from '../storage/assets'
 import { effectiveRate, fetchUsdInrRate, FxFetchError } from './fx'
 import { saveSettings, type Settings } from '../storage/settings'
 
@@ -38,6 +39,54 @@ export function stampMany(
   return rows.map((h) => stampHolding(h, base, usdInrRate, fetchedAt))
 }
 
+/**
+ * Stamp a manual asset's base-currency figures, the asset analogue of
+ * `stampHolding`. Assets have no broker re-import to re-stamp them, so the
+ * triggers are: FX Refresh, base-currency change, and the asset add/edit action
+ * (see `maybeStampAsset` at the App action layer). Identity stamp (rate 1) when
+ * the asset's currency equals the base. `investedAmountBase` is only set when
+ * the asset carries a cost basis — a value-only asset keeps it `undefined`
+ * (R1: no sentinel `0`).
+ */
+export function stampAsset(
+  asset: ManualAsset,
+  base: BaseCurrency,
+  usdInrRate: number,
+  fetchedAt: number,
+): ManualAsset {
+  const rate = effectiveRate(asset.currency, base, usdInrRate)
+  // Mirrors `stampHolding`: stamps FX fields only, never touches the audit
+  // fields (`createdAt`/`updatedAt`) — the caller owns those.
+  const stamped: ManualAsset = {
+    ...asset,
+    fxRate: rate,
+    fxAsOf: fetchedAt,
+    currentValueBase: asset.currentValue * rate,
+  }
+  if (asset.investedAmount !== undefined) {
+    stamped.investedAmountBase = asset.investedAmount * rate
+  } else {
+    delete stamped.investedAmountBase
+  }
+  return stamped
+}
+
+/** Re-stamp every manual asset against a fresh rate, persisting each in its own
+ *  atomic write. Returns the count re-stamped. Sequential by design — the asset
+ *  set is small (manual entries), so a per-row tx keeps each write atomic (R3)
+ *  without a cross-store transaction. */
+async function restampAllAssets(
+  base: BaseCurrency,
+  usdInrRate: number,
+  fetchedAt: number,
+): Promise<number> {
+  const assets = await getAllAssets()
+  for (const a of assets) {
+    await upsertAsset(stampAsset(a, base, usdInrRate, fetchedAt))
+  }
+  return assets.length
+}
+
 export type RefreshResult = {
   rate: number
   fetchedAt: number
@@ -49,8 +98,11 @@ export async function refreshFx(settings: Settings): Promise<RefreshResult> {
   const holdings = await getAll()
   const stamped = stampMany(holdings, settings.baseCurrency, rate, fetchedAt)
   await commitImport({ inserts: [], updates: stamped, deletes: [] })
+  // Re-stamp manual assets against the same rate so net worth never mixes a
+  // fresh-FX holding with a stale-FX asset (the single-rule fix from review).
+  const assetCount = await restampAllAssets(settings.baseCurrency, rate, fetchedAt)
   await saveSettings({ ...settings, lastFxRate: rate, lastFxAsOf: fetchedAt })
-  return { rate, fetchedAt, updatedCount: stamped.length }
+  return { rate, fetchedAt, updatedCount: stamped.length + assetCount }
 }
 
 export function applyManualRate(
@@ -67,11 +119,16 @@ export function applyManualRate(
     const holdings = await getAll()
     const stamped = stampMany(holdings, settings.baseCurrency, manualUsdInrRate, fetchedAt)
     await commitImport({ inserts: [], updates: stamped, deletes: [] })
+    const assetCount = await restampAllAssets(
+      settings.baseCurrency,
+      manualUsdInrRate,
+      fetchedAt,
+    )
     await saveSettings({
       ...settings,
       lastFxRate: manualUsdInrRate,
       lastFxAsOf: fetchedAt,
     })
-    return { rate: manualUsdInrRate, fetchedAt, updatedCount: stamped.length }
+    return { rate: manualUsdInrRate, fetchedAt, updatedCount: stamped.length + assetCount }
   })()
 }

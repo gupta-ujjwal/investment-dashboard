@@ -67,12 +67,21 @@ export type HoldingKey = {
 }
 
 export const DB_NAME = 'investment-dashboard'
-export const DB_VERSION = 3
-const STORE = 'holdings'
+export const DB_VERSION = 4
+/** The holdings object store. Exported so the cross-store backup/restore
+ *  (`storage/backup.ts`) can open a transaction spanning every store. */
+export const HOLDINGS_STORE = 'holdings'
+const STORE = HOLDINGS_STORE
 const IDX_BY_SOURCE = 'by-source'
 export const SETTINGS_STORE = 'settings'
 /** Per-day portfolio snapshots — see `storage/history.ts`. Added in v3. */
 export const HISTORY_STORE = 'historySnapshots'
+/** Value-only manual assets (crypto, gold, FD, …) — see `storage/assets.ts`.
+ *  Added in v4. Keyed by a generated `id`. */
+export const ASSETS_STORE = 'assets'
+/** Monthly cash-flow records — see `storage/budget.ts`. Added in v4. Keyed by
+ *  `YYYY-MM`. */
+export const BUDGET_STORE = 'budgetMonths'
 
 let dbPromise: Promise<IDBPDatabase> | null = null
 
@@ -95,10 +104,19 @@ export function getDB(): Promise<IDBPDatabase> {
           // snapshots populate lazily on the next import.
           db.createObjectStore(HISTORY_STORE, { keyPath: 'date' })
         }
-        // No v4 needed: `status`, `createdAt`, `updatedAt`, `manualOverrides`
-        // are optional scalars on existing rows. Per dsl.md §
-        // dsl-decision-guide, optional scalar additions do not bump the
-        // schema version.
+        if (oldVersion < 4) {
+          // Personal-finance revamp: two additive stores alongside `holdings`
+          // (R11 — holdings stay positional, new concerns are new stores; never
+          // reshape `holdings`). Additive-only, no backfill — both populate
+          // lazily on the first asset/budget the user enters. `assets` is
+          // keyed by a generated id; `budgetMonths` by `YYYY-MM`.
+          db.createObjectStore(ASSETS_STORE, { keyPath: 'id' })
+          db.createObjectStore(BUDGET_STORE, { keyPath: 'month' })
+        }
+        // `status`, `createdAt`, `updatedAt`, `manualOverrides`, and the v4
+        // asset planning tags (`riskBand`, `emergencyFund`) are optional
+        // scalars on existing rows — per dsl.md § dsl-decision-guide, optional
+        // scalar additions do not bump the schema version.
       },
     })
   }

@@ -156,4 +156,139 @@ describe('parseBackup', () => {
     if (result.ok) return
     expect(result.error).toMatch(/index 1/)
   })
+
+  // ── Revamp: cross-version + multi-store coverage ──────────────────────────
+
+  it('upconverts a pre-v4 (holdings-only) backup instead of rejecting it', () => {
+    // A v3 backup predates the asset/budget stores; the fix accepts it and
+    // defaults the missing sections to empty so existing backups stay
+    // restorable across the v4 bump.
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: 3,
+      holdings: [validHolding()],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.schemaVersion).toBe(3)
+    expect(result.backup.holdings).toHaveLength(1)
+    expect(result.backup.assets).toEqual([])
+    expect(result.backup.budgetMonths).toEqual([])
+    expect(result.backup.settings).toBeUndefined()
+  })
+
+  it('rejects a backup newer than this build', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION + 1,
+      holdings: [],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/newer/i)
+  })
+
+  it('accepts and validates assets, budget months, and settings targets', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      assets: [
+        {
+          id: 'a1',
+          name: 'Gold',
+          assetClass: 'gold',
+          currency: 'INR',
+          currentValue: 500000,
+          createdAt: 1717200000000,
+          updatedAt: 1717200000000,
+          emergencyFund: true,
+          riskBand: 'safe',
+        },
+      ],
+      budgetMonths: [
+        {
+          month: '2026-05',
+          income: [{ category: 'Salary', amount: 280000 }],
+          expenses: [{ category: 'Rent', amount: 43000 }],
+          invested: 50000,
+          createdAt: 1717200000000,
+          updatedAt: 1717200000000,
+        },
+      ],
+      settings: { goalCorpus: 5000000, monthlyContribution: 50000 },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.assets).toHaveLength(1)
+    expect(result.backup.assets[0].name).toBe('Gold')
+    expect(result.backup.budgetMonths[0].income[0].amount).toBe(280000)
+    expect(result.backup.settings?.goalCorpus).toBe(5000000)
+  })
+
+  it('rejects a malformed asset', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      assets: [{ id: 'a1', name: 'Gold', assetClass: 'gold', currency: 'INR' }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/currentValue/)
+  })
+
+  it('accepts a manual holding (so hand-added rows round-trip)', () => {
+    const result = parseBackup(validBackupJson([validHolding({ source: 'manual', sourceSymbol: 'MYGOLD' })]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.holdings[0].source).toBe('manual')
+  })
+
+  it('round-trips allocationTargets in settings', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      settings: {
+        goalCorpus: 5000000,
+        allocationTargets: [
+          { riskBand: 'safe', pct: 50 },
+          { riskBand: 'high', pct: 50 },
+        ],
+      },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.settings?.allocationTargets).toHaveLength(2)
+    expect(result.backup.settings?.allocationTargets?.[0]).toEqual({ riskBand: 'safe', pct: 50 })
+  })
+
+  it('rejects an allocationTarget with an invalid risk band', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      settings: { allocationTargets: [{ riskBand: 'spicy', pct: 50 }] },
+    })
+    expect(parseBackup(json).ok).toBe(false)
+  })
+
+  it('rejects a malformed budget month', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-05-20T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      budgetMonths: [{ month: 'May 2026', income: [], expenses: [], invested: 0, createdAt: 1, updatedAt: 1 }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/YYYY-MM/)
+  })
 })

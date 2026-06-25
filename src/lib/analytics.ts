@@ -1,6 +1,7 @@
 import type { BaseCurrency, CanonicalHolding, Currency } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import { deriveRows, type DerivedRow } from './holdingsView'
+import { assetPosition } from './netWorth'
 
 /**
  * Pure aggregation for the homepage analytics page. Every function here is a
@@ -153,8 +154,20 @@ export function valueSeries(
     .filter((record) => record.baseCurrency === base)
     .map((record) => {
       const rows = deriveRows(record.holdings)
-      const value = sumDefined(rows.map((r) => r.currentValueBase))
-      const invested = sumDefined(rows.map((r) => r.investedBase))
+      // Net worth = holdings + manual assets. Older records predate assets and
+      // read as `[]`. Value sums every position's base value (R1: `undefined`
+      // if any is missing). Invested sums basis-bearing positions only —
+      // value-only assets (cash, savings) have no basis and are excluded from
+      // the cost line rather than blanking it.
+      const assetPositions = (record.assets ?? []).map(assetPosition)
+      const value = sumDefined([
+        ...rows.map((r) => r.currentValueBase),
+        ...assetPositions.map((a) => a.currentValueBase),
+      ])
+      const invested = sumDefined([
+        ...rows.map((r) => r.investedBase),
+        ...assetPositions.filter((a) => a.hasBasis).map((a) => a.investedBase),
+      ])
       const profit =
         value === undefined || invested === undefined ? undefined : value - invested
       return { date: record.date, value, invested, profit }
