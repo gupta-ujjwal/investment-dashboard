@@ -1,11 +1,21 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { FEATURE_BUDGET, FEATURE_PLANNING } from '../featureFlags'
 
+// Tab set grows with the personal-finance revamp. Budget and Planning are
+// gated on their phase flags so flipping a flag off removes both the tab and
+// its route in lockstep (no dead links). Order keeps the analysis surfaces
+// (Analytics → Holdings → Budget → Planning) before the utility tabs
+// (Import / Settings). With up to six tabs the nav can overflow a 360px
+// viewport, so the list is a horizontal scroll strip on mobile (see below)
+// rather than the old fixed four-tab row.
 const tabs = [
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/holdings', label: 'Holdings' },
-  { to: '/import', label: 'Import' },
-  { to: '/settings', label: 'Settings' },
-]
+  { to: '/analytics', label: 'Analytics', enabled: true },
+  { to: '/holdings', label: 'Holdings', enabled: true },
+  { to: '/budget', label: 'Budget', enabled: FEATURE_BUDGET },
+  { to: '/planning', label: 'Planning', enabled: FEATURE_PLANNING },
+  { to: '/import', label: 'Import', enabled: true },
+  { to: '/settings', label: 'Settings', enabled: true },
+].filter((t) => t.enabled)
 
 export function AppShell() {
   const title = import.meta.env.VITE_APP_TITLE ?? 'Investment Dashboard'
@@ -23,15 +33,20 @@ export function AppShell() {
               {title}
             </span>
           </div>
-          <nav>
-            <ul className="flex items-center gap-1">
+          <nav
+            aria-label="Primary"
+            // Horizontal scroll strip: up to six tabs cannot fit a 360px
+            // viewport, so the list scrolls horizontally on mobile (scrollbar
+            // hidden) and sits inline on ≥sm. `min-w-0` lets the nav shrink
+            // inside the flex header instead of pushing the layout wider.
+            className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <ul className="flex items-center gap-1 whitespace-nowrap">
               {tabs.map((t) => (
                 <li key={t.to}>
                   <NavLink
                     to={t.to}
                     className={({ isActive }) =>
-                      // Mobile sizing is tightened so all four tabs fit a
-                      // 360px viewport without horizontal overflow.
                       `relative inline-block px-2 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.14em] transition sm:px-4 sm:text-[13px] sm:tracking-[0.16em] ${
                         isActive
                           ? 'text-bone-50'

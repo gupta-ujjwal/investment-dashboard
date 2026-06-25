@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
+import type { ManualAsset } from '../storage/assets'
 import type { Settings } from '../storage/settings'
 import {
   concentration,
@@ -9,12 +10,22 @@ import {
   type Concentration,
   type HhiBand,
 } from '../lib/analytics'
+import {
+  buildPositions,
+  netWorthAllocation,
+  netWorthTotals,
+  type NetWorthSlice,
+  type NetWorthTotals,
+} from '../lib/netWorth'
+import { projectGoal, type GoalProjection } from '../lib/goals'
 import { deriveRows } from '../lib/holdingsView'
 import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
 import {
   FEATURE_ANALYTICS_DEPTH,
+  FEATURE_ASSETS,
   FEATURE_BASE_CURRENCY,
+  FEATURE_GOALS,
   FEATURE_HISTORY,
 } from '../featureFlags'
 
@@ -26,16 +37,28 @@ type LoaderData = {
   holdings: CanonicalHolding[]
   settings: Settings
   history: HistoryRecord[]
+  assets: ManualAsset[]
 }
 
 export function AnalyticsRoute() {
-  const { holdings, settings, history } = useLoaderData() as LoaderData
+  const { holdings, settings, history, assets } = useLoaderData() as LoaderData
+  const assetList = assets ?? []
 
-  if (holdings.length === 0) {
+  // Empty only when there is nothing at all — assets alone are enough to show
+  // a net worth, so a holdings-empty / assets-present user still gets a page.
+  if (holdings.length === 0 && assetList.length === 0) {
     return <EmptyState />
   }
 
   const base = settings.baseCurrency
+  const showNetWorth = FEATURE_ASSETS && assetList.length > 0
+  const positions = buildPositions(holdings, assetList)
+  const netWorth = netWorthTotals(positions)
+  const allocation = netWorthAllocation(positions)
+  const goal: GoalProjection | undefined =
+    FEATURE_GOALS && (settings.goalCorpus ?? 0) > 0
+      ? projectGoal(netWorth.knownCurrentValue, settings.goalCorpus, settings.monthlyContribution)
+      : undefined
   const totals = portfolioTotals(holdings)
   const inrCount = holdings.filter((h) => h.currency === 'INR').length
   const usdCount = holdings.length - inrCount
@@ -57,60 +80,198 @@ export function AnalyticsRoute() {
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
-      <section
-        aria-label="Key figures"
-        className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
-      >
+      {showNetWorth && (
+        <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
+      )}
+
+      {goal && <GoalCard goal={goal} base={base} />}
+
+      {holdings.length > 0 && (
+        <>
+          <section aria-label="Equity holdings key figures" className="space-y-3">
+            {showNetWorth && (
+              <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+                Equity holdings
+              </h3>
+            )}
+            <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+              <Kpi
+                label={`Value · ${base}`}
+                value={money(totals.totalValueBase, base)}
+                sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
+                tone="tick"
+              />
+              <Kpi
+                label={`Invested · ${base}`}
+                value={money(totals.totalInvestedBase, base)}
+                sub="cost basis"
+                tone="mute"
+              />
+              <Kpi
+                label={`P&L · ${base}`}
+                value={money(totals.totalProfitBase, base)}
+                sub={
+                  totals.totalProfitPct === undefined
+                    ? '—'
+                    : formatPercent(totals.totalProfitPct)
+                }
+                tone={pnlTone}
+              />
+              <Kpi
+                label="Positions"
+                value={String(totals.positions)}
+                sub={`${inrCount} India · ${usdCount} US`}
+                tone="mute"
+              />
+            </div>
+          </section>
+
+          {conc && <RiskRow concentration={conc} />}
+
+          <section aria-label="Charts">
+            <div className="flex items-end justify-between">
+              <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+                Charts
+              </h3>
+              {FEATURE_HISTORY && (
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+                  {history.length} snapshot{history.length === 1 ? '' : 's'}
+                </span>
+              )}
+            </div>
+            <div className="mt-4">
+              <Suspense fallback={<ChartsFallback />}>
+                <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+              </Suspense>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Net-worth summary: holdings + manual assets folded into one figure, with a
+ *  partial badge when some position lacks a base value (never a silently
+ *  understated total), and an allocation-by-class breakdown. */
+function NetWorthSection({
+  netWorth,
+  allocation,
+  base,
+}: {
+  netWorth: NetWorthTotals
+  allocation: NetWorthSlice[]
+  base: BaseCurrency
+}) {
+  const partial = netWorth.excludedCount > 0
+  return (
+    <section aria-label="Net worth" className="space-y-4">
+      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        Net worth
+      </h3>
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
-          label={`Value · ${base}`}
-          value={money(totals.totalValueBase, base)}
-          sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
-          tone="tick"
+          label={`Net worth · ${base}`}
+          value={formatMoney(netWorth.knownCurrentValue, base)}
+          sub={
+            partial
+              ? `partial · ${netWorth.excludedCount} not valued`
+              : `${netWorth.totalPositions} position${netWorth.totalPositions === 1 ? '' : 's'}`
+          }
+          tone={partial ? 'loss' : 'tick'}
         />
         <Kpi
           label={`Invested · ${base}`}
-          value={money(totals.totalInvestedBase, base)}
-          sub="cost basis"
+          value={formatMoney(netWorth.knownInvested, base)}
+          sub="cost basis (where known)"
           tone="mute"
         />
         <Kpi
           label={`P&L · ${base}`}
-          value={money(totals.totalProfitBase, base)}
+          value={formatMoney(netWorth.profitKnown, base)}
           sub={
-            totals.totalProfitPct === undefined
-              ? '—'
-              : formatPercent(totals.totalProfitPct)
+            netWorth.profitPctKnown === undefined
+              ? 'no comparable basis'
+              : formatPercent(netWorth.profitPctKnown)
           }
-          tone={pnlTone}
+          tone={netWorth.profitKnown >= 0 ? 'gain' : 'loss'}
         />
-        <Kpi
-          label="Positions"
-          value={String(totals.positions)}
-          sub={`${inrCount} India · ${usdCount} US`}
-          tone="mute"
-        />
-      </section>
+      </div>
 
-      {conc && <RiskRow concentration={conc} />}
+      {partial && (
+        <p
+          role="status"
+          className="border-l-2 border-ember-400/60 bg-ember-900/15 px-4 py-2 font-sans text-xs text-ember-300"
+        >
+          {netWorth.excludedCount} of {netWorth.totalPositions} positions have no
+          base-currency value yet (unpriced holding or stale FX) and are excluded
+          from the total above. Refresh FX or add a price to complete it.
+        </p>
+      )}
 
-      <section aria-label="Charts">
-        <div className="flex items-end justify-between">
-          <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-            Charts
-          </h3>
-          {FEATURE_HISTORY && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-              {history.length} snapshot{history.length === 1 ? '' : 's'}
+      {allocation.length > 0 && <AllocationBars slices={allocation} base={base} />}
+    </section>
+  )
+}
+
+/** Allocation-by-asset-class as a labelled bar list — a lightweight, chart-free
+ *  breakdown that reads at a glance and needs no Recharts chunk. */
+function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseCurrency }) {
+  return (
+    <ul className="space-y-2 border border-bone-100/10 bg-ink-900 p-4">
+      {slices.map((s) => (
+        <li key={s.key} className="space-y-1">
+          <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
+            <span className="uppercase tracking-[0.14em]">{s.label}</span>
+            <span className="tabular-nums text-bone-400">
+              {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
             </span>
-          )}
+          </div>
+          <div className="h-1.5 w-full overflow-hidden bg-bone-100/10">
+            <div
+              className="h-full bg-tick-400/70"
+              style={{ width: `${Math.max(2, s.pct * 100)}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** Goal projection card (Phase 4) — corpus progress + time-to-goal under a
+ *  stated, visible projection model. */
+function GoalCard({ goal, base }: { goal: GoalProjection; base: BaseCurrency }) {
+  return (
+    <section aria-label="Goal" className="space-y-3">
+      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        Goal
+      </h3>
+      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+        <div className="flex items-baseline justify-between">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
+            {formatMoney(goal.current, base)} of {formatMoney(goal.target, base)}
+          </span>
+          <span className="font-display text-2xl tabular-nums text-tick-300">
+            {(goal.progressPct * 100).toFixed(1)}%
+          </span>
         </div>
-        <div className="mt-4">
-          <Suspense fallback={<ChartsFallback />}>
-            <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
-          </Suspense>
+        <div className="h-2 w-full overflow-hidden bg-bone-100/10">
+          <div
+            className="h-full bg-tick-400"
+            style={{ width: `${Math.min(100, goal.progressPct * 100)}%` }}
+          />
         </div>
-      </section>
-    </div>
+        <p className="font-sans text-xs text-bone-400">
+          {goal.reached
+            ? 'Goal reached 🎉'
+            : goal.monthsToGoal === undefined
+              ? 'Set a monthly contribution in Settings to project a timeline.'
+              : `~${goal.monthsToGoal} month${goal.monthsToGoal === 1 ? '' : 's'} to goal (${goal.yearsToGoal} yr) at ${formatMoney(goal.monthlyContribution, base)}/mo.`}
+          <span className="mt-1 block text-bone-500">{goal.assumptionNote}</span>
+        </p>
+      </div>
+    </section>
   )
 }
 

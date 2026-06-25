@@ -19,7 +19,9 @@ import type { RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { useUndoableAction } from '../components/useUndoableAction'
 import { UndoToast } from '../components/UndoToast'
-import { FEATURE_BASE_CURRENCY } from '../featureFlags'
+import { AssetsSection } from '../components/AssetsSection'
+import { FEATURE_ASSETS, FEATURE_BASE_CURRENCY } from '../featureFlags'
+import type { ManualAsset } from '../storage/assets'
 
 /** Columns whose natural first-click direction is ascending (text-like). */
 const ASC_FIRST: ReadonlySet<SortKey> = new Set<SortKey>(['name', 'market', 'broker'])
@@ -47,9 +49,10 @@ const sortOptions: { key: SortKey; label: string }[] = [
 ]
 
 export function HoldingsRoute() {
-  const { holdings, settings } = useLoaderData() as {
+  const { holdings, settings, assets } = useLoaderData() as {
     holdings: CanonicalHolding[]
     settings: Settings
+    assets: ManualAsset[]
   }
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
@@ -183,6 +186,13 @@ export function HoldingsRoute() {
           existingKeys={existingKeys}
           onClose={() => setAddOpen(false)}
         />
+        {FEATURE_ASSETS && (
+          <AssetsSection
+            assets={assets}
+            baseCurrency={settings.baseCurrency}
+            lastFxAsOf={settings.lastFxAsOf}
+          />
+        )}
       </div>
     )
   }
@@ -277,6 +287,15 @@ export function HoldingsRoute() {
         existingKeys={existingKeys}
         onClose={() => setEditing(null)}
       />
+
+      {FEATURE_ASSETS && (
+        <AssetsSection
+          assets={assets}
+          baseCurrency={settings.baseCurrency}
+          lastFxAsOf={settings.lastFxAsOf}
+        />
+      )}
+
       <UndoToast
         toast={undoable.active}
         onUndo={undoable.undo}
