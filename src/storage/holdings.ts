@@ -67,7 +67,7 @@ export type HoldingKey = {
 }
 
 export const DB_NAME = 'investment-dashboard'
-export const DB_VERSION = 4
+export const DB_VERSION = 5
 /** The holdings object store. Exported so the cross-store backup/restore
  *  (`storage/backup.ts`) can open a transaction spanning every store. */
 export const HOLDINGS_STORE = 'holdings'
@@ -82,8 +82,39 @@ export const ASSETS_STORE = 'assets'
 /** Monthly cash-flow records — see `storage/budget.ts`. Added in v4. Keyed by
  *  `YYYY-MM`. */
 export const BUDGET_STORE = 'budgetMonths'
+/** Reusable budget tags (income / expense vocabulary) — see
+ *  `storage/budgetTags.ts`. Added in v5. Keyed by a generated `id`. */
+export const BUDGET_TAGS_STORE = 'budgetTags'
 
 let dbPromise: Promise<IDBPDatabase> | null = null
+
+/**
+ * Surface a blocked/failed IndexedDB open instead of letting it reject silently
+ * into a route loader and white-screen the app. An upgrade is *blocked* when an
+ * older-version connection is still open in another tab; a `VersionError` is
+ * thrown when this bundle requests a lower version than the on-disk DB (e.g. a
+ * stale/reverted deploy opening a DB a newer deploy already migrated). The
+ * default presenter is a one-line `alert` + `console` warning ("reload to
+ * latest"); tests can swap it for a no-op. There is no first-party telemetry
+ * (privacy doctrine) — this is the only failure signal a user gets, so it must
+ * be visible, not swallowed.
+ */
+let presentDbBlocked: (message: string) => void = (message) => {
+  console.warn(`[idb] ${message}`)
+  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert(message)
+  }
+}
+
+/** Test seam — replace the blocked/version-error presenter (default alerts). */
+export function setDbBlockedPresenter(fn: (message: string) => void): void {
+  presentDbBlocked = fn
+}
+
+const BLOCKED_MESSAGE =
+  'This dashboard is open in another tab on an older version. Close the other tab(s) and reload to finish updating your local database.'
+const VERSION_ERROR_MESSAGE =
+  'Your local database was created by a newer version of this dashboard. Reload to load the latest version — your data is safe and untouched.'
 
 export function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
@@ -113,11 +144,48 @@ export function getDB(): Promise<IDBPDatabase> {
           db.createObjectStore(ASSETS_STORE, { keyPath: 'id' })
           db.createObjectStore(BUDGET_STORE, { keyPath: 'month' })
         }
+        if (oldVersion < 5) {
+          // Reusable budget tags (revamp: managed income/expense vocabulary).
+          // Additive only — one store, keyed by a generated `id`, no backfill
+          // (R11 / dsl.md § dsl-decision-guide). The `contains` guard makes a
+          // partial / re-run upgrade idempotent: a throw inside `upgrade`
+          // aborts the open transaction and the DB never opens at all (full
+          // outage, not a degraded feature), so creation must never throw on
+          // an already-present store.
+          if (!db.objectStoreNames.contains(BUDGET_TAGS_STORE)) {
+            db.createObjectStore(BUDGET_TAGS_STORE, { keyPath: 'id' })
+          }
+        }
         // `status`, `createdAt`, `updatedAt`, `manualOverrides`, and the v4
         // asset planning tags (`riskBand`, `emergencyFund`) are optional
         // scalars on existing rows — per dsl.md § dsl-decision-guide, optional
         // scalar additions do not bump the schema version.
       },
+      // Another tab holds an older-version connection open and is blocking this
+      // upgrade. Tell the user to close it rather than hanging on a silent
+      // blocked open.
+      blocked() {
+        presentDbBlocked(BLOCKED_MESSAGE)
+      },
+      // This (older) connection is blocking a newer tab's upgrade — close it so
+      // the newer version can proceed, and drop the cached promise so the next
+      // call re-opens at the new version.
+      blocking() {
+        dbPromise = null
+      },
+      terminated() {
+        dbPromise = null
+      },
+    }).catch((err: unknown) => {
+      // `VersionError` (DB on disk is newer than this bundle requests) and any
+      // other open failure must not reject unhandled into a route loader and
+      // white-screen the app. Surface a reload prompt and reset the cache so a
+      // reload can retry against the correct version.
+      dbPromise = null
+      if (err instanceof DOMException && err.name === 'VersionError') {
+        presentDbBlocked(VERSION_ERROR_MESSAGE)
+      }
+      throw err
     })
   }
   return dbPromise

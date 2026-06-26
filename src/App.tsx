@@ -32,7 +32,13 @@ import {
   type NumberLocale,
   type Settings,
 } from './storage/settings'
-import { FEATURE_ASSETS, FEATURE_BUDGET, FEATURE_HISTORY, FEATURE_PLANNING } from './featureFlags'
+import {
+  FEATURE_ASSETS,
+  FEATURE_BUDGET,
+  FEATURE_BUDGET_TAGS,
+  FEATURE_HISTORY,
+  FEATURE_PLANNING,
+} from './featureFlags'
 import { applyManualRate, refreshFx, stampAsset, stampHolding } from './lib/refreshFx'
 import { FxFetchError } from './lib/fx'
 import {
@@ -48,8 +54,9 @@ import {
 import type { HoldingActionResult } from './components/HoldingForm'
 import type { AssetActionResult } from './components/AssetForm'
 import { AppShell } from './routes/AppShell'
-import { AnalyticsRoute } from './routes/AnalyticsRoute'
-import { HoldingsRoute } from './routes/HoldingsRoute'
+import { OverviewRoute } from './routes/OverviewRoute'
+import { InvestmentsRoute } from './routes/InvestmentsRoute'
+import { EquityRoute } from './routes/EquityRoute'
 import { BudgetRoute } from './routes/BudgetRoute'
 import { PlanningRoute } from './routes/PlanningRoute'
 import { ImportRoute } from './routes/import/ImportRoute'
@@ -63,6 +70,14 @@ import {
   type BudgetLine,
   type BudgetMonth,
 } from './storage/budget'
+import {
+  deleteBudgetTag,
+  getAllBudgetTags,
+  tagDedupeKey,
+  upsertBudgetTag,
+  type BudgetTag,
+  type BudgetTagKind,
+} from './storage/budgetTags'
 import type { BudgetActionResult } from './routes/BudgetRoute'
 
 const dashboardLoader = async () => {
@@ -76,8 +91,12 @@ const dashboardLoader = async () => {
 }
 
 const budgetLoader = async () => {
-  const [months, settings] = await Promise.all([getAllBudgetMonths(), getSettings()])
-  return { months, settings }
+  const [months, settings, tags] = await Promise.all([
+    getAllBudgetMonths(),
+    getSettings(),
+    FEATURE_BUDGET_TAGS ? getAllBudgetTags() : Promise.resolve([] as BudgetTag[]),
+  ])
+  return { months, settings, tags }
 }
 
 const planningLoader = async () => {
@@ -96,6 +115,10 @@ function isBaseCurrency(v: FormDataEntryValue | null): v is BaseCurrency {
 
 function isNumberLocale(v: FormDataEntryValue | null): v is NumberLocale {
   return v === 'en-IN' || v === 'en-US'
+}
+
+function isBudgetTagKind(v: FormDataEntryValue | null): v is BudgetTagKind {
+  return v === 'income' || v === 'expense'
 }
 
 /** Parse an optional numeric target field. Returns a sentinel:
@@ -516,6 +539,39 @@ const budgetAction = async ({ request }: ActionFunctionArgs): Promise<BudgetActi
       await deleteBudgetMonth(month)
       return { ok: true, mode: 'deleted' }
     }
+    // ── Budget tag intents (v5) ─────────────────────────────────────────────
+    if (intent === 'createTag') {
+      if (!FEATURE_BUDGET_TAGS) return { ok: false, error: 'Budget tags are disabled.' }
+      const labelRaw = form.get('label')
+      const kind = form.get('kind')
+      const label = typeof labelRaw === 'string' ? labelRaw.trim() : ''
+      if (label === '') return { ok: false, error: 'Tag label is required.' }
+      if (!isBudgetTagKind(kind)) return { ok: false, error: 'Tag kind must be income or expense.' }
+      // Idempotent create: if a tag with the same label (case/space-insensitive)
+      // already exists in this kind, return it rather than making a duplicate —
+      // a user "creating" Rent twice should converge on one tag.
+      const existing = await getAllBudgetTags()
+      const key = tagDedupeKey(label, kind)
+      const dupe = existing.find((t) => tagDedupeKey(t.label, t.kind) === key)
+      if (dupe) return { ok: true, mode: 'tag-created', tag: dupe }
+      const tag: BudgetTag = {
+        id: crypto.randomUUID(),
+        label,
+        kind,
+        createdAt: Date.now(),
+      }
+      await upsertBudgetTag(tag)
+      return { ok: true, mode: 'tag-created', tag }
+    }
+    if (intent === 'deleteTag') {
+      if (!FEATURE_BUDGET_TAGS) return { ok: false, error: 'Budget tags are disabled.' }
+      const id = form.get('id')
+      if (typeof id !== 'string' || id === '') return { ok: false, error: 'Missing tag id' }
+      // Deleting a tag only removes it from the picker — past months' lines keep
+      // the label they were saved with (tag = managed label, not a foreign key).
+      await deleteBudgetTag(id)
+      return { ok: true, mode: 'tag-deleted' }
+    }
     return { ok: false, error: `Unknown intent: ${String(intent)}` }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -533,16 +589,26 @@ const router = createBrowserRouter(
           loader: async () => {
             const holdings = await getAll()
             // First run lands on Import — the one thing a new user must do.
-            throw redirect(holdings.length === 0 ? '/import' : '/analytics')
+            throw redirect(holdings.length === 0 ? '/import' : '/overview')
           },
         },
-        { path: 'analytics', Component: AnalyticsRoute, loader: dashboardLoader },
+        // Net-worth-centric IA: Overview (generic, cross-asset) → Investments
+        // (all asset classes; equity backfilled read-only from holdings) →
+        // Equity (the per-ticker table + equity analytics). `holdingsAction`
+        // (holding + manual-asset intents) is mounted on `/equity`; the asset
+        // forms on Investments post to it and react-router revalidates the
+        // Investments loader.
+        { path: 'overview', Component: OverviewRoute, loader: dashboardLoader },
+        { path: 'investments', Component: InvestmentsRoute, loader: dashboardLoader },
         {
-          path: 'holdings',
-          Component: HoldingsRoute,
+          path: 'equity',
+          Component: EquityRoute,
           loader: dashboardLoader,
           action: holdingsAction,
         },
+        // Redirects preserve old bookmarks / external links after the rename.
+        { path: 'analytics', loader: () => redirect('/overview') },
+        { path: 'holdings', loader: () => redirect('/equity') },
         // Budget / Planning routes are gated on their phase flags so a flag-off
         // build has neither the tab (AppShell) nor the route — no dead links.
         ...(FEATURE_BUDGET

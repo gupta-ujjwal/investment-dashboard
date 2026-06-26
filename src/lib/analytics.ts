@@ -1,7 +1,7 @@
 import type { BaseCurrency, CanonicalHolding, Currency } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import { deriveRows, type DerivedRow } from './holdingsView'
-import { assetPosition } from './netWorth'
+import { buildPositions, type NetWorthPosition } from './netWorth'
 
 /**
  * Pure aggregation for the homepage analytics page. Every function here is a
@@ -141,38 +141,153 @@ export type ValuePoint = {
 }
 
 /**
- * The history log folded into a time series. Records stamped in a base
- * currency other than the one in view are skipped — there is no historical FX
- * to honestly re-base them, so a stale-base point would mislabel its axis.
- * Points stay in oldest-first date order.
+ * The history log folded into a value/invested/profit time series. Records
+ * stamped in a base currency other than the one in view are skipped — there is
+ * no historical FX to honestly re-base them, so a stale-base point would
+ * mislabel its axis. Points stay in oldest-first date order.
+ *
+ * One fold, two callers, via an optional position `filter`:
+ *  - **Overview (net worth)** — no filter: every position (holdings + manual
+ *    assets) counts.
+ *  - **Equity tab** — `(p) => p.kind === 'holding'`: the broker/equity portfolio
+ *    only, so the NIFTY/S&P benchmark overlay compares like-with-like instead of
+ *    riding a net-worth line that includes cash/gold.
+ * Positions come from `buildPositions`, which already excludes closed holdings
+ * and folds value-only assets — so value sums every selected position's base
+ * value (R1: `undefined` if any is missing) and invested sums only
+ * basis-bearing positions (cash/savings have no basis and don't blank the cost
+ * line).
  */
 export function valueSeries(
   history: readonly HistoryRecord[],
   base: BaseCurrency,
+  filter?: (position: NetWorthPosition) => boolean,
 ): ValuePoint[] {
   return history
     .filter((record) => record.baseCurrency === base)
     .map((record) => {
-      const rows = deriveRows(record.holdings)
-      // Net worth = holdings + manual assets. Older records predate assets and
-      // read as `[]`. Value sums every position's base value (R1: `undefined`
-      // if any is missing). Invested sums basis-bearing positions only —
-      // value-only assets (cash, savings) have no basis and are excluded from
-      // the cost line rather than blanking it.
-      const assetPositions = (record.assets ?? []).map(assetPosition)
-      const value = sumDefined([
-        ...rows.map((r) => r.currentValueBase),
-        ...assetPositions.map((a) => a.currentValueBase),
-      ])
-      const invested = sumDefined([
-        ...rows.map((r) => r.investedBase),
-        ...assetPositions.filter((a) => a.hasBasis).map((a) => a.investedBase),
-      ])
+      // Older records predate assets and read as `[]`.
+      const positions = buildPositions(record.holdings, record.assets ?? [])
+      const selected = filter ? positions.filter(filter) : positions
+      const value = sumDefined(selected.map((p) => p.currentValueBase))
+      const invested = sumDefined(
+        selected.filter((p) => p.hasBasis).map((p) => p.investedBase),
+      )
       const profit =
         value === undefined || invested === undefined ? undefined : value - invested
       return { date: record.date, value, invested, profit }
     })
     .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+/** Position selector for the Equity tab's value series + benchmark overlay —
+ *  the broker/equity portfolio only, excluding manual value-only assets. */
+export const isHoldingPosition = (p: NetWorthPosition): boolean => p.kind === 'holding'
+
+// ── Net worth by asset class over time (Overview stacked area + sparklines) ──
+
+/** One stacked-area data row: a `date` plus a base value per asset-class group.
+ *  The index signature is `number | string` (not `number`) so the string `date`
+ *  coexists with the numeric group columns Recharts reads by `dataKey`. */
+export type ClassRow = { date: string; [group: string]: number | string }
+
+export type ClassSeries = {
+  /** Asset-class group keys present across the history, ordered by their value
+   *  in the most recent snapshot (largest first) — a stable stacking order. */
+  groups: string[]
+  /** One row per snapshot date: `{ date, [group]: valueBase }`. A group with no
+   *  computable value on a given date is `0` for that date (stacked-area
+   *  friendly — partial values are excluded from the sum, never read as a
+   *  negative or NaN). */
+  rows: ClassRow[]
+}
+
+/** Read a numeric group cell from a `ClassRow`, coercing the `number | string`
+ *  index type (the only string column is `date`, never read this way). */
+function cell(row: ClassRow, group: string): number {
+  const v = row[group]
+  return typeof v === 'number' ? v : 0
+}
+
+/**
+ * Fold the history log into net-worth-by-asset-class over time. Reconstructable
+ * because each `HistoryRecord` embeds both holdings and assets; a position with
+ * no computable base value is simply excluded from its group's sum for that
+ * date (R1 — never read absent as 0-that-means-something or as NaN). Base-
+ * currency-mismatched records are skipped, as in `valueSeries`.
+ */
+export function classValueSeries(
+  history: readonly HistoryRecord[],
+  base: BaseCurrency,
+): ClassSeries {
+  const inBase = history
+    .filter((record) => record.baseCurrency === base)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  const groupsSeen = new Set<string>()
+  const rows = inBase.map((record) => {
+    const positions = buildPositions(record.holdings, record.assets ?? [])
+    const byGroup = new Map<string, number>()
+    for (const p of positions) {
+      const v = p.currentValueBase
+      if (v === undefined || !Number.isFinite(v)) continue
+      groupsSeen.add(p.group)
+      byGroup.set(p.group, (byGroup.get(p.group) ?? 0) + v)
+    }
+    const row: ClassRow = { date: record.date }
+    for (const [g, v] of byGroup) row[g] = v
+    return row
+  })
+
+  // Order groups by their value in the latest row (largest band on the bottom of
+  // the stack), falling back to alphabetical for groups absent from the latest.
+  const latest = rows[rows.length - 1]
+  const groups = [...groupsSeen].sort((a, b) => {
+    const av = latest ? cell(latest, a) : 0
+    const bv = latest ? cell(latest, b) : 0
+    if (av !== bv) return bv - av
+    return a.localeCompare(b)
+  })
+
+  // Backfill absent groups to 0 so every row carries every group key (stacked
+  // areas need a value at each x for each series).
+  for (const row of rows) {
+    for (const g of groups) if (!(g in row)) row[g] = 0
+  }
+
+  return { groups, rows }
+}
+
+export type ClassChange = {
+  group: string
+  /** Per-snapshot base values, oldest-first — the sparkline path. */
+  points: number[]
+  /** Latest base value. */
+  latest: number
+  /** `(latest − first) / first` over the window; `undefined` when the first
+   *  value is 0 (no honest base to compute a percentage from). */
+  changePct: number | undefined
+}
+
+/**
+ * Per-asset-class change summary derived from `classValueSeries` — one entry per
+ * group with its sparkline points and window change %. Drives the Overview
+ * "change graphs of each asset" small-multiples. Groups are returned in the
+ * same stable order as the stacked area.
+ */
+export function assetClassChanges(series: ClassSeries): ClassChange[] {
+  return series.groups.map((group) => {
+    const points = series.rows.map((r) => cell(r, group))
+    const first = points[0] ?? 0
+    const latest = points[points.length - 1] ?? 0
+    return {
+      group,
+      points,
+      latest,
+      changePct: first > 0 ? (latest - first) / first : undefined,
+    }
+  })
 }
 
 // ── Concentration (Risk KPI sub-row) ────────────────────────────────────────

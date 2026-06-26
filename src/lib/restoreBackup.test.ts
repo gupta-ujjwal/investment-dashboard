@@ -291,4 +291,62 @@ describe('parseBackup', () => {
     if (result.ok) return
     expect(result.error).toMatch(/YYYY-MM/)
   })
+
+  // ── Budget tags (v5) — round-trip + default-to-empty on older backups ──────
+  it('round-trips budget tags', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-06-26T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      budgetTags: [
+        { id: 't1', label: 'Salary', kind: 'income', createdAt: 1717200000000 },
+        { id: 't2', label: 'Rent', kind: 'expense', createdAt: 1717200000000 },
+      ],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.budgetTags).toHaveLength(2)
+    expect(result.backup.budgetTags[0]).toEqual({
+      id: 't1',
+      label: 'Salary',
+      kind: 'income',
+      createdAt: 1717200000000,
+    })
+  })
+
+  it('defaults budgetTags to [] when absent (pre-v5 backup)', () => {
+    // A v4 backup predates the tag store — its missing `budgetTags` must
+    // upconvert to empty, never reject (the "restore an older backup" path).
+    const result = parseBackup(validBackupJson())
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.budgetTags).toEqual([])
+  })
+
+  it('rejects a budget tag with an invalid kind', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-06-26T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      budgetTags: [{ id: 't1', label: 'Salary', kind: 'revenue', createdAt: 1 }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/income\|expense/)
+  })
+
+  it('rejects a budget tag missing its label', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-06-26T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      budgetTags: [{ id: 't1', kind: 'income', createdAt: 1 }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/label/)
+  })
 })

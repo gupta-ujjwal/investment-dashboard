@@ -11,6 +11,7 @@ import type {
   RiskBand,
 } from '../storage/assets'
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
+import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
 import type { AllocationTarget } from '../storage/settings'
 
 /** The planning/goal target subset of `Settings` a backup carries — config,
@@ -32,6 +33,9 @@ export type ParsedBackup = {
    *  to `[]` rather than being rejected. */
   assets: ManualAsset[]
   budgetMonths: BudgetMonth[]
+  /** Always an array after parse — a pre-v5 backup has no `budgetTags` key and
+   *  upconverts to `[]` (default-to-empty), never a parse error. */
+  budgetTags: BudgetTag[]
   settings?: BackupSettingsTargets
 }
 
@@ -68,6 +72,10 @@ const VALID_RISK_BANDS: ReadonlySet<RiskBand> = new Set<RiskBand>([
   'safe',
   'moderate',
   'high',
+])
+const VALID_BUDGET_TAG_KINDS: ReadonlySet<BudgetTagKind> = new Set<BudgetTagKind>([
+  'income',
+  'expense',
 ])
 
 /**
@@ -153,6 +161,20 @@ export function parseBackup(json: string): ParseBackupResult {
     }
   }
 
+  // `budgetTags` is absent in pre-v5 backups — default to empty (upconvert)
+  // rather than reject. When present every entry must be well-formed.
+  const budgetTags: BudgetTag[] = []
+  if (raw.budgetTags !== undefined) {
+    if (!Array.isArray(raw.budgetTags)) {
+      return { ok: false, error: 'Backup `budgetTags`, if present, must be an array.' }
+    }
+    for (let i = 0; i < raw.budgetTags.length; i++) {
+      const validated = validateBudgetTag(raw.budgetTags[i], i)
+      if (!validated.ok) return { ok: false, error: validated.error }
+      budgetTags.push(validated.tag)
+    }
+  }
+
   let settings: BackupSettingsTargets | undefined
   if (raw.settings !== undefined) {
     const validated = validateSettingsTargets(raw.settings)
@@ -162,8 +184,29 @@ export function parseBackup(json: string): ParseBackupResult {
 
   return {
     ok: true,
-    backup: { schemaVersion, exportedAt, holdings, assets, budgetMonths, settings },
+    backup: { schemaVersion, exportedAt, holdings, assets, budgetMonths, budgetTags, settings },
   }
+}
+
+function validateBudgetTag(
+  raw: unknown,
+  index: number,
+): { ok: true; tag: BudgetTag } | { ok: false; error: string } {
+  const prefix = `Budget tag at index ${index}`
+  if (!isPlainObject(raw)) return { ok: false, error: `${prefix}: not an object.` }
+  if (typeof raw.id !== 'string' || raw.id === '') {
+    return { ok: false, error: `${prefix}: \`id\` must be a non-empty string.` }
+  }
+  if (typeof raw.label !== 'string' || raw.label === '') {
+    return { ok: false, error: `${prefix}: \`label\` must be a non-empty string.` }
+  }
+  if (typeof raw.kind !== 'string' || !VALID_BUDGET_TAG_KINDS.has(raw.kind as BudgetTagKind)) {
+    return { ok: false, error: `${prefix}: \`kind\` must be income|expense.` }
+  }
+  if (!isFiniteNumber(raw.createdAt)) {
+    return { ok: false, error: `${prefix}: \`createdAt\` must be a finite number.` }
+  }
+  return { ok: true, tag: raw as BudgetTag }
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

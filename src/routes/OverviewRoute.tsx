@@ -4,12 +4,7 @@ import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import type { ManualAsset } from '../storage/assets'
 import type { Settings } from '../storage/settings'
-import {
-  concentration,
-  portfolioTotals,
-  type Concentration,
-  type HhiBand,
-} from '../lib/analytics'
+import { portfolioTotals } from '../lib/analytics'
 import {
   buildPositions,
   netWorthAllocation,
@@ -17,21 +12,20 @@ import {
   type NetWorthSlice,
   type NetWorthTotals,
 } from '../lib/netWorth'
+import { emergencyFundStatus, type EmergencyFundStatus } from '../lib/planning'
 import { projectGoal, type GoalProjection } from '../lib/goals'
-import { deriveRows } from '../lib/holdingsView'
 import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
 import {
-  FEATURE_ANALYTICS_DEPTH,
-  FEATURE_ASSETS,
   FEATURE_BASE_CURRENCY,
   FEATURE_GOALS,
   FEATURE_HISTORY,
+  FEATURE_PLANNING,
 } from '../featureFlags'
 
-/** Recharts is heavy (~100KB+); keep it out of the initial bundle so the KPI
- *  row paints first. The Suspense fallback covers the chunk load. */
-const ChartsPanel = lazy(() => import('../components/charts/ChartsPanel'))
+/** Recharts is heavy (~100KB+); keep the Overview's cross-asset charts out of
+ *  the initial bundle so the net-worth KPIs paint first. */
+const OverviewCharts = lazy(() => import('../components/charts/OverviewCharts'))
 
 type LoaderData = {
   holdings: CanonicalHolding[]
@@ -40,120 +34,73 @@ type LoaderData = {
   assets: ManualAsset[]
 }
 
-export function AnalyticsRoute() {
+/**
+ * The homepage — generic, cross-asset analytics only. Equity is just one asset
+ * class here; the per-ticker table and equity-specific depth live on the Equity
+ * tab. Surfaces: net worth + composition (allocation by asset class), emergency
+ * fund status, goal projection, and the historical/by-class charts.
+ */
+export function OverviewRoute() {
   const { holdings, settings, history, assets } = useLoaderData() as LoaderData
   const assetList = assets ?? []
 
-  // Empty only when there is nothing at all — assets alone are enough to show
-  // a net worth, so a holdings-empty / assets-present user still gets a page.
   if (holdings.length === 0 && assetList.length === 0) {
     return <EmptyState />
   }
 
   const base = settings.baseCurrency
-  const showNetWorth = FEATURE_ASSETS && assetList.length > 0
   const positions = buildPositions(holdings, assetList)
   const netWorth = netWorthTotals(positions)
   const allocation = netWorthAllocation(positions)
+  // Net-worth-level "refresh needed" hint: any position lacking a base value.
+  const totals = portfolioTotals(holdings)
   const goal: GoalProjection | undefined =
     FEATURE_GOALS && (settings.goalCorpus ?? 0) > 0
       ? projectGoal(netWorth.knownCurrentValue, settings.goalCorpus, settings.monthlyContribution)
       : undefined
-  const totals = portfolioTotals(holdings)
-  const inrCount = holdings.filter((h) => h.currency === 'INR').length
-  const usdCount = holdings.length - inrCount
-  const pnlTone: KpiTone =
-    totals.totalProfitBase === undefined
-      ? 'mute'
-      : totals.totalProfitBase >= 0
-        ? 'gain'
-        : 'loss'
-  const conc: Concentration | undefined = FEATURE_ANALYTICS_DEPTH
-    ? concentration(deriveRows(holdings))
-    : undefined
+  const emergency: EmergencyFundStatus | undefined =
+    FEATURE_PLANNING && assetList.length > 0
+      ? emergencyFundStatus(assetList, settings.emergencyMonthlyNeed, settings.emergencyMonths)
+      : undefined
 
   return (
     <div className="space-y-10">
-      <PageHead title="Analytics" caption="Portfolio snapshot, on-device" />
+      <PageHead title="Overview" caption="Your whole net worth, on-device" />
 
       {FEATURE_BASE_CURRENCY && totals.unstamped > 0 && (
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
-      {showNetWorth && (
-        <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
-      )}
+      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
+
+      {emergency && <EmergencyCard status={emergency} base={base} />}
 
       {goal && <GoalCard goal={goal} base={base} />}
 
-      {holdings.length > 0 && (
-        <>
-          <section aria-label="Equity holdings key figures" className="space-y-3">
-            {showNetWorth && (
-              <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-                Equity holdings
-              </h3>
-            )}
-            <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
-              <Kpi
-                label={`Value · ${base}`}
-                value={money(totals.totalValueBase, base)}
-                sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
-                tone="tick"
-              />
-              <Kpi
-                label={`Invested · ${base}`}
-                value={money(totals.totalInvestedBase, base)}
-                sub="cost basis"
-                tone="mute"
-              />
-              <Kpi
-                label={`P&L · ${base}`}
-                value={money(totals.totalProfitBase, base)}
-                sub={
-                  totals.totalProfitPct === undefined
-                    ? '—'
-                    : formatPercent(totals.totalProfitPct)
-                }
-                tone={pnlTone}
-              />
-              <Kpi
-                label="Positions"
-                value={String(totals.positions)}
-                sub={`${inrCount} India · ${usdCount} US`}
-                tone="mute"
-              />
-            </div>
-          </section>
-
-          {conc && <RiskRow concentration={conc} />}
-
-          <section aria-label="Charts">
-            <div className="flex items-end justify-between">
-              <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-                Charts
-              </h3>
-              {FEATURE_HISTORY && (
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-                  {history.length} snapshot{history.length === 1 ? '' : 's'}
-                </span>
-              )}
-            </div>
-            <div className="mt-4">
-              <Suspense fallback={<ChartsFallback />}>
-                <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
-              </Suspense>
-            </div>
-          </section>
-        </>
+      {FEATURE_HISTORY && (
+        <section aria-label="History">
+          <div className="flex items-end justify-between">
+            <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+              History
+            </h3>
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+              {history.length} snapshot{history.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="mt-4">
+            <Suspense fallback={<ChartsFallback />}>
+              <OverviewCharts history={history} baseCurrency={base} />
+            </Suspense>
+          </div>
+        </section>
       )}
     </div>
   )
 }
 
 /** Net-worth summary: holdings + manual assets folded into one figure, with a
- *  partial badge when some position lacks a base value (never a silently
- *  understated total), and an allocation-by-class breakdown. */
+ *  partial badge when some position lacks a base value, and an allocation-by-
+ *  class breakdown (the "overall portfolio composition"). */
 function NetWorthSection({
   netWorth,
   allocation,
@@ -214,8 +161,8 @@ function NetWorthSection({
   )
 }
 
-/** Allocation-by-asset-class as a labelled bar list — a lightweight, chart-free
- *  breakdown that reads at a glance and needs no Recharts chunk. */
+/** Allocation-by-asset-class as a labelled bar list — the chart-free
+ *  "overall portfolio composition" that reads at a glance with no Recharts. */
 function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseCurrency }) {
   return (
     <ul className="space-y-2 border border-bone-100/10 bg-ink-900 p-4">
@@ -239,8 +186,43 @@ function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseC
   )
 }
 
-/** Goal projection card (Phase 4) — corpus progress + time-to-goal under a
- *  stated, visible projection model. */
+/** Emergency-fund status — a compact card on the homepage mirroring the Planning
+ *  tab's fuller view (same `emergencyFundStatus` fold, one source of truth). */
+function EmergencyCard({ status, base }: { status: EmergencyFundStatus; base: BaseCurrency }) {
+  const coverage = status.coverageMonths
+  const funded = status.fundedPct
+  const tone: KpiTone = funded === undefined ? 'mute' : funded >= 1 ? 'gain' : 'loss'
+  return (
+    <section aria-label="Emergency fund" className="space-y-3">
+      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        Emergency fund
+      </h3>
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+        <Kpi label={`Fund · ${base}`} value={formatMoney(status.current, base)} sub="tagged assets" tone="tick" />
+        <Kpi
+          label="Coverage"
+          value={coverage === undefined ? '—' : `${coverage.toFixed(1)} mo`}
+          sub={status.monthlyNeed === undefined ? 'set monthly need' : `at ${formatMoney(status.monthlyNeed, base)}/mo`}
+          tone="mute"
+        />
+        <Kpi
+          label="Funded"
+          value={funded === undefined ? '—' : `${(funded * 100).toFixed(0)}%`}
+          sub={status.target === undefined ? 'set a target in Settings' : `of ${formatMoney(status.target, base)}`}
+          tone={tone}
+        />
+      </div>
+      {status.excludedCount > 0 && (
+        <p role="status" className="font-mono text-[11px] text-bone-400">
+          {status.excludedCount} emergency-tagged asset{status.excludedCount === 1 ? '' : 's'} not
+          valued (refresh FX) and excluded from the fund total.
+        </p>
+      )}
+    </section>
+  )
+}
+
+/** Goal projection card — corpus progress + time-to-goal under a stated model. */
 function GoalCard({ goal, base }: { goal: GoalProjection; base: BaseCurrency }) {
   return (
     <section aria-label="Goal" className="space-y-3">
@@ -275,10 +257,6 @@ function GoalCard({ goal, base }: { goal: GoalProjection; base: BaseCurrency }) 
   )
 }
 
-function money(value: number | undefined, currency: BaseCurrency): string {
-  return value === undefined ? '—' : formatMoney(value, currency)
-}
-
 function PageHead({ title, caption }: { title: string; caption: string }) {
   return (
     <div className="flex flex-col gap-1">
@@ -298,7 +276,6 @@ const kpiRail: Record<KpiTone, string> = {
   gain: 'bg-jade-400/70',
   loss: 'bg-ember-400/70',
 }
-
 const kpiValueColor: Record<KpiTone, string> = {
   tick: 'text-bone-50',
   mute: 'text-bone-50',
@@ -306,17 +283,7 @@ const kpiValueColor: Record<KpiTone, string> = {
   loss: 'text-ember-300',
 }
 
-function Kpi({
-  label,
-  value,
-  sub,
-  tone = 'tick',
-}: {
-  label: string
-  value: string
-  sub: string
-  tone?: KpiTone
-}) {
+function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
       <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
@@ -352,65 +319,26 @@ function ChartsFallback() {
 function EmptyState() {
   return (
     <div className="space-y-6">
-      <PageHead title="Analytics" caption="No holdings on file yet" />
+      <PageHead title="Overview" caption="Nothing on file yet" />
       <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
         <p className="font-sans text-base text-bone-200">
-          Once you import your first file, this page will fill with charts and totals.
+          Import your holdings or add an investment, and this page fills with your net worth and trends.
         </p>
-        <Link
-          to="/import"
-          className="mt-6 inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
-        >
-          Go to Import →
-        </Link>
+        <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link
+            to="/import"
+            className="inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+          >
+            Go to Import →
+          </Link>
+          <Link
+            to="/investments"
+            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-tick-400 hover:text-tick-400"
+          >
+            Add an investment →
+          </Link>
+        </div>
       </div>
     </div>
   )
-}
-
-/** Risk sub-row beneath the main KPIs — concentration metrics derived from
- *  the priced holdings. Only the `high` HHI band and a firing single-stock
- *  flag get an ember tone; everything else stays mute so the row reads as
- *  context rather than alarm. */
-function RiskRow({ concentration: c }: { concentration: Concentration }) {
-  const hhiBandLabel: Record<HhiBand, string> = {
-    low: 'Low',
-    moderate: 'Moderate',
-    high: 'High',
-  }
-  return (
-    <section
-      aria-label="Risk"
-      className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
-    >
-      <Kpi
-        label="Top-5 weight"
-        value={c.top5Pct === undefined ? '—' : pctNoSign(c.top5Pct)}
-        sub={c.top5Pct === undefined ? 'no priced holdings' : 'of portfolio value'}
-        tone="mute"
-      />
-      <Kpi
-        label="Concentration"
-        value={c.hhiBand === undefined ? '—' : hhiBandLabel[c.hhiBand]}
-        sub={c.hhi === undefined ? 'HHI unavailable' : `HHI ${c.hhi.toFixed(2)}`}
-        tone={c.hhiBand === 'high' ? 'loss' : 'mute'}
-      />
-      <Kpi
-        label="Single-stock risk"
-        value={c.singleStockRisk === undefined ? '—' : c.singleStockRisk.holding.name}
-        sub={
-          c.singleStockRisk === undefined
-            ? 'no position >10%'
-            : `${pctNoSign(c.singleStockRisk.weight)} of portfolio`
-        }
-        tone={c.singleStockRisk === undefined ? 'mute' : 'loss'}
-      />
-    </section>
-  )
-}
-
-/** `formatPercent` includes a leading `+` for positive values; the Risk row
- *  reads weights as magnitudes, not directional changes, so the sign is noise. */
-function pctNoSign(value: number): string {
-  return formatPercent(value).replace('+', '')
 }

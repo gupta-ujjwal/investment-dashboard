@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
-import { upsertHolding, type CanonicalHolding } from '../storage/holdings'
+import { upsertHolding, type BaseCurrency, type CanonicalHolding } from '../storage/holdings'
+import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import {
   DEFAULT_FILTERS,
   DEFAULT_SORT,
+  deriveRows,
   newestImport,
   viewRows,
   type Filters,
@@ -12,16 +14,28 @@ import {
   type Sort,
   type SortKey,
 } from '../lib/holdingsView'
-import { formatDate } from '../lib/format'
+import {
+  concentration,
+  portfolioTotals,
+  type Concentration,
+  type HhiBand,
+} from '../lib/analytics'
+import { formatDate, formatMoney, formatPercent } from '../lib/format'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
 import type { RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { useUndoableAction } from '../components/useUndoableAction'
 import { UndoToast } from '../components/UndoToast'
-import { AssetsSection } from '../components/AssetsSection'
-import { FEATURE_ASSETS, FEATURE_BASE_CURRENCY } from '../featureFlags'
-import type { ManualAsset } from '../storage/assets'
+import {
+  FEATURE_ANALYTICS_DEPTH,
+  FEATURE_BASE_CURRENCY,
+  FEATURE_HISTORY,
+} from '../featureFlags'
+
+/** Equity charts (Recharts ~100KB+) stay lazy, exactly as on the old Analytics
+ *  page — this panel is now equity-only (holdings folds + the index benchmark). */
+const ChartsPanel = lazy(() => import('../components/charts/ChartsPanel'))
 
 /** Columns whose natural first-click direction is ascending (text-like). */
 const ASC_FIRST: ReadonlySet<SortKey> = new Set<SortKey>(['name', 'market', 'broker'])
@@ -48,12 +62,22 @@ const sortOptions: { key: SortKey; label: string }[] = [
   { key: 'broker', label: 'Broker' },
 ]
 
-export function HoldingsRoute() {
-  const { holdings, settings, assets } = useLoaderData() as {
-    holdings: CanonicalHolding[]
-    settings: Settings
-    assets: ManualAsset[]
-  }
+type LoaderData = {
+  holdings: CanonicalHolding[]
+  settings: Settings
+  history: HistoryRecord[]
+}
+
+/**
+ * The Equity tab — the per-ticker holdings portfolio plus all equity-specific
+ * analytics (P&L KPIs, concentration/risk, allocation / sector / movers charts,
+ * value-over-time with the index benchmark). Equity is one asset class on the
+ * Overview; this is where you drill into it. Manual non-equity assets live on
+ * the Investments tab, not here.
+ */
+export function EquityRoute() {
+  const { holdings, settings, history } = useLoaderData() as LoaderData
+  const base = settings.baseCurrency
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT)
@@ -66,16 +90,9 @@ export function HoldingsRoute() {
     [holdings],
   )
 
-  // Imperative fetcher for row-level actions (delete, setStatus, revert).
-  // Inline-edit's fetcher lives inside HoldingRow; modal-edit's lives inside
-  // HoldingForm. Both flow through the same /holdings action.
   const fetcher = useFetcher()
   const revalidator = useRevalidator()
 
-  // Single undo hook handles both delete-undo and inline-edit-save-undo —
-  // restore path is identical (upsert the snapshot + revalidate). The
-  // toast's message differentiates the two for the user. Reliability Tenet
-  // 3 (blast radius) on irreplaceable single-user data.
   const undoable = useUndoableAction<CanonicalHolding>({
     onUndo: async (snapshot) => {
       await upsertHolding(snapshot)
@@ -94,75 +111,41 @@ export function HoldingsRoute() {
     [undoable],
   )
 
+  const submitHolding = useCallback(
+    (intent: string, h: CanonicalHolding, extra?: Record<string, string>) => {
+      const formData = new FormData()
+      formData.set('intent', intent)
+      formData.set('source', h.source)
+      formData.set('sourceSymbol', h.sourceSymbol)
+      for (const [k, v] of Object.entries(extra ?? {})) formData.set(k, v)
+      fetcher.submit(formData, { method: 'post', action: '/equity' })
+    },
+    [fetcher],
+  )
+
   const onDelete = useCallback(
     (h: CanonicalHolding) => {
-      const formData = new FormData()
-      formData.set('intent', 'delete')
-      formData.set('source', h.source)
-      formData.set('sourceSymbol', h.sourceSymbol)
-      fetcher.submit(formData, { method: 'post', action: '/holdings' })
-      undoable.show(h, {
-        message: `Deleted ${h.name}`,
-        detail: `${h.sourceSymbol} · ${h.source}`,
-      })
+      submitHolding('delete', h)
+      undoable.show(h, { message: `Deleted ${h.name}`, detail: `${h.sourceSymbol} · ${h.source}` })
     },
-    [fetcher, undoable],
+    [submitHolding, undoable],
   )
-
-  const onMarkClosed = useCallback(
-    (h: CanonicalHolding) => {
-      const formData = new FormData()
-      formData.set('intent', 'setStatus')
-      formData.set('source', h.source)
-      formData.set('sourceSymbol', h.sourceSymbol)
-      formData.set('status', 'closed')
-      fetcher.submit(formData, { method: 'post', action: '/holdings' })
-    },
-    [fetcher],
-  )
-
-  const onReopen = useCallback(
-    (h: CanonicalHolding) => {
-      const formData = new FormData()
-      formData.set('intent', 'setStatus')
-      formData.set('source', h.source)
-      formData.set('sourceSymbol', h.sourceSymbol)
-      formData.set('status', 'open')
-      fetcher.submit(formData, { method: 'post', action: '/holdings' })
-    },
-    [fetcher],
-  )
-
-  const onRevertOverrides = useCallback(
-    (h: CanonicalHolding) => {
-      const formData = new FormData()
-      formData.set('intent', 'revertOverrides')
-      formData.set('source', h.source)
-      formData.set('sourceSymbol', h.sourceSymbol)
-      fetcher.submit(formData, { method: 'post', action: '/holdings' })
-    },
-    [fetcher],
-  )
+  const onMarkClosed = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'closed' }), [submitHolding])
+  const onReopen = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'open' }), [submitHolding])
+  const onRevertOverrides = useCallback((h: CanonicalHolding) => submitHolding('revertOverrides', h), [submitHolding])
 
   const actions: RowActions = useMemo(
-    () => ({
-      onEditModal,
-      onEditSaved,
-      onDelete,
-      onMarkClosed,
-      onReopen,
-      onRevertOverrides,
-    }),
+    () => ({ onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides }),
     [onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides],
   )
 
   if (holdings.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHead title="Holdings" caption="Nothing imported yet" />
+        <PageHead title="Equity" caption="No equity positions yet" />
         <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
           <p className="font-sans text-base text-bone-200">
-            Import a broker file to see your positions here — or add one manually below.
+            Import a broker file to see your positions and equity analytics — or add one manually.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
@@ -180,26 +163,11 @@ export function HoldingsRoute() {
             </button>
           </div>
         </div>
-        <HoldingForm
-          open={addOpen}
-          mode="add"
-          existingKeys={existingKeys}
-          onClose={() => setAddOpen(false)}
-        />
-        {FEATURE_ASSETS && (
-          <AssetsSection
-            assets={assets}
-            baseCurrency={settings.baseCurrency}
-            lastFxAsOf={settings.lastFxAsOf}
-          />
-        )}
+        <HoldingForm open={addOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddOpen(false)} />
       </div>
     )
   }
 
-  // Tallies use the *open* set so "5 positions · 3 INR · 2 USD" matches the
-  // default view. Closed-position count is surfaced in the filter toggle
-  // label and the page caption.
   const openHoldings = holdings.filter((h) => h.status !== 'closed')
   const inr = openHoldings.filter((h) => h.currency === 'INR').length
   const usd = openHoldings.filter((h) => h.currency === 'USD').length
@@ -209,19 +177,24 @@ export function HoldingsRoute() {
   ).length
   const pricedAt = newestImport(openHoldings)
 
+  const totals = portfolioTotals(openHoldings)
+  const pnlTone: KpiTone =
+    totals.totalProfitBase === undefined ? 'mute' : totals.totalProfitBase >= 0 ? 'gain' : 'loss'
+  const conc: Concentration | undefined = FEATURE_ANALYTICS_DEPTH
+    ? concentration(deriveRows(openHoldings))
+    : undefined
+
   function onSort(key: SortKey) {
     setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: defaultDir(key) },
+      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: defaultDir(key) },
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageHead
-          title="Holdings"
+          title="Equity"
           caption={`${openHoldings.length} open · ${inr} INR · ${usd} USD${closedCount > 0 ? ` · ${closedCount} closed` : ''}`}
         />
         <div className="flex items-center gap-2">
@@ -241,45 +214,79 @@ export function HoldingsRoute() {
         </div>
       </div>
 
-      {pricedAt !== undefined && (
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-          Prices as of {formatDate(pricedAt)} · snapshot from last import
-        </p>
-      )}
-
       {FEATURE_BASE_CURRENCY && unstamped > 0 && (
-        <RefreshBanner unstamped={unstamped} baseCurrency={settings.baseCurrency} />
+        <RefreshBanner unstamped={unstamped} baseCurrency={base} />
       )}
 
-      <HoldingsControls
-        filters={filters}
-        sort={sort}
-        closedCount={closedCount}
-        onFilters={setFilters}
-        onSortKey={onSort}
-        onToggleDir={() =>
-          setSort((prev) => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))
-        }
-      />
+      {/* Equity KPIs */}
+      <section aria-label="Equity key figures">
+        <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+          <Kpi
+            label={`Value · ${base}`}
+            value={money(totals.totalValueBase, base)}
+            sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
+            tone="tick"
+          />
+          <Kpi label={`Invested · ${base}`} value={money(totals.totalInvestedBase, base)} sub="cost basis" tone="mute" />
+          <Kpi
+            label={`P&L · ${base}`}
+            value={money(totals.totalProfitBase, base)}
+            sub={totals.totalProfitPct === undefined ? '—' : formatPercent(totals.totalProfitPct)}
+            tone={pnlTone}
+          />
+          <Kpi label="Positions" value={String(totals.positions)} sub={`${inr} India · ${usd} US`} tone="mute" />
+        </div>
+      </section>
 
-      {rows.length === 0 ? (
-        <FilteredEmpty onClear={() => setFilters(DEFAULT_FILTERS)} />
-      ) : (
-        <HoldingsTable
-          rows={rows}
-          baseCurrency={settings.baseCurrency}
+      {conc && <RiskRow concentration={conc} />}
+
+      {/* Equity charts */}
+      <section aria-label="Charts">
+        <div className="flex items-end justify-between">
+          <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+            Charts
+          </h3>
+          {FEATURE_HISTORY && (
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+              {history.length} snapshot{history.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
+        <div className="mt-4">
+          <Suspense fallback={<ChartsFallback />}>
+            <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+          </Suspense>
+        </div>
+      </section>
+
+      {/* Holdings table */}
+      <section aria-label="Holdings" className="space-y-4">
+        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+          Holdings
+        </h3>
+        {pricedAt !== undefined && (
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+            Prices as of {formatDate(pricedAt)} · snapshot from last import
+          </p>
+        )}
+
+        <HoldingsControls
+          filters={filters}
           sort={sort}
-          onSort={onSort}
-          actions={actions}
+          closedCount={closedCount}
+          onFilters={setFilters}
+          onSortKey={onSort}
+          onToggleDir={() => setSort((prev) => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))}
         />
-      )}
 
-      <HoldingForm
-        open={addOpen}
-        mode="add"
-        existingKeys={existingKeys}
-        onClose={() => setAddOpen(false)}
-      />
+        {rows.length === 0 ? (
+          <FilteredEmpty onClear={() => setFilters(DEFAULT_FILTERS)} />
+        ) : (
+          <HoldingsTable rows={rows} baseCurrency={base} sort={sort} onSort={onSort} actions={actions} />
+        )}
+      </section>
+
+      <HoldingForm open={addOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddOpen(false)} />
       <HoldingForm
         open={editing !== null}
         mode="edit"
@@ -288,19 +295,7 @@ export function HoldingsRoute() {
         onClose={() => setEditing(null)}
       />
 
-      {FEATURE_ASSETS && (
-        <AssetsSection
-          assets={assets}
-          baseCurrency={settings.baseCurrency}
-          lastFxAsOf={settings.lastFxAsOf}
-        />
-      )}
-
-      <UndoToast
-        toast={undoable.active}
-        onUndo={undoable.undo}
-        onDismiss={undoable.dismiss}
-      />
+      <UndoToast toast={undoable.active} onUndo={undoable.undo} onDismiss={undoable.dismiss} />
     </div>
   )
 }
@@ -322,12 +317,7 @@ function HoldingsControls({
 }) {
   return (
     <section className="flex flex-col gap-3 border border-bone-100/10 bg-ink-900 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      {/* Market segmented control */}
-      <div
-        role="group"
-        aria-label="Filter by market"
-        className="inline-flex border border-bone-100/15"
-      >
+      <div role="group" aria-label="Filter by market" className="inline-flex border border-bone-100/15">
         {marketOptions.map((opt) => {
           const active = filters.market === opt.value
           return (
@@ -337,9 +327,7 @@ function HoldingsControls({
               aria-pressed={active}
               onClick={() => onFilters({ ...filters, market: opt.value })}
               className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition ${
-                active
-                  ? 'bg-tick-400 text-ink-950'
-                  : 'text-bone-400 hover:text-bone-100'
+                active ? 'bg-tick-400 text-ink-950' : 'text-bone-400 hover:text-bone-100'
               }`}
             >
               {opt.label}
@@ -348,7 +336,6 @@ function HoldingsControls({
         })}
       </div>
 
-      {/* Symbol / name search */}
       <label className="flex items-center gap-2 border border-bone-100/15 bg-ink-950 px-3 py-1.5 sm:w-72">
         <span aria-hidden="true" className="font-mono text-xs text-bone-400">
           ⌕
@@ -363,8 +350,6 @@ function HoldingsControls({
         />
       </label>
 
-      {/* Closed-positions toggle. Hidden when there are no closed rows to
-          show — keeps the control surface honest with the data. */}
       {closedCount > 0 && (
         <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-tick-400 has-[:checked]:text-tick-400">
           <input
@@ -377,7 +362,6 @@ function HoldingsControls({
         </label>
       )}
 
-      {/* Mobile sort — desktop sorts via column headers */}
       <div className="flex items-center gap-2 md:hidden">
         <select
           value={sort.key}
@@ -419,6 +403,44 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
   )
 }
 
+/** Risk sub-row — concentration metrics derived from priced holdings. */
+function RiskRow({ concentration: c }: { concentration: Concentration }) {
+  const hhiBandLabel: Record<HhiBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High' }
+  return (
+    <section
+      aria-label="Risk"
+      className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
+    >
+      <Kpi
+        label="Top-5 weight"
+        value={c.top5Pct === undefined ? '—' : pctNoSign(c.top5Pct)}
+        sub={c.top5Pct === undefined ? 'no priced holdings' : 'of portfolio value'}
+        tone="mute"
+      />
+      <Kpi
+        label="Concentration"
+        value={c.hhiBand === undefined ? '—' : hhiBandLabel[c.hhiBand]}
+        sub={c.hhi === undefined ? 'HHI unavailable' : `HHI ${c.hhi.toFixed(2)}`}
+        tone={c.hhiBand === 'high' ? 'loss' : 'mute'}
+      />
+      <Kpi
+        label="Single-stock risk"
+        value={c.singleStockRisk === undefined ? '—' : c.singleStockRisk.holding.name}
+        sub={c.singleStockRisk === undefined ? 'no position >10%' : `${pctNoSign(c.singleStockRisk.weight)} of portfolio`}
+        tone={c.singleStockRisk === undefined ? 'mute' : 'loss'}
+      />
+    </section>
+  )
+}
+
+function pctNoSign(value: number): string {
+  return formatPercent(value).replace('+', '')
+}
+
+function money(value: number | undefined, currency: BaseCurrency): string {
+  return value === undefined ? '—' : formatMoney(value, currency)
+}
+
 function PageHead({ title, caption }: { title: string; caption: string }) {
   return (
     <div className="flex flex-col gap-1">
@@ -426,6 +448,50 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
         {title}
       </h1>
       <p className="font-sans text-sm text-bone-400">{caption}</p>
+    </div>
+  )
+}
+
+type KpiTone = 'tick' | 'mute' | 'gain' | 'loss'
+const kpiRail: Record<KpiTone, string> = {
+  tick: 'bg-tick-400/60',
+  mute: 'bg-bone-300/40',
+  gain: 'bg-jade-400/70',
+  loss: 'bg-ember-400/70',
+}
+const kpiValueColor: Record<KpiTone, string> = {
+  tick: 'text-bone-50',
+  mute: 'text-bone-50',
+  gain: 'text-jade-300',
+  loss: 'text-ember-300',
+}
+
+function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
+  return (
+    <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
+      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+        <span className={`h-px w-3 ${kpiRail[tone]}`} />
+        {label}
+      </div>
+      <div
+        className={`mt-3 break-words font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+      >
+        {value}
+      </div>
+      <div className="mt-2 font-mono text-[11px] text-bone-400">{sub}</div>
+    </div>
+  )
+}
+
+function ChartsFallback() {
+  return (
+    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          Loading charts
+        </span>
+      </div>
     </div>
   )
 }

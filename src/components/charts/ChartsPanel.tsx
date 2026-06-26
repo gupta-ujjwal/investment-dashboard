@@ -4,6 +4,7 @@ import type { HistoryRecord } from '../../storage/history'
 import { deriveRows } from '../../lib/holdingsView'
 import {
   benchmarkSeries,
+  isHoldingPosition,
   valueSeries,
   type BenchmarkData,
   type SectorMap,
@@ -54,7 +55,11 @@ const sp500 = sp500Json as BenchmarkData
  */
 export default function ChartsPanel({ holdings, history, baseCurrency }: Props) {
   const rows = deriveRows(holdings)
-  const series = valueSeries(history, baseCurrency)
+  // Equity-only series: this panel lives on the Equity tab, and the NIFTY/S&P
+  // benchmark must compare against the equity portfolio, not a net-worth line
+  // that includes cash/gold. Filtering to holding positions excludes manual
+  // value-only assets from the value/P&L lines (the Overview keeps net worth).
+  const series = valueSeries(history, baseCurrency, isHoldingPosition)
 
   // Mixed-currency portfolio detection — a single-index overlay against a
   // portfolio holding both INR-listed and USD-listed positions is

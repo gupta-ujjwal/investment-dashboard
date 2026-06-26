@@ -79,3 +79,15 @@ export const FEATURE_PLANNING = true
  *  Settings; time-to-goal projection surfaced on Analytics. Reads net-worth
  *  totals, so it is most useful with FEATURE_ASSETS on. */
 export const FEATURE_GOALS = true
+
+/** Reusable budget tags (DB v5). Adds a `budgetTags` store and a creatable,
+ *  kind-filtered tag combobox on the Budget line editor; the tag's label is
+ *  written into `BudgetLine.category` (managed label, not a foreign key). The
+ *  per-feature bulkhead for the budget-tags surface: flipping this off reverts
+ *  the Budget line inputs to free-text and stops reading/writing tags, WITHOUT
+ *  reverting the v5 schema (R9 — flags are compile-time; the additive
+ *  `budgetTags` store simply sits unused). This is the data-loss-capable
+ *  surface's kill switch — the v5 migration is one-way, but this flag lets the
+ *  tag UI be disabled without a schema revert (the rollback shape the plan
+ *  review converged on). */
+export const FEATURE_BUDGET_TAGS = true

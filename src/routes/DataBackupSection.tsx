@@ -64,7 +64,10 @@ export function DataBackupSection({ currentHoldings }: Props) {
     try {
       await restoreAll(state.backup)
       const m = backupManifest(state.backup)
-      setState({ kind: 'done', restoredCount: m.holdings + m.assets + m.budgetMonths })
+      setState({
+        kind: 'done',
+        restoredCount: m.holdings + m.assets + m.budgetMonths + m.budgetTags,
+      })
       // Hard reload so every route loader picks up the new holdings — the
       // Analytics/Holdings caches are scoped per loader and would otherwise
       // show stale data until the user navigates.
@@ -205,10 +208,11 @@ function RestoreConfirmPanel({
         </p>
       </div>
 
-      <dl className="grid grid-cols-3 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
         <Stat label="Holdings" value={manifest.holdings} tone="tick" />
         <Stat label="Assets" value={manifest.assets} tone="tick" />
         <Stat label="Budget months" value={manifest.budgetMonths} tone="tick" />
+        <Stat label="Budget tags" value={manifest.budgetTags} tone="tick" />
       </dl>
 
       <div className="border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
