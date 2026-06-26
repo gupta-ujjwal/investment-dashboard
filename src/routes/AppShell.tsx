@@ -1,16 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { FEATURE_BUDGET, FEATURE_PLANNING } from '../featureFlags'
+import { FEATURE_ASSETS, FEATURE_BUDGET, FEATURE_PLANNING } from '../featureFlags'
 
-// Tab set grows with the personal-finance revamp. Budget and Planning are
-// gated on their phase flags so flipping a flag off removes both the tab and
-// its route in lockstep (no dead links). Order keeps the analysis surfaces
-// (Analytics → Holdings → Budget → Planning) before the utility tabs
-// (Import / Settings). With up to six tabs the nav can overflow a 360px
-// viewport, so the list is a horizontal scroll strip on mobile (see below)
-// rather than the old fixed four-tab row.
+// Net-worth-centric IA: Overview (generic, cross-asset) → Investments (all
+// asset classes; equity backfilled read-only from holdings) → Equity (per-ticker
+// table + equity analytics), then Budget / Planning, then the utility tabs
+// (Import / Settings). Investments is gated on FEATURE_ASSETS so flipping that
+// flag off removes the tab and its asset surface in lockstep. With up to seven
+// tabs the nav overflows a 360px viewport, so the list is a horizontal scroll
+// strip on mobile (see below).
 const tabs = [
-  { to: '/analytics', label: 'Analytics', enabled: true },
-  { to: '/holdings', label: 'Holdings', enabled: true },
+  { to: '/overview', label: 'Overview', enabled: true },
+  { to: '/investments', label: 'Investments', enabled: FEATURE_ASSETS },
+  { to: '/equity', label: 'Equity', enabled: true },
   { to: '/budget', label: 'Budget', enabled: FEATURE_BUDGET },
   { to: '/planning', label: 'Planning', enabled: FEATURE_PLANNING },
   { to: '/import', label: 'Import', enabled: true },

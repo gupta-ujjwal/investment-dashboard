@@ -114,7 +114,7 @@ export function HoldingForm({ open, mode, holding, existingKeys, onClose }: Prop
 
   return (
     <ModalShell onClose={onClose} title={mode === 'add' ? 'Add holding' : `Edit ${initial.name}`}>
-      <fetcher.Form method="post" action="/holdings" className="grid gap-5">
+      <fetcher.Form method="post" action="/equity" className="grid gap-5">
         <input type="hidden" name="intent" value={mode === 'add' ? 'add' : 'update'} />
         <input type="hidden" name="source" value={source} />
         {/* For edit, we send the original sourceSymbol so the action can find

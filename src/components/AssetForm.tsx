@@ -20,8 +20,12 @@ type Props = {
   onClose: () => void
 }
 
+// `equity` is intentionally NOT offered for new assets — equity is backfilled
+// (read-only) on the Investments tab from the holdings store, so a manual equity
+// asset would double-read against it. It is re-surfaced ONLY when editing a
+// pre-existing (legacy) equity asset, so the select round-trips that asset's
+// class instead of silently switching it to the first option on save.
 const assetClasses: { value: ManualAssetClass; label: string }[] = [
-  { value: 'equity', label: 'Equity (manual)' },
   { value: 'mutualFund', label: 'Mutual fund' },
   { value: 'crypto', label: 'Crypto' },
   { value: 'gold', label: 'Gold / Silver' },
@@ -31,6 +35,7 @@ const assetClasses: { value: ManualAssetClass; label: string }[] = [
   { value: 'cash', label: 'Cash' },
   { value: 'other', label: 'Other' },
 ]
+const LEGACY_EQUITY_OPTION = { value: 'equity' as ManualAssetClass, label: 'Equity (manual · legacy)' }
 
 const currencies: { value: Currency; label: string; subtitle: string }[] = [
   { value: 'INR', label: 'India', subtitle: 'INR' },
@@ -81,6 +86,13 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
   const errors = fetcher.data && !fetcher.data.ok ? fetcher.data.fieldErrors ?? {} : {}
   const submitting = fetcher.state !== 'idle'
 
+  // Re-surface the legacy `equity` option only when editing an asset that is
+  // already equity (preserves round-trip; never offered for new assets).
+  const classOptions =
+    mode === 'edit' && asset?.assetClass === 'equity'
+      ? [LEGACY_EQUITY_OPTION, ...assetClasses]
+      : assetClasses
+
   const initial = {
     name: asset?.name ?? '',
     assetClass: (asset?.assetClass ?? 'crypto') as ManualAssetClass,
@@ -93,7 +105,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
 
   return (
     <ModalShell onClose={onClose} title={mode === 'add' ? 'Add asset' : `Edit ${initial.name}`}>
-      <fetcher.Form method="post" action="/holdings" className="grid gap-5">
+      <fetcher.Form method="post" action="/equity" className="grid gap-5">
         <input type="hidden" name="intent" value={mode === 'add' ? 'addAsset' : 'updateAsset'} />
         {mode === 'edit' && asset && <input type="hidden" name="id" value={asset.id} />}
 
@@ -116,7 +128,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
             defaultValue={initial.assetClass}
             className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
           >
-            {assetClasses.map((a) => (
+            {classOptions.map((a) => (
               <option key={a.value} value={a.value}>
                 {a.label}
               </option>

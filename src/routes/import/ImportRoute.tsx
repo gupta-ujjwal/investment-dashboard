@@ -54,7 +54,7 @@ export function ImportWizard() {
       {state.step === 'preview' && <PreviewStep state={state} dispatch={dispatch} />}
       {state.step === 'committing' && <CommitStep state="committing" />}
       {state.step === 'done' && (
-        <CommitStep state="done" onContinue={() => navigate('/analytics')} />
+        <CommitStep state="done" onContinue={() => navigate('/overview')} />
       )}
     </div>
   )

@@ -1,16 +1,21 @@
 import { useMemo, useState } from 'react'
 import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
+import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
+import { tagDedupeKey } from '../storage/budgetTags'
 import type { Settings } from '../storage/settings'
 import { summarizeAll, summarizeMonth, type BudgetSummary } from '../lib/budget'
 import { formatMoney } from '../lib/format'
+import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 
 /** Action response from `budgetAction`. */
 export type BudgetActionResult =
   | { ok: true; mode: 'saved' | 'deleted' }
+  | { ok: true; mode: 'tag-created'; tag: BudgetTag }
+  | { ok: true; mode: 'tag-deleted' }
   | { ok: false; error: string }
 
-type LoaderData = { months: BudgetMonth[]; settings: Settings }
+type LoaderData = { months: BudgetMonth[]; settings: Settings; tags: BudgetTag[] }
 
 type Line = { id: number; category: string; amount: string }
 
@@ -25,7 +30,7 @@ function currentMonthKey(): string {
 }
 
 export function BudgetRoute() {
-  const { months, settings } = useLoaderData() as LoaderData
+  const { months, settings, tags } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   const [editingMonth, setEditingMonth] = useState<string | null>(null)
@@ -68,6 +73,7 @@ export function BudgetRoute() {
       <BudgetEditor
         key={editingMonth ?? 'new'}
         base={base}
+        tags={tags}
         existing={editingMonth ? months.find((m) => m.month === editingMonth) : undefined}
         onDone={() => setEditingMonth(null)}
       />
@@ -151,14 +157,33 @@ function MonthCard({
 
 function BudgetEditor({
   base,
+  tags,
   existing,
   onDone,
 }: {
   base: Settings['baseCurrency']
+  tags: BudgetTag[]
   existing: BudgetMonth | undefined
   onDone: () => void
 }) {
   const fetcher = useFetcher<BudgetActionResult>()
+  // A separate fetcher for tag create/delete — these are independent of the
+  // month save (no nested <form>), and the route loader revalidates after each
+  // so the new/removed tag flows back into the picker.
+  const tagFetcher = useFetcher()
+  const incomeTags = useMemo(() => tags.filter((t) => t.kind === 'income'), [tags])
+  const expenseTags = useMemo(() => tags.filter((t) => t.kind === 'expense'), [tags])
+
+  const onCreateTag = (label: string, kind: BudgetTagKind) => {
+    tagFetcher.submit(
+      { intent: 'createTag', label, kind },
+      { method: 'post', action: '/budget' },
+    )
+  }
+  const onDeleteTag = (id: string) => {
+    tagFetcher.submit({ intent: 'deleteTag', id }, { method: 'post', action: '/budget' })
+  }
+
   const [month, setMonth] = useState(existing?.month ?? currentMonthKey())
   const [income, setIncome] = useState<Line[]>(
     existing ? toLines(existing.income) : [{ id: lineSeq++, category: '', amount: '' }],
@@ -220,8 +245,26 @@ function BudgetEditor({
           />
         </label>
 
-        <LineEditor title="Income" lines={income} onChange={setIncome} base={base} />
-        <LineEditor title="Expenses" lines={expenses} onChange={setExpenses} base={base} />
+        <LineEditor
+          title="Income"
+          kind="income"
+          lines={income}
+          onChange={setIncome}
+          base={base}
+          tags={incomeTags}
+          onCreateTag={onCreateTag}
+          onDeleteTag={onDeleteTag}
+        />
+        <LineEditor
+          title="Expenses"
+          kind="expense"
+          lines={expenses}
+          onChange={setExpenses}
+          base={base}
+          tags={expenseTags}
+          onCreateTag={onCreateTag}
+          onDeleteTag={onDeleteTag}
+        />
 
         <label className="grid gap-1.5 sm:max-w-[16rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
@@ -265,25 +308,54 @@ function BudgetEditor({
 
 function LineEditor({
   title,
+  kind,
   lines,
   onChange,
   base,
+  tags,
+  onCreateTag,
+  onDeleteTag,
 }: {
   title: string
+  kind: BudgetTagKind
   lines: Line[]
   onChange: (next: Line[]) => void
   base: Settings['baseCurrency']
+  tags: BudgetTag[]
+  onCreateTag: (label: string, kind: BudgetTagKind) => void
+  onDeleteTag: (id: string) => void
 }) {
   const update = (id: number, patch: Partial<Line>) =>
     onChange(lines.map((l) => (l.id === id ? { ...l, ...patch } : l)))
   const remove = (id: number) => onChange(lines.filter((l) => l.id !== id))
   const add = () => onChange([...lines, { id: lineSeq++, category: '', amount: '' }])
 
+  // Tags are a reusable, kind-scoped vocabulary. The category input is backed by
+  // a native <datalist> of this kind's tag labels (reuse via autocomplete);
+  // picking a tag just writes its label into `category` (managed label, not a
+  // foreign key). A label that isn't yet a tag can be saved as one inline.
+  const tagsOn = FEATURE_BUDGET_TAGS
+  const listId = `budget-tags-${kind}`
+  const knownKeys = new Set(tags.map((t) => tagDedupeKey(t.label, t.kind)))
+  const isUntagged = (value: string) => {
+    const v = value.trim()
+    return v !== '' && !knownKeys.has(tagDedupeKey(v, kind))
+  }
+
   return (
     <fieldset className="grid gap-2">
       <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
         {title} · {base}
       </legend>
+
+      {tagsOn && (
+        <datalist id={listId}>
+          {tags.map((t) => (
+            <option key={t.id} value={t.label} />
+          ))}
+        </datalist>
+      )}
+
       {lines.map((l) => (
         <div key={l.id} className="flex items-center gap-2">
           <input
@@ -291,9 +363,20 @@ function LineEditor({
             aria-label={`${title} category`}
             value={l.category}
             onChange={(e) => update(l.id, { category: e.target.value })}
-            placeholder="Category"
+            placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
+            list={tagsOn ? listId : undefined}
             className="flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
           />
+          {tagsOn && isUntagged(l.category) && (
+            <button
+              type="button"
+              onClick={() => onCreateTag(l.category.trim(), kind)}
+              title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
+              className="whitespace-nowrap border border-tick-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-tick-400 transition hover:border-tick-400 hover:text-tick-200"
+            >
+              + tag
+            </button>
+          )}
           <input
             type="text"
             inputMode="decimal"
@@ -320,6 +403,31 @@ function LineEditor({
       >
         + Add line
       </button>
+
+      {tagsOn && tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
+            {kind} tags
+          </span>
+          {tags.map((t) => (
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-1 border border-bone-100/15 bg-ink-950 py-0.5 pl-2 pr-1 font-sans text-[11px] text-bone-300"
+            >
+              {t.label}
+              <button
+                type="button"
+                aria-label={`Delete tag ${t.label}`}
+                onClick={() => onDeleteTag(t.id)}
+                title="Remove from picker (past months keep this label)"
+                className="px-1 font-mono text-bone-500 transition hover:text-ember-400"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </fieldset>
   )
 }

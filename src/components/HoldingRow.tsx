@@ -259,7 +259,7 @@ function InlineEditRow({ holding, onExit, onSaved }: InlineEditProps) {
       <td colSpan={10} className="px-3 py-3">
         <fetcher.Form
           method="post"
-          action="/holdings"
+          action="/equity"
           className="grid items-center gap-2 sm:grid-cols-[2.2fr_0.6fr_0.9fr_1fr_1fr_1.1fr_auto]"
         >
           <input type="hidden" name="intent" value="update" />

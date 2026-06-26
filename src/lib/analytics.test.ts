@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { CanonicalHolding, Currency } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import { deriveRows } from './holdingsView'
+import type { ManualAsset } from '../storage/assets'
 import {
   allocation,
+  assetClassChanges,
   benchmarkSeries,
+  classValueSeries,
   concentration,
+  isHoldingPosition,
   portfolioTotals,
   sectorAllocation,
   topMovers,
@@ -524,5 +528,85 @@ describe('benchmarkSeries', () => {
     const overlay = benchmarkSeries(portfolio, benchmark)
     expect(overlay).toHaveLength(2)
     expect(overlay[0]).toEqual({ date: '2026-01-08', value: 1100 })
+  })
+})
+
+function assetRecord(over: Partial<ManualAsset> = {}): ManualAsset {
+  return {
+    id: 'asset-1',
+    name: 'Gold',
+    assetClass: 'gold',
+    currency: 'INR',
+    currentValue: 50000,
+    currentValueBase: 50000,
+    createdAt: 0,
+    updatedAt: 0,
+    ...over,
+  }
+}
+
+function hist(over: Partial<HistoryRecord>): HistoryRecord {
+  return { date: '2026-05-16', capturedAt: 0, baseCurrency: 'INR', holdings: [], ...over }
+}
+
+describe('valueSeries — equity-only filter', () => {
+  it('excludes manual assets when filtered to holding positions', () => {
+    const record = hist({
+      holdings: [stamped({ avgBuyPriceBase: 100, currentPriceBase: 150 })], // value 1500
+      assets: [assetRecord({ currentValueBase: 50000 })],
+    })
+    const netWorth = valueSeries([record], 'INR')
+    const equityOnly = valueSeries([record], 'INR', isHoldingPosition)
+    expect(netWorth[0].value).toBe(1500 + 50000)
+    expect(equityOnly[0].value).toBe(1500)
+  })
+})
+
+describe('classValueSeries / assetClassChanges', () => {
+  it('bands net worth by asset-class group across dates, backfilling absent groups to 0', () => {
+    const series = classValueSeries(
+      [
+        hist({
+          date: '2026-05-01',
+          holdings: [stamped({ avgBuyPriceBase: 100, currentPriceBase: 100 })], // Equity 1000
+        }),
+        hist({
+          date: '2026-05-16',
+          holdings: [stamped({ avgBuyPriceBase: 100, currentPriceBase: 120 })], // Equity 1200
+          assets: [assetRecord({ currentValueBase: 50000 })], // Gold 50000
+        }),
+      ],
+      'INR',
+    )
+    expect(series.groups).toContain('Equity')
+    expect(series.groups).toContain('Gold / Silver')
+    const first = series.rows.find((r) => r.date === '2026-05-01')!
+    expect(first['Equity']).toBe(1000)
+    expect(first['Gold / Silver']).toBe(0) // backfilled — gold didn't exist yet
+    const last = series.rows.find((r) => r.date === '2026-05-16')!
+    expect(last['Gold / Silver']).toBe(50000)
+  })
+
+  it('excludes a partial (unpriced) position from its group sum (R1)', () => {
+    const series = classValueSeries(
+      [hist({ holdings: [holding({ currentPrice: 150 })] })], // no base stamp → undefined
+      'INR',
+    )
+    // No computable value anywhere → no groups.
+    expect(series.groups).toEqual([])
+  })
+
+  it('computes per-class window change %', () => {
+    const series = classValueSeries(
+      [
+        hist({ date: '2026-05-01', holdings: [stamped({ avgBuyPriceBase: 100, currentPriceBase: 100 })] }),
+        hist({ date: '2026-05-16', holdings: [stamped({ avgBuyPriceBase: 100, currentPriceBase: 110 })] }),
+      ],
+      'INR',
+    )
+    const equity = assetClassChanges(series).find((c) => c.group === 'Equity')!
+    expect(equity.points).toEqual([1000, 1100])
+    expect(equity.latest).toBe(1100)
+    expect(equity.changePct).toBeCloseTo(0.1)
   })
 })
