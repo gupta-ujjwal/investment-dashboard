@@ -1,6 +1,7 @@
 import {
   ASSETS_STORE,
   BUDGET_STORE,
+  BUDGET_TAGS_STORE,
   DB_VERSION,
   getAll,
   getDB,
@@ -8,6 +9,7 @@ import {
 } from './holdings'
 import { getAllAssets } from './assets'
 import { getAllBudgetMonths } from './budget'
+import { getAllBudgetTags } from './budgetTags'
 import { getSettings, saveSettings } from './settings'
 import type { ParsedBackup } from '../lib/restoreBackup'
 
@@ -18,6 +20,7 @@ export type BackupManifest = {
   holdings: number
   assets: number
   budgetMonths: number
+  budgetTags: number
   hasSettings: boolean
 }
 
@@ -29,10 +32,11 @@ export type BackupManifest = {
  * record), so a restored portfolio keeps its base-currency figures.
  */
 export async function exportBackup(): Promise<string> {
-  const [holdings, assets, budgetMonths, settings] = await Promise.all([
+  const [holdings, assets, budgetMonths, budgetTags, settings] = await Promise.all([
     getAll(),
     getAllAssets(),
     getAllBudgetMonths(),
+    getAllBudgetTags(),
     getSettings(),
   ])
   return JSON.stringify(
@@ -42,6 +46,7 @@ export async function exportBackup(): Promise<string> {
       holdings,
       assets,
       budgetMonths,
+      budgetTags,
       settings: {
         emergencyMonthlyNeed: settings.emergencyMonthlyNeed,
         emergencyMonths: settings.emergencyMonths,
@@ -60,6 +65,7 @@ export function backupManifest(backup: ParsedBackup): BackupManifest {
     holdings: backup.holdings.length,
     assets: backup.assets.length,
     budgetMonths: backup.budgetMonths.length,
+    budgetTags: backup.budgetTags.length,
     hasSettings: backup.settings !== undefined,
   }
 }
@@ -75,10 +81,14 @@ export function backupManifest(backup: ParsedBackup): BackupManifest {
  */
 export async function restoreAll(backup: ParsedBackup): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction([HOLDINGS_STORE, ASSETS_STORE, BUDGET_STORE], 'readwrite')
+  const tx = db.transaction(
+    [HOLDINGS_STORE, ASSETS_STORE, BUDGET_STORE, BUDGET_TAGS_STORE],
+    'readwrite',
+  )
   const holdings = tx.objectStore(HOLDINGS_STORE)
   const assets = tx.objectStore(ASSETS_STORE)
   const budget = tx.objectStore(BUDGET_STORE)
+  const budgetTags = tx.objectStore(BUDGET_TAGS_STORE)
 
   holdings.clear()
   for (const row of backup.holdings) holdings.add(row)
@@ -86,6 +96,12 @@ export async function restoreAll(backup: ParsedBackup): Promise<void> {
   for (const row of backup.assets) assets.add(row)
   budget.clear()
   for (const row of backup.budgetMonths) budget.add(row)
+  // A pre-v5 backup has no `budgetTags` (parsed to `[]`), so this clears any
+  // tags on the device and adds nothing — the same replace-semantics the other
+  // stores get. Restoring an old backup intentionally wipes tags, surfaced in
+  // the restore manifest.
+  budgetTags.clear()
+  for (const row of backup.budgetTags) budgetTags.add(row)
   await tx.done
 
   if (backup.settings) {
