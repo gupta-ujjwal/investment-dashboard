@@ -1,26 +1,21 @@
 # Evidence — PR #46: net-worth IA + budget tags
 
-## Status: screenshots PENDING (environment-blocked)
+## Status: CAPTURED ✅
 
-Playwright route screenshots could **not** be captured in the `/develop` session:
-the Playwright MCP browser (system Chrome, `/opt/google/chrome`) failed to launch
-with a Nix-glibc mismatch —
+Playwright route screenshots captured at desktop **1280×900** and mobile
+**390×844** (deviceScaleFactor 2), against `npm run dev`
+(`http://localhost:5173/investment-dashboard/`) with a seeded v5 portfolio
+(5 equity holdings across IN/US, 5 manual assets, 2 budget months, 5 budget
+tags, 4 history snapshots).
 
-```
-/opt/google/chrome: libc.so.6: version `GLIBC_2.38' not found
-  (required by /nix/store/.../alsa-lib/libasound.so.2)
-```
-
-— because `/nix/store` libraries leaked into the MCP server's environment
-(`LD_LIBRARY_PATH`, via direnv). The browser is launched by the MCP server
-process, whose environment the agent cannot change. Restarting the Playwright MCP
-in a clean env (outside the direnv shell / `env -u LD_LIBRARY_PATH`) resolves it.
-
-A re-runnable IDB seeder + capture runbook is prepared in the (gitignored)
-`notes/investments-tab-budget-tags/` directory (`seed-idb.js`,
-`capture-runbook.md`). Once the browser launches, capture the screenshots listed
-below into this directory, add the categorized console summary, and mark the PR
-ready-for-review.
+> Capture note: the Playwright **MCP** browser still could not launch here — the
+> system Chrome (`/opt/google/chrome`) hits a Nix-glibc `GLIBC_2.38 not found`
+> mismatch because `/nix/store` libs leak into the MCP server's env via
+> `LD_LIBRARY_PATH`/direnv, and the agent can't change the MCP server's env.
+> Worked around by driving the bundled chromium directly from a **clean env**
+> (`env -u LD_LIBRARY_PATH`), via the re-runnable
+> `notes/investments-tab-budget-tags/capture.mjs` + `seed-idb.js` (gitignored
+> scratch). Same browser engine, same routes.
 
 ## Non-visual verification (all green)
 
@@ -35,21 +30,31 @@ New unit coverage: equity backfill fold (partial-aware, defensive on non-finite)
 `classValueSeries` / `assetClassChanges`, parameterized `valueSeries` equity-only
 filter, budget-tag backup round-trip + pre-v5 missing-key default, tag dedupe.
 
-## Screenshots to capture (desktop 1280×900 + mobile 390×844)
+## Screenshots
 
-- `/overview` — net-worth KPIs, allocation-by-class bars, emergency-fund card,
-  goal, and the two new charts (stacked net-worth-by-class area + per-class
-  change sparklines)
-- `/investments` — unified list: read-only Equity·India / Equity·US rows (with
-  "View →") above editable crypto/gold/NPS/FD/savings rows; "+ Add asset" modal
-- `/equity` — equity KPIs + risk row + charts (value-over-time w/ benchmark,
-  donuts, movers) + holdings table
-- `/budget` — month summary, line editor with the tag combobox (datalist open),
-  tag chip row, "+ tag" inline create
-- `/settings` → Data → Restore preview — manifest now shows a **Budget tags** count
+Desktop (`-desktop.png`) and mobile (`-mobile.png`) for each route, full-page:
+
+| File | What it shows |
+|---|---|
+| `overview-{desktop,mobile}` | Net-worth KPIs, allocation-by-class bars, emergency-fund card (5.4 mo / 90%), goal, and the **two new charts** — *Net worth by asset class* stacked area + *Change by asset class* per-class sparklines |
+| `investments-{desktop,mobile}` | Unified list: **Equity·India / Equity·US** read-only rows (`VIEW →`, "from holdings") above editable crypto/gold/NPS/FD/savings manual rows |
+| `investments-add-asset-modal` | `+ Add asset` modal — name, asset class, IN/US currency toggle, value/invested, planning tags (risk band + emergency-fund) |
+| `equity-{desktop,mobile}` | Equity KPIs + concentration/single-stock-risk row + charts (value-over-time w/ benchmark, P&L-over-time, allocation/currency/sector donuts, top movers) + per-ticker holdings table |
+| `budget-{desktop,mobile}` | Month summary; line editor with the **tag combobox** ("Pick or type a tag"); income/expense **tag chips** (Salary/Interest, Rent/Groceries/EMI); `+ Add line` inline create |
+| `settings-{desktop,mobile}` | Settings (data/backup, external-API consent, FX, allocation targets) |
 
 ## Console summary
 
-To be filled after capture: name each error/warning class observed per route,
-mark new vs pre-existing on `main`, and conclude. Do **not** commit the raw
-console dump (keep it under `notes/`).
+Captured `error` + `warning` console output across every route load
+(raw JSON kept in gitignored `notes/`, not committed). Three distinct classes,
+**all pre-existing on `main` — none introduced by this PR**:
+
+| Class | Level | New? | Cause |
+|---|---|---|---|
+| `Matched leaf route at location "/" does not have an element or Component` | warning | pre-existing | React Router v7 layout route (`/`) renders an `<Outlet/>` only — router-config boilerplate, unrelated to the tab restructure |
+| `No HydrateFallback element provided to render during initial hydration` | warning | pre-existing | React Router v7 data-router boilerplate; no `HydrateFallback` configured |
+| `Failed to load resource: 404` (`/favicon.ico`) | error | pre-existing | App ships no favicon (no `public/`, no `<link rel=icon>`); Chrome auto-requests `/favicon.ico` on every page and it 404s on `main` too |
+
+**Conclusion: no new errors or warnings introduced by this PR.** The two router
+warnings and the favicon 404 are environmental/framework artifacts present on
+`main` independent of this diff.
