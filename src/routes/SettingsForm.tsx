@@ -3,6 +3,7 @@ import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency } from '../storage/holdings'
 import type { NumberLocale, Settings } from '../storage/settings'
 import { formatMoney } from '../lib/format'
+import { FEATURE_GOALS, FEATURE_PLANNING } from '../featureFlags'
 
 export type SettingsActionResult =
   | { ok: true; mode: 'saved' | 'refreshed' | 'manual'; rate?: number; fetchedAt?: number }
@@ -206,7 +207,123 @@ export function SettingsForm() {
           </div>
         )}
       </fieldset>
+
+      {(FEATURE_PLANNING || FEATURE_GOALS) && (
+        <PlanningTargets settings={settings} submitting={submitting} />
+      )}
     </fetcher.Form>
+  )
+}
+
+/** Planning (Phase 3) + goal (Phase 4) targets. Uncontrolled inputs with
+ *  `defaultValue` — they post inside the same settings form, and `intent=save`
+ *  persists them via `readSettingsFromForm`. Blank clears a target. */
+function PlanningTargets({
+  settings,
+  submitting,
+}: {
+  settings: Settings
+  submitting: boolean
+}) {
+  const targetFor = (band: 'safe' | 'moderate' | 'high'): string => {
+    const t = settings.allocationTargets?.find((x) => x.riskBand === band)
+    return t ? String(t.pct) : ''
+  }
+  return (
+    <fieldset className="space-y-6 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
+        Planning &amp; goals
+      </legend>
+
+      {FEATURE_GOALS && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TargetInput
+            name="goalCorpus"
+            label={`Goal corpus · ${settings.baseCurrency}`}
+            defaultValue={settings.goalCorpus}
+            placeholder="e.g. 5000000"
+          />
+          <TargetInput
+            name="monthlyContribution"
+            label={`Monthly contribution · ${settings.baseCurrency}`}
+            defaultValue={settings.monthlyContribution}
+            placeholder="e.g. 50000"
+          />
+        </div>
+      )}
+
+      {FEATURE_PLANNING && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TargetInput
+              name="emergencyMonthlyNeed"
+              label={`Emergency monthly need · ${settings.baseCurrency}`}
+              defaultValue={settings.emergencyMonthlyNeed}
+              placeholder="e.g. 150000"
+            />
+            <TargetInput
+              name="emergencyMonths"
+              label="Emergency months of cover"
+              defaultValue={settings.emergencyMonths}
+              placeholder="e.g. 6"
+            />
+          </div>
+
+          <fieldset className="space-y-3">
+            <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+              Allocation targets (% by risk band)
+            </legend>
+            <div className="grid grid-cols-3 gap-4">
+              <TargetInput name="alloc_safe" label="Safe %" defaultValue={targetFor('safe') === '' ? undefined : Number(targetFor('safe'))} placeholder="0" />
+              <TargetInput name="alloc_moderate" label="Moderate %" defaultValue={targetFor('moderate') === '' ? undefined : Number(targetFor('moderate'))} placeholder="0" />
+              <TargetInput name="alloc_high" label="High %" defaultValue={targetFor('high') === '' ? undefined : Number(targetFor('high'))} placeholder="0" />
+            </div>
+          </fieldset>
+        </>
+      )}
+
+      <button
+        type="submit"
+        name="intent"
+        value="save"
+        disabled={submitting}
+        className="border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Save targets
+      </button>
+      <p className="font-sans text-[11px] text-bone-400">
+        Used by the Planning tab and the goal projection on Analytics. Leave a field
+        blank to clear it.
+      </p>
+    </fieldset>
+  )
+}
+
+function TargetInput({
+  name,
+  label,
+  defaultValue,
+  placeholder,
+}: {
+  name: string
+  label: string
+  defaultValue: number | undefined
+  placeholder: string
+}) {
+  return (
+    <label className="block space-y-2">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+        {label}
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        name={name}
+        defaultValue={defaultValue !== undefined ? String(defaultValue) : ''}
+        placeholder={placeholder}
+        className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+      />
+    </label>
   )
 }
 

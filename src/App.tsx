@@ -12,40 +12,77 @@ import {
   upsertHolding,
   type BaseCurrency,
   type CanonicalHolding,
+  type Currency,
   type HoldingKey,
   type HoldingStatus,
   type Source,
 } from './storage/holdings'
-import { getHistory } from './storage/history'
+import {
+  deleteAsset,
+  getAllAssets,
+  getAsset,
+  upsertAsset,
+  type ManualAsset,
+  type ManualAssetClass,
+} from './storage/assets'
+import { getHistory, recordSnapshot } from './storage/history'
 import {
   getSettings,
   saveSettings,
   type NumberLocale,
   type Settings,
 } from './storage/settings'
-import { FEATURE_HISTORY } from './featureFlags'
-import { applyManualRate, refreshFx, stampHolding } from './lib/refreshFx'
+import { FEATURE_ASSETS, FEATURE_BUDGET, FEATURE_HISTORY, FEATURE_PLANNING } from './featureFlags'
+import { applyManualRate, refreshFx, stampAsset, stampHolding } from './lib/refreshFx'
 import { FxFetchError } from './lib/fx'
 import {
   buildHoldingFromForm,
   validateHoldingForm,
   type HoldingFormInput,
 } from './lib/holdingValidators'
+import {
+  buildAssetFromForm,
+  validateAssetForm,
+  type AssetFormInput,
+} from './lib/assetValidators'
 import type { HoldingActionResult } from './components/HoldingForm'
+import type { AssetActionResult } from './components/AssetForm'
 import { AppShell } from './routes/AppShell'
 import { AnalyticsRoute } from './routes/AnalyticsRoute'
 import { HoldingsRoute } from './routes/HoldingsRoute'
+import { BudgetRoute } from './routes/BudgetRoute'
+import { PlanningRoute } from './routes/PlanningRoute'
 import { ImportRoute } from './routes/import/ImportRoute'
 import { SettingsRoute } from './routes/SettingsRoute'
 import type { SettingsActionResult } from './routes/SettingsForm'
+import {
+  getAllBudgetMonths,
+  getBudgetMonth,
+  upsertBudgetMonth,
+  deleteBudgetMonth,
+  type BudgetLine,
+  type BudgetMonth,
+} from './storage/budget'
+import type { BudgetActionResult } from './routes/BudgetRoute'
 
 const dashboardLoader = async () => {
-  const [holdings, settings, history] = await Promise.all([
+  const [holdings, settings, history, assets] = await Promise.all([
     getAll(),
     getSettings(),
     FEATURE_HISTORY ? getHistory() : Promise.resolve([]),
+    FEATURE_ASSETS ? getAllAssets() : Promise.resolve([]),
   ])
-  return { holdings, settings, history }
+  return { holdings, settings, history, assets }
+}
+
+const budgetLoader = async () => {
+  const [months, settings] = await Promise.all([getAllBudgetMonths(), getSettings()])
+  return { months, settings }
+}
+
+const planningLoader = async () => {
+  const [assets, settings] = await Promise.all([getAllAssets(), getSettings()])
+  return { assets, settings }
 }
 
 const settingsLoader = async () => {
@@ -61,6 +98,39 @@ function isNumberLocale(v: FormDataEntryValue | null): v is NumberLocale {
   return v === 'en-IN' || v === 'en-US'
 }
 
+/** Parse an optional numeric target field. Returns a sentinel:
+ *  - `'keep'` when the field is absent from the form (don't touch current);
+ *  - `undefined` when present-but-blank (the user cleared it);
+ *  - a finite number when present and valid (invalid → `'keep'`). */
+function readTarget(form: FormData, key: string): number | undefined | 'keep' {
+  const raw = form.get(key)
+  if (raw === null) return 'keep'
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : 'keep'
+}
+
+function applyTarget(
+  current: number | undefined,
+  parsed: number | undefined | 'keep',
+): number | undefined {
+  return parsed === 'keep' ? current : parsed
+}
+
+function readAllocationTargets(
+  form: FormData,
+  current: Settings['allocationTargets'],
+): Settings['allocationTargets'] {
+  const bands = ['safe', 'moderate', 'high'] as const
+  // If none of the three fields are present, the planning UI wasn't rendered —
+  // preserve whatever is stored.
+  if (bands.every((b) => form.get(`alloc_${b}`) === null)) return current
+  const targets = bands
+    .map((b) => ({ riskBand: b, pct: Number(form.get(`alloc_${b}`) ?? '') }))
+    .filter((t) => Number.isFinite(t.pct) && t.pct > 0)
+  return targets.length > 0 ? targets : undefined
+}
+
 async function readSettingsFromForm(form: FormData): Promise<Settings> {
   const current = await getSettings()
   const name = form.get('name')
@@ -71,6 +141,17 @@ async function readSettingsFromForm(form: FormData): Promise<Settings> {
     name: typeof name === 'string' ? name.trim() : current.name,
     baseCurrency: isBaseCurrency(base) ? base : current.baseCurrency,
     numberLocale: isNumberLocale(locale) ? locale : current.numberLocale,
+    emergencyMonthlyNeed: applyTarget(
+      current.emergencyMonthlyNeed,
+      readTarget(form, 'emergencyMonthlyNeed'),
+    ),
+    emergencyMonths: applyTarget(current.emergencyMonths, readTarget(form, 'emergencyMonths')),
+    goalCorpus: applyTarget(current.goalCorpus, readTarget(form, 'goalCorpus')),
+    monthlyContribution: applyTarget(
+      current.monthlyContribution,
+      readTarget(form, 'monthlyContribution'),
+    ),
+    allocationTargets: readAllocationTargets(form, current.allocationTargets),
   }
 }
 
@@ -158,7 +239,48 @@ function maybeStampFx(
   return stampHolding(row, settings.baseCurrency, settings.lastFxRate, settings.lastFxAsOf)
 }
 
-const holdingsAction = async ({ request }: ActionFunctionArgs): Promise<HoldingActionResult> => {
+/** Asset analogue of `maybeStampFx` — stamp a manual asset's base figures with
+ *  the last known FX rate if it is fresh enough, so a non-base asset added
+ *  between refreshes isn't left unstamped. Identity stamp when the asset's
+ *  currency equals base. */
+function maybeStampAsset(asset: ManualAsset, settings: Settings, now: number): ManualAsset {
+  if (settings.lastFxRate === null || settings.lastFxAsOf === null) return asset
+  if (now - settings.lastFxAsOf > FRESH_FX_WINDOW_MS) return asset
+  return stampAsset(asset, settings.baseCurrency, settings.lastFxRate, settings.lastFxAsOf)
+}
+
+function readAssetForm(form: FormData): AssetFormInput {
+  const get = (k: string) => {
+    const v = form.get(k)
+    return typeof v === 'string' ? v : ''
+  }
+  return {
+    name: get('name'),
+    assetClass: get('assetClass') as ManualAssetClass,
+    currency: (get('currency') as Currency) || 'INR',
+    investedAmount: get('investedAmount'),
+    currentValue: get('currentValue'),
+    riskBand: get('riskBand'),
+    emergencyFund: form.get('emergencyFund') === 'true',
+  }
+}
+
+/** Capture a history snapshot after a net-worth-moving asset change. Best-effort
+ *  per R3 — a snapshot failure must never fail the asset write that already
+ *  committed. Budget writes deliberately do NOT call this (they don't move net
+ *  worth). */
+async function snapshotAfterNetWorthChange(base: BaseCurrency): Promise<void> {
+  if (!FEATURE_HISTORY) return
+  try {
+    await recordSnapshot(base)
+  } catch (err) {
+    console.warn('History snapshot after asset change failed (non-fatal):', err)
+  }
+}
+
+const holdingsAction = async ({
+  request,
+}: ActionFunctionArgs): Promise<HoldingActionResult | AssetActionResult> => {
   const form = await request.formData()
   const intent = form.get('intent')
 
@@ -254,6 +376,58 @@ const holdingsAction = async ({ request }: ActionFunctionArgs): Promise<HoldingA
       return { ok: true, mode: 'reverted' }
     }
 
+    // ── Manual asset intents (Phase 1) ──────────────────────────────────────
+    if (intent === 'addAsset') {
+      const validation = validateAssetForm(readAssetForm(form))
+      if (!validation.ok) {
+        return { ok: false, error: 'Validation failed', fieldErrors: validation.errors }
+      }
+      const settings = await getSettings()
+      const now = Date.now()
+      const asset = buildAssetFromForm(validation.value, {
+        id: crypto.randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+      })
+      await upsertAsset(maybeStampAsset(asset, settings, now))
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
+      return { ok: true, mode: 'asset-added' }
+    }
+
+    if (intent === 'updateAsset') {
+      const id = form.get('id')
+      if (typeof id !== 'string' || id === '') {
+        return { ok: false, error: 'Missing asset id' }
+      }
+      const existing = await getAsset(id)
+      if (!existing) return { ok: false, error: 'Asset no longer exists' }
+      const validation = validateAssetForm(readAssetForm(form))
+      if (!validation.ok) {
+        return { ok: false, error: 'Validation failed', fieldErrors: validation.errors }
+      }
+      const settings = await getSettings()
+      const now = Date.now()
+      const asset = buildAssetFromForm(validation.value, {
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: now,
+      })
+      await upsertAsset(maybeStampAsset(asset, settings, now))
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
+      return { ok: true, mode: 'asset-updated' }
+    }
+
+    if (intent === 'deleteAsset') {
+      const id = form.get('id')
+      if (typeof id !== 'string' || id === '') {
+        return { ok: false, error: 'Missing asset id' }
+      }
+      await deleteAsset(id)
+      const settings = await getSettings()
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
+      return { ok: true, mode: 'asset-deleted' }
+    }
+
     return { ok: false, error: `Unknown intent: ${String(intent)}` }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -282,6 +456,72 @@ function diffOverrides(
   return changed
 }
 
+/** Parse the JSON-encoded budget line list a `BudgetRoute` form submits. Lines
+ *  with a non-finite amount or non-string category are dropped (defensive — the
+ *  UI shouldn't produce them). */
+function parseBudgetLines(raw: FormDataEntryValue | null): BudgetLine[] {
+  if (typeof raw !== 'string' || raw.trim() === '') return []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed)) return []
+  const lines: BudgetLine[] = []
+  for (const item of parsed) {
+    if (item === null || typeof item !== 'object') continue
+    const category = (item as { category?: unknown }).category
+    const amount = Number((item as { amount?: unknown }).amount)
+    if (typeof category !== 'string') continue
+    if (!Number.isFinite(amount)) continue
+    lines.push({ category, amount })
+  }
+  return lines
+}
+
+const budgetAction = async ({ request }: ActionFunctionArgs): Promise<BudgetActionResult> => {
+  const form = await request.formData()
+  const intent = form.get('intent')
+  try {
+    if (intent === 'saveMonth') {
+      const month = form.get('month')
+      if (typeof month !== 'string' || !/^\d{4}-\d{2}$/.test(month)) {
+        return { ok: false, error: 'Pick a valid month.' }
+      }
+      const investedRaw = form.get('invested')
+      const invested =
+        typeof investedRaw === 'string' && investedRaw.trim() !== ''
+          ? Number(investedRaw)
+          : 0
+      if (!Number.isFinite(invested) || invested < 0) {
+        return { ok: false, error: 'Invested must be a non-negative number.' }
+      }
+      const existing = await getBudgetMonth(month)
+      const now = Date.now()
+      const record: BudgetMonth = {
+        month,
+        income: parseBudgetLines(form.get('incomeJson')),
+        expenses: parseBudgetLines(form.get('expensesJson')),
+        invested,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      }
+      await upsertBudgetMonth(record)
+      return { ok: true, mode: 'saved' }
+    }
+    if (intent === 'deleteMonth') {
+      const month = form.get('month')
+      if (typeof month !== 'string') return { ok: false, error: 'Invalid month' }
+      await deleteBudgetMonth(month)
+      return { ok: true, mode: 'deleted' }
+    }
+    return { ok: false, error: `Unknown intent: ${String(intent)}` }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 const router = createBrowserRouter(
   [
     {
@@ -303,6 +543,14 @@ const router = createBrowserRouter(
           loader: dashboardLoader,
           action: holdingsAction,
         },
+        // Budget / Planning routes are gated on their phase flags so a flag-off
+        // build has neither the tab (AppShell) nor the route — no dead links.
+        ...(FEATURE_BUDGET
+          ? [{ path: 'budget', Component: BudgetRoute, loader: budgetLoader, action: budgetAction }]
+          : []),
+        ...(FEATURE_PLANNING
+          ? [{ path: 'planning', Component: PlanningRoute, loader: planningLoader }]
+          : []),
         { path: 'import', Component: ImportRoute },
         {
           path: 'settings',

@@ -8,6 +8,7 @@ import type {
   Source,
 } from '../storage/holdings'
 import type { HoldingFormErrors } from '../lib/holdingValidators'
+import { Field, inputClass, ModalShell } from './formModal'
 
 /**
  * Shape of the action response from `holdingsAction`. Field-level errors flow
@@ -267,78 +268,3 @@ export function HoldingForm({ open, mode, holding, existingKeys, onClose }: Prop
   )
 }
 
-function ModalShell({
-  title,
-  onClose,
-  children,
-}: {
-  title: string
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="holding-modal-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/80 px-3 py-6 backdrop-blur-sm sm:items-center sm:px-6"
-    >
-      {/* Backdrop click closes; clicking the panel does not. */}
-      <button
-        type="button"
-        aria-label="Close"
-        tabIndex={-1}
-        onClick={onClose}
-        className="absolute inset-0 cursor-default"
-      />
-      <div className="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden border border-bone-100/15 bg-ink-900 shadow-2xl shadow-ink-950/80">
-        <header className="flex items-center justify-between border-b border-bone-100/10 bg-ink-850 px-5 py-3">
-          <h2
-            id="holding-modal-title"
-            className="font-sans text-base font-semibold tracking-tight text-bone-50"
-          >
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="font-mono text-lg text-bone-400 transition hover:text-bone-100"
-          >
-            ×
-          </button>
-        </header>
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string
-  error: string | undefined
-  children: React.ReactNode
-}) {
-  return (
-    <label className="grid gap-1.5">
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{label}</span>
-      {children}
-      {error && (
-        <span role="alert" className="font-sans text-xs text-ember-400">
-          {error}
-        </span>
-      )}
-    </label>
-  )
-}
-
-function inputClass(hasError: boolean): string {
-  const base = 'w-full border bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 placeholder:text-bone-500 focus:outline-none'
-  return hasError
-    ? `${base} border-ember-400/60 focus:border-ember-400`
-    : `${base} border-bone-100/15 focus:border-tick-400`
-}

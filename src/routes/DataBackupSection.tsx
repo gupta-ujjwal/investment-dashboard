@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
+import type { CanonicalHolding } from '../storage/holdings'
 import {
-  exportSnapshot,
-  restoreAllHoldings,
-  type CanonicalHolding,
-} from '../storage/holdings'
+  backupManifest,
+  exportBackup,
+  restoreAll,
+  type BackupManifest,
+} from '../storage/backup'
 import { parseBackup, type ParsedBackup } from '../lib/restoreBackup'
 import { formatQuantity } from '../lib/format'
 
@@ -23,13 +25,13 @@ export function DataBackupSection({ currentHoldings }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleDownload() {
-    const json = await exportSnapshot()
+    const json = await exportBackup()
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     a.href = url
-    a.download = `holdings-backup-${stamp}.json`
+    a.download = `dashboard-backup-${stamp}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -60,8 +62,9 @@ export function DataBackupSection({ currentHoldings }: Props) {
     if (state.kind !== 'preview') return
     setState({ kind: 'restoring' })
     try {
-      await restoreAllHoldings(state.backup.holdings)
-      setState({ kind: 'done', restoredCount: state.backup.holdings.length })
+      await restoreAll(state.backup)
+      const m = backupManifest(state.backup)
+      setState({ kind: 'done', restoredCount: m.holdings + m.assets + m.budgetMonths })
       // Hard reload so every route loader picks up the new holdings — the
       // Analytics/Holdings caches are scoped per loader and would otherwise
       // show stale data until the user navigates.
@@ -89,8 +92,9 @@ export function DataBackupSection({ currentHoldings }: Props) {
         </h3>
         <p className="font-sans text-[12px] text-bone-400">
           {currentCount} holding{currentCount === 1 ? '' : 's'} on this device. The
-          export captures positions only — base-currency stamps included, history
-          snapshots are not.
+          export captures everything — holdings, manual assets, budget months, and
+          planning / goal targets (base-currency stamps included). History
+          snapshots are not included.
         </p>
         <button
           type="button"
@@ -108,8 +112,8 @@ export function DataBackupSection({ currentHoldings }: Props) {
           Restore
         </h3>
         <p className="font-sans text-[12px] text-bone-400">
-          Replaces every holding on this device with the contents of a backup
-          file. Cannot be undone.
+          Replaces all holdings, assets, and budget months on this device with
+          the contents of a backup file, atomically. Cannot be undone.
         </p>
         <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-tick-400 has-[:focus-visible]:outline-offset-2">
           <input
@@ -156,7 +160,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
             restored ·{' '}
           </span>
-          Replaced existing data with {state.restoredCount} holding
+          Replaced existing data with {state.restoredCount} record
           {state.restoredCount === 1 ? '' : 's'}. Reloading…
         </div>
       )}
@@ -179,35 +183,46 @@ function RestoreConfirmPanel({
   onCancel,
   onConfirm,
 }: ConfirmProps) {
-  const inBackup = backup.holdings.length
-  const netChange = inBackup - currentCount
-  const netTone: Tone = netChange > 0 ? 'jade' : netChange < 0 ? 'ember' : 'mute'
+  const manifest: BackupManifest = backupManifest(backup)
   const largest = computeLargest(backup.holdings)
   const exportedAt = new Date(backup.exportedAt)
   const exportedAtDisplay = Number.isFinite(exportedAt.getTime())
     ? exportedAt.toLocaleString()
     : backup.exportedAt
+  // Pre-v4 (holdings-only) backups carry no asset/budget sections — surface
+  // that explicitly so the user knows those stores will be *emptied*, not left
+  // untouched, by an old backup. This is the data-safety manifest.
+  const isLegacy = backup.schemaVersion < 4
 
   return (
     <div className="space-y-5 border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
       <div>
         <h3 className="font-sans text-base font-semibold tracking-tight text-ember-300">
-          Replace all holdings
+          Replace all data
         </h3>
         <p className="mt-1 font-mono text-[11px] text-ember-300/70">
-          {fileName} · exported {exportedAtDisplay}
+          {fileName} · exported {exportedAtDisplay} · schema v{backup.schemaVersion}
         </p>
       </div>
 
       <dl className="grid grid-cols-3 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10">
-        <Stat label="In backup" value={inBackup} tone="jade" />
-        <Stat label="On device" value={currentCount} tone="mute" />
-        <Stat
-          label="Net change"
-          value={`${netChange > 0 ? '+' : ''}${netChange}`}
-          tone={netTone}
-        />
+        <Stat label="Holdings" value={manifest.holdings} tone="tick" />
+        <Stat label="Assets" value={manifest.assets} tone="tick" />
+        <Stat label="Budget months" value={manifest.budgetMonths} tone="tick" />
       </dl>
+
+      <div className="border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+        <span className="font-mono uppercase tracking-[0.16em] text-bone-400">
+          manifest ·{' '}
+        </span>
+        planning / goal targets {manifest.hasSettings ? 'included' : 'not in file'} ·
+        replaces {currentCount} holding{currentCount === 1 ? '' : 's'} on device.
+        {isLegacy && (
+          <span className="text-ember-300">
+            {' '}This is a pre-v4 backup — assets and budget months will be cleared.
+          </span>
+        )}
+      </div>
 
       {largest ? (
         <div className="border-l-2 border-tick-400/60 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
@@ -238,7 +253,7 @@ function RestoreConfirmPanel({
           onClick={onConfirm}
           className="border border-ember-400 bg-ember-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-ember-300"
         >
-          Replace {currentCount} with {inBackup}
+          Replace all data
         </button>
       </div>
     </div>

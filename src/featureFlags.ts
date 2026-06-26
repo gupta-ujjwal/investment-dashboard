@@ -48,3 +48,34 @@ export const FEATURE_SECTOR_DONUT = true
  *  switch — once deployed, rollback is `git revert` → redeploy via
  *  `deploy.yml`. */
 export const FEATURE_BENCHMARK_OVERLAY = true
+
+// ── Personal-finance revamp (dashboard-revamp-expansion) ────────────────────
+// Four phase flags gating the scope expansion from an equity-only tracker into
+// a full personal-finance dashboard. Each is an independent per-feature
+// bulkhead: flipping one off hides its tab/widgets and reverts to the prior
+// shape without touching the others or the DB schema (R9 — flags are
+// compile-time, the v4 stores exist regardless). Phase 0 (DB v4 migration +
+// backup/restore coverage + responsive nav) is infrastructure and is NOT
+// flag-gated — it ships unconditionally so the data-safety guarantees hold
+// even with every feature flag off.
+
+/** Phase 1: multi-asset net worth. Value-only `ManualAsset` store alongside
+ *  holdings; `NetWorthPosition` unifier; net-worth KPIs + allocation on
+ *  Analytics; asset CRUD on Holdings; assets folded into history snapshots. */
+export const FEATURE_ASSETS = true
+
+/** Phase 2: monthly cash-flow / budget. `budgetMonths` store; Budget tab;
+ *  category-total entry with % spent/invested/remaining folds. Independent of
+ *  FEATURE_ASSETS — budget moves spending, not net worth. */
+export const FEATURE_BUDGET = true
+
+/** Phase 3: planning. Adds optional `riskBand` + `emergencyFund` tags to
+ *  assets (additive, no version bump); Planning tab derives the emergency-fund
+ *  status and allocation/risk mix from tagged assets + manual targets on
+ *  Settings. Depends on FEATURE_ASSETS for its source data. */
+export const FEATURE_PLANNING = true
+
+/** Phase 4: goals & projection. Manual goal corpus + monthly contribution on
+ *  Settings; time-to-goal projection surfaced on Analytics. Reads net-worth
+ *  totals, so it is most useful with FEATURE_ASSETS on. */
+export const FEATURE_GOALS = true
