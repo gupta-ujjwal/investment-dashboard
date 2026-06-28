@@ -1,5 +1,6 @@
 import { openDB } from 'idb'
 import type { IDBPDatabase } from 'idb'
+import type { RiskBand } from './assets'
 
 export type Source = 'vested' | 'groww' | 'manual'
 /** Broker sources only — every `Source` except `'manual'`. The import wizard
@@ -59,6 +60,11 @@ export type CanonicalHolding = {
   /** Per-field sticky overrides for broker rows. When a field is listed here,
    *  the next broker re-import preserves the user's value for that field. */
   manualOverrides?: OverridableField[]
+  /** Planning risk band — the USER OVERRIDE only (#2). Absent means "use the
+   *  band derived from `assetClass`" (`lib/riskBand.ts`), never "no band". Set
+   *  via the row menu; cleared (back to derived) by choosing Auto. Optional
+   *  scalar → no DB_VERSION bump (see the upgrade-callback note below). */
+  riskBand?: RiskBand
 }
 
 export type HoldingKey = {
@@ -156,10 +162,12 @@ export function getDB(): Promise<IDBPDatabase> {
             db.createObjectStore(BUDGET_TAGS_STORE, { keyPath: 'id' })
           }
         }
-        // `status`, `createdAt`, `updatedAt`, `manualOverrides`, and the v4
-        // asset planning tags (`riskBand`, `emergencyFund`) are optional
-        // scalars on existing rows — per dsl.md § dsl-decision-guide, optional
-        // scalar additions do not bump the schema version.
+        // `status`, `createdAt`, `updatedAt`, `manualOverrides`, the holding
+        // `riskBand` override (#2), and the v4 asset planning tags (`riskBand`,
+        // `emergencyFund`) are optional scalars on existing rows — per dsl.md
+        // § dsl-decision-guide, optional scalar additions do not bump the schema
+        // version. An old build reads a row carrying `riskBand` and simply
+        // ignores the field, so reverting #2's code needs no data migration.
       },
       // Another tab holds an older-version connection open and is blocking this
       // upgrade. Tell the user to close it rather than hanging on a silent
@@ -271,6 +279,34 @@ export async function setHoldingStatus(
     return
   }
   await Promise.all([store.put({ ...existing, status, updatedAt: now }), tx.done])
+}
+
+/** Set (or clear) a row's `riskBand` override (#2) without rewriting its other
+ *  fields. A `RiskBand` records a user override that wins over the asset-class-
+ *  derived default; `undefined` deletes the field, reverting the row to "Auto"
+ *  (derived). Touches `updatedAt`. No-op if the row is absent. Single readwrite
+ *  tx (R3). Mirrors `setHoldingStatus`. */
+export async function setHoldingRiskBand(
+  key: HoldingKey,
+  band: RiskBand | undefined,
+  now: number = Date.now(),
+): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(STORE, 'readwrite')
+  const store = tx.objectStore(STORE)
+  const existing = (await store.get([key.source, key.sourceSymbol])) as
+    | CanonicalHolding
+    | undefined
+  if (!existing) {
+    await tx.done
+    return
+  }
+  if (band === undefined) {
+    const { riskBand: _drop, ...rest } = existing
+    await Promise.all([store.put({ ...rest, updatedAt: now }), tx.done])
+  } else {
+    await Promise.all([store.put({ ...existing, riskBand: band, updatedAt: now }), tx.done])
+  }
 }
 
 /** Clear a row's `manualOverrides` set entirely — the per-row "Revert to

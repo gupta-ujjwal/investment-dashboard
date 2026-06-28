@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CanonicalHolding } from '../storage/holdings'
+import type { RiskBand } from '../storage/assets'
+import { effectiveBand, isBandOverridden } from '../lib/riskBand'
 
 type Props = {
   holding: CanonicalHolding
@@ -7,7 +9,16 @@ type Props = {
   onMarkClosed: () => void
   onReopen: () => void
   onRevertOverrides: () => void
+  /** Set the risk-band override, or clear it (Auto → asset-class-derived) with
+   *  `undefined`. */
+  onSetRiskBand: (band: RiskBand | undefined) => void
   onDelete: () => void
+}
+
+const RISK_BAND_LABELS: Record<RiskBand, string> = {
+  safe: 'Safe',
+  moderate: 'Moderate',
+  high: 'High',
 }
 
 /**
@@ -27,6 +38,7 @@ export function HoldingActionsMenu({
   onMarkClosed,
   onReopen,
   onRevertOverrides,
+  onSetRiskBand,
   onDelete,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -66,6 +78,8 @@ export function HoldingActionsMenu({
 
   const isClosed = holding.status === 'closed'
   const hasOverrides = (holding.manualOverrides?.length ?? 0) > 0
+  const currentBand = effectiveBand(holding)
+  const bandOverridden = isBandOverridden(holding)
 
   return (
     <div ref={ref} className="relative inline-block">
@@ -123,6 +137,35 @@ export function HoldingActionsMenu({
                   ⤺  Revert to broker
                 </MenuItem>
               )}
+
+              <li role="separator" className="mx-2 my-1 border-t border-bone-100/10" />
+              <li
+                role="presentation"
+                className="px-3 pb-0.5 pt-1 font-mono text-[9px] uppercase tracking-[0.16em] text-bone-500"
+              >
+                Risk band {bandOverridden ? '· overridden' : '· auto'}
+              </li>
+              {(['safe', 'moderate', 'high'] as const).map((band) => (
+                <MenuItem
+                  key={band}
+                  onSelect={() => {
+                    close()
+                    onSetRiskBand(band)
+                  }}
+                >
+                  {currentBand === band ? '● ' : '○ '}
+                  {RISK_BAND_LABELS[band]}
+                </MenuItem>
+              ))}
+              <MenuItem
+                onSelect={() => {
+                  close()
+                  onSetRiskBand(undefined)
+                }}
+              >
+                {bandOverridden ? '○ ' : '● '}Auto (by asset class)
+              </MenuItem>
+
               <li role="separator" className="mx-2 my-1 border-t border-bone-100/10" />
               <MenuItem
                 tone="ember"

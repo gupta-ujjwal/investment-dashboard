@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
 import { upsertHolding, type BaseCurrency, type CanonicalHolding } from '../storage/holdings'
+import type { RiskBand } from '../storage/assets'
 import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import {
@@ -133,10 +134,16 @@ export function EquityRoute() {
   const onMarkClosed = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'closed' }), [submitHolding])
   const onReopen = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'open' }), [submitHolding])
   const onRevertOverrides = useCallback((h: CanonicalHolding) => submitHolding('revertOverrides', h), [submitHolding])
+  // `band` undefined → Auto: send empty 'band' so the action clears the override (#2).
+  const onSetRiskBand = useCallback(
+    (h: CanonicalHolding, band: RiskBand | undefined) =>
+      submitHolding('setRiskBand', h, { band: band ?? '' }),
+    [submitHolding],
+  )
 
   const actions: RowActions = useMemo(
-    () => ({ onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides }),
-    [onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides],
+    () => ({ onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides, onSetRiskBand }),
+    [onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides, onSetRiskBand],
   )
 
   if (holdings.length === 0) {

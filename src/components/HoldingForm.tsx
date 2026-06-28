@@ -17,7 +17,7 @@ import { Field, inputClass, ModalShell } from './formModal'
  * above the action buttons.
  */
 export type HoldingActionResult =
-  | { ok: true; mode: 'added' | 'updated' | 'deleted' | 'status-set' | 'reverted' }
+  | { ok: true; mode: 'added' | 'updated' | 'deleted' | 'status-set' | 'reverted' | 'risk-band-set' }
   | { ok: false; error: string; fieldErrors?: HoldingFormErrors }
 
 type Mode = 'add' | 'edit'

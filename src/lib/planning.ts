@@ -1,5 +1,8 @@
 import type { ManualAsset, RiskBand } from '../storage/assets'
+import type { CanonicalHolding } from '../storage/holdings'
 import type { AllocationTarget } from '../storage/settings'
+import { deriveRows } from './holdingsView'
+import { effectiveBand } from './riskBand'
 
 /**
  * Planning folds (Phase 3) — emergency-fund status and risk allocation, derived
@@ -72,16 +75,32 @@ const RISK_LABEL: Record<RiskBandKey, string> = {
 const RISK_ORDER: RiskBandKey[] = ['safe', 'moderate', 'high', 'untagged']
 
 /**
- * Current allocation by risk band over priced assets, with an optional target
- * overlay. Bands with zero value are omitted unless they carry a target (so an
- * unmet target still shows). Returns bands in a stable safe→high→untagged
- * order rather than by size — the risk ladder reads more naturally fixed.
+ * Current allocation by risk band over priced holdings AND assets, with an
+ * optional target overlay (#2: Planning sees the whole portfolio, not just
+ * manual assets). Each imported holding contributes under its EFFECTIVE band —
+ * the user override if set, else the asset-class-derived default
+ * (`lib/riskBand.ts`); an unmappable class with no override buckets as
+ * `'untagged'`, never dropped (so the slices always reconcile to 100% of priced
+ * value). Manual assets contribute under their own `riskBand` (or `'untagged'`).
+ * Partial-aware (R1): a position with no base value is skipped, never read as 0.
+ * Bands with zero value are omitted unless they carry a target. Returns bands in
+ * a stable safe→high→untagged order — the risk ladder reads more naturally fixed.
  */
 export function riskAllocation(
+  holdings: readonly CanonicalHolding[],
   assets: readonly ManualAsset[],
   targets: readonly AllocationTarget[] = [],
 ): RiskSlice[] {
   const byBand = new Map<RiskBandKey, number>()
+  // Imported holdings (open positions only — a closed position is not held).
+  for (const row of deriveRows([...holdings])) {
+    if (row.holding.status === 'closed') continue
+    const value = row.currentValueBase
+    if (value === undefined || !Number.isFinite(value)) continue
+    const band: RiskBandKey = effectiveBand(row.holding) ?? 'untagged'
+    byBand.set(band, (byBand.get(band) ?? 0) + value)
+  }
+  // Manual assets.
   for (const a of assets) {
     if (a.currentValueBase === undefined) continue
     const band: RiskBandKey = a.riskBand ?? 'untagged'

@@ -59,6 +59,32 @@ describe('parseBackup', () => {
     expect(result.backup.holdings[0].currentPriceBase).toBe(14365)
   })
 
+  // ── #2: the holding riskBand override is an optional scalar (no DB_VERSION
+  //    bump). It must round-trip through backup→restore, and the prior build
+  //    (which never wrote it) must tolerate a backup that lacks it. ──────────────
+  it('round-trips a holding riskBand override (additive optional scalar)', () => {
+    const result = parseBackup(validBackupJson([validHolding({ riskBand: 'safe' })]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.holdings[0].riskBand).toBe('safe')
+    // No bump: a riskBand-carrying backup stays at the current schema version.
+    expect(result.backup.schemaVersion).toBe(DB_VERSION)
+  })
+
+  it('tolerates a holding with no riskBand (derived at read — pre-#2 backup)', () => {
+    const result = parseBackup(validBackupJson([validHolding()]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.holdings[0].riskBand).toBeUndefined()
+  })
+
+  it('rejects a holding with an invalid riskBand', () => {
+    const result = parseBackup(validBackupJson([{ ...validHolding(), riskBand: 'spicy' }]))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/riskBand/)
+  })
+
   it('rejects invalid JSON', () => {
     const result = parseBackup('{not json')
     expect(result.ok).toBe(false)
