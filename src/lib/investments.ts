@@ -1,7 +1,7 @@
-import type { CanonicalHolding, Currency } from '../storage/holdings'
+import type { AssetClass, CanonicalHolding, Currency } from '../storage/holdings'
 import type { ManualAsset } from '../storage/assets'
 import { deriveRows } from './holdingsView'
-import { assetPosition, MANUAL_ASSET_CLASS_LABELS } from './netWorth'
+import { assetPosition, HOLDING_GROUP, MANUAL_ASSET_CLASS_LABELS } from './netWorth'
 
 /**
  * The Investments tab's unified row model. Equity is a *derived, read-only*
@@ -20,14 +20,21 @@ import { assetPosition, MANUAL_ASSET_CLASS_LABELS } from './netWorth'
  * or poison a total — non-finite base values are treated as "not computable"
  * (undefined), exactly like an absent one.
  */
-export type EquityDerivedRow = {
-  kind: 'equityDerived'
-  /** `equity:INR` / `equity:USD`. */
+export type HoldingsDerivedRow = {
+  kind: 'holdingsDerived'
+  /** `holdings:<assetClass>:<market>` — e.g. `holdings:etf:USD`. Unique per
+   *  (class, market) group; consumed only as a React list key. */
   key: string
+  /** Display label, `<classLabel> · <India|US>` — e.g. "ETF · US". */
   label: string
+  /** The holdings' asset class for this group (#1: rows are grouped by real
+   *  asset class, never collapsed to "Equity"). */
+  assetClass: AssetClass
+  /** Coarse class label from the shared `HOLDING_GROUP` map — the Class cell. */
+  classLabel: string
   market: Currency
   /** Known base-currency current value (sum over priced holdings), or
-   *  `undefined` when no holding in this market has a computable value. */
+   *  `undefined` when no holding in this group has a computable value. */
   currentValueBase: number | undefined
   /** Known base-currency cost basis (sum over stamped holdings), or
    *  `undefined` when none is computable. */
@@ -54,12 +61,18 @@ export type AssetInvestmentRow = {
   isLegacyEquity: boolean
 }
 
-export type InvestmentRow = EquityDerivedRow | AssetInvestmentRow
+export type InvestmentRow = HoldingsDerivedRow | AssetInvestmentRow
 
-const EQUITY_MARKET_LABEL: Record<Currency, string> = {
-  INR: 'Equity · India',
-  USD: 'Equity · US',
+/** Market suffix for a holdings-row label. */
+const MARKET_LABEL: Record<Currency, string> = {
+  INR: 'India',
+  USD: 'US',
 }
+
+/** Stable display order: India before US, and a fixed class ladder within each
+ *  market so the row list never reshuffles between renders. */
+const MARKET_ORDER: Currency[] = ['INR', 'USD']
+const CLASS_ORDER: AssetClass[] = ['equity', 'etf', 'mf', 'invit', 'other']
 
 /** Finite-number guard: a non-finite figure (NaN/±Infinity from malformed data)
  *  is treated as "not computable", never propagated into a total. */
@@ -68,44 +81,54 @@ function finite(v: number | undefined): number | undefined {
 }
 
 /**
- * Aggregate open holdings into one derived equity row per market. Closed
- * positions are excluded (consistent with net worth / the analytics default).
- * Markets with no open holdings produce no row. Returned India-before-US.
+ * Aggregate open holdings into one derived row per (asset class, market) group.
+ * #1 fix: rows are grouped by the holding's real `assetClass` (equity / etf / mf
+ * / invit / other), never collapsed into a single "Equity" bucket — so an ETF or
+ * InvIT reads as ETF / InvIT, matching the class split Overview already shows.
+ * Closed positions are excluded (consistent with net worth / the analytics
+ * default). Groups with no open holdings produce no row. Order is India-before-US
+ * then a fixed class ladder, so the list is stable across renders.
  */
-export function deriveEquityRows(holdings: CanonicalHolding[]): EquityDerivedRow[] {
+export function deriveHoldingsRows(holdings: CanonicalHolding[]): HoldingsDerivedRow[] {
   const rows = deriveRows(holdings).filter((r) => r.holding.status !== 'closed')
-  const order: Currency[] = ['INR', 'USD']
-  const out: EquityDerivedRow[] = []
-  for (const market of order) {
-    const inMarket = rows.filter((r) => r.holding.currency === market)
-    if (inMarket.length === 0) continue
+  const out: HoldingsDerivedRow[] = []
+  for (const market of MARKET_ORDER) {
+    for (const assetClass of CLASS_ORDER) {
+      const inGroup = rows.filter(
+        (r) => r.holding.currency === market && r.holding.assetClass === assetClass,
+      )
+      if (inGroup.length === 0) continue
 
-    let currentKnown = 0
-    let valuedCount = 0
-    let investedKnown = 0
-    let investedCount = 0
-    for (const r of inMarket) {
-      const cv = finite(r.currentValueBase)
-      if (cv !== undefined) {
-        currentKnown += cv
-        valuedCount++
+      let currentKnown = 0
+      let valuedCount = 0
+      let investedKnown = 0
+      let investedCount = 0
+      for (const r of inGroup) {
+        const cv = finite(r.currentValueBase)
+        if (cv !== undefined) {
+          currentKnown += cv
+          valuedCount++
+        }
+        const iv = finite(r.investedBase)
+        if (iv !== undefined) {
+          investedKnown += iv
+          investedCount++
+        }
       }
-      const iv = finite(r.investedBase)
-      if (iv !== undefined) {
-        investedKnown += iv
-        investedCount++
-      }
+      const classLabel = HOLDING_GROUP[assetClass]
+      out.push({
+        kind: 'holdingsDerived',
+        key: `holdings:${assetClass}:${market}`,
+        label: `${classLabel} · ${MARKET_LABEL[market]}`,
+        assetClass,
+        classLabel,
+        market,
+        currentValueBase: valuedCount > 0 ? currentKnown : undefined,
+        investedBase: investedCount > 0 ? investedKnown : undefined,
+        positionsCount: inGroup.length,
+        excludedCount: inGroup.length - valuedCount,
+      })
     }
-    out.push({
-      kind: 'equityDerived',
-      key: `equity:${market}`,
-      label: EQUITY_MARKET_LABEL[market],
-      market,
-      currentValueBase: valuedCount > 0 ? currentKnown : undefined,
-      investedBase: investedCount > 0 ? investedKnown : undefined,
-      positionsCount: inMarket.length,
-      excludedCount: inMarket.length - valuedCount,
-    })
   }
   return out
 }
@@ -126,21 +149,21 @@ export function assetInvestmentRow(asset: ManualAsset): AssetInvestmentRow {
 }
 
 /**
- * The full Investments row list: derived equity rows first (read-only, by
- * market), then every manual asset row (editable), assets ordered largest known
- * value first so the meaningful holdings sort to the top. Legacy manual `equity`
- * assets are retained (still editable) rather than hidden — hiding them would
- * orphan data the user can no longer reach; they are flagged instead.
+ * The full Investments row list: holdings-derived rows first (read-only, by
+ * class × market), then every manual asset row (editable), assets ordered
+ * largest known value first so the meaningful holdings sort to the top. Legacy
+ * manual `equity` assets are retained (still editable) rather than hidden —
+ * hiding them would orphan data the user can no longer reach; they are flagged.
  */
 export function buildInvestmentRows(
   holdings: CanonicalHolding[],
   assets: ManualAsset[],
 ): InvestmentRow[] {
-  const equity = deriveEquityRows(holdings)
+  const derived = deriveHoldingsRows(holdings)
   const assetRows = assets
     .map(assetInvestmentRow)
     .sort((a, b) => (b.currentValueBase ?? -Infinity) - (a.currentValueBase ?? -Infinity))
-  return [...equity, ...assetRows]
+  return [...derived, ...assetRows]
 }
 
 /** Count of legacy manual `equity` assets in the list — drives the
