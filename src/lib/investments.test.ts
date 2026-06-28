@@ -3,7 +3,7 @@ import type { CanonicalHolding } from '../storage/holdings'
 import type { ManualAsset } from '../storage/assets'
 import {
   buildInvestmentRows,
-  deriveEquityRows,
+  deriveHoldingsRows,
   legacyEquityCount,
 } from './investments'
 
@@ -37,23 +37,58 @@ function asset(overrides: Partial<ManualAsset> = {}): ManualAsset {
   }
 }
 
-describe('deriveEquityRows', () => {
-  it('aggregates holdings into one row per market, India before US', () => {
-    const rows = deriveEquityRows([
-      holding({ sourceSymbol: 'AAPL', currency: 'USD' }),
-      holding({ sourceSymbol: 'INFY', currency: 'INR', quantity: 5 }),
+describe('deriveHoldingsRows', () => {
+  it('groups by (asset class, market) — never collapses non-equity into "Equity"', () => {
+    // The bug being fixed (#1): an ETF and an MF were both shown as "Equity".
+    const rows = deriveHoldingsRows([
+      holding({ sourceSymbol: 'AAPL', currency: 'USD', assetClass: 'equity' }),
+      holding({ sourceSymbol: 'QQQ', currency: 'USD', assetClass: 'etf' }),
+      holding({ sourceSymbol: 'PARAGMF', currency: 'INR', assetClass: 'mf' }),
+      holding({ sourceSymbol: 'IRBINVIT', currency: 'INR', assetClass: 'invit' }),
     ])
-    expect(rows.map((r) => r.market)).toEqual(['INR', 'USD'])
-    const us = rows.find((r) => r.market === 'USD')!
-    expect(us.label).toBe('Equity · US')
-    expect(us.currentValueBase).toBe(10 * 9000)
-    expect(us.investedBase).toBe(10 * 8000)
-    expect(us.positionsCount).toBe(1)
-    expect(us.excludedCount).toBe(0)
+    // Each (class, market) pair is its own row; class label reflects the true class.
+    const byKey = Object.fromEntries(rows.map((r) => [r.key, r]))
+    expect(byKey['holdings:equity:USD'].classLabel).toBe('Equity')
+    expect(byKey['holdings:equity:USD'].label).toBe('Equity · US')
+    expect(byKey['holdings:etf:USD'].classLabel).toBe('ETF')
+    expect(byKey['holdings:etf:USD'].label).toBe('ETF · US')
+    expect(byKey['holdings:mf:INR'].classLabel).toBe('Mutual Funds')
+    expect(byKey['holdings:mf:INR'].label).toBe('Mutual Funds · India')
+    expect(byKey['holdings:invit:INR'].classLabel).toBe('InvIT')
+    // No row is mislabeled Equity unless it is genuinely equity.
+    const equityLabeled = rows.filter((r) => r.classLabel === 'Equity')
+    expect(equityLabeled).toHaveLength(1)
+    expect(equityLabeled[0].assetClass).toBe('equity')
+  })
+
+  it('orders India before US, then by a fixed class order within a market', () => {
+    const rows = deriveHoldingsRows([
+      holding({ sourceSymbol: 'QQQ', currency: 'USD', assetClass: 'etf' }),
+      holding({ sourceSymbol: 'AAPL', currency: 'USD', assetClass: 'equity' }),
+      holding({ sourceSymbol: 'INFY', currency: 'INR', assetClass: 'equity', quantity: 5 }),
+    ])
+    expect(rows.map((r) => r.key)).toEqual([
+      'holdings:equity:INR',
+      'holdings:equity:USD',
+      'holdings:etf:USD',
+    ])
+  })
+
+  it('aggregates value within a (class, market) group', () => {
+    const rows = deriveHoldingsRows([
+      holding({ sourceSymbol: 'AAPL', currency: 'USD', assetClass: 'equity' }),
+      holding({ sourceSymbol: 'MSFT', currency: 'USD', assetClass: 'equity', quantity: 2 }),
+    ])
+    expect(rows).toHaveLength(1)
+    const r = rows[0]
+    expect(r.positionsCount).toBe(2)
+    expect(r.currentValueBase).toBe(10 * 9000 + 2 * 9000)
+    expect(r.investedBase).toBe(10 * 8000 + 2 * 8000)
+    expect(r.excludedCount).toBe(0)
   })
 
   it('excludes closed positions', () => {
-    const rows = deriveEquityRows([
+    const rows = deriveHoldingsRows([
       holding({ currency: 'USD' }),
       holding({ sourceSymbol: 'CLOSED', currency: 'USD', status: 'closed' }),
     ])
@@ -62,7 +97,7 @@ describe('deriveEquityRows', () => {
   })
 
   it('is partial-aware: an unstamped holding is excluded, not read as 0', () => {
-    const rows = deriveEquityRows([
+    const rows = deriveHoldingsRows([
       holding({ sourceSymbol: 'AAPL', currency: 'USD' }), // valued
       holding({ sourceSymbol: 'NVDA', currency: 'USD', currentPriceBase: undefined }), // unpriced
     ])
@@ -72,8 +107,8 @@ describe('deriveEquityRows', () => {
     expect(us.currentValueBase).toBe(10 * 9000) // only the valued one
   })
 
-  it('returns undefined value when no holding in the market is computable', () => {
-    const rows = deriveEquityRows([
+  it('returns undefined value when no holding in the group is computable', () => {
+    const rows = deriveHoldingsRows([
       holding({ currency: 'USD', currentPriceBase: undefined, avgBuyPriceBase: undefined }),
     ])
     expect(rows[0].currentValueBase).toBeUndefined()
@@ -82,20 +117,16 @@ describe('deriveEquityRows', () => {
   })
 
   it('treats a non-finite base figure as not-computable (defensive)', () => {
-    const rows = deriveEquityRows([
+    const rows = deriveHoldingsRows([
       holding({ currency: 'USD', quantity: Number.NaN }),
     ])
     expect(rows[0].currentValueBase).toBeUndefined()
     expect(rows[0].excludedCount).toBe(1)
   })
-
-  it('produces no row for a market with no open holdings', () => {
-    expect(deriveEquityRows([holding({ currency: 'USD' })]).map((r) => r.market)).toEqual(['USD'])
-  })
 })
 
 describe('buildInvestmentRows', () => {
-  it('lists derived equity rows first, then manual assets by known value desc', () => {
+  it('lists holdings-derived rows first, then manual assets by known value desc', () => {
     const rows = buildInvestmentRows(
       [holding({ currency: 'INR' })],
       [
@@ -103,7 +134,7 @@ describe('buildInvestmentRows', () => {
         asset({ id: 'big', name: 'Gold', assetClass: 'gold', currentValueBase: 500_000 }),
       ],
     )
-    expect(rows[0].kind).toBe('equityDerived')
+    expect(rows[0].kind).toBe('holdingsDerived')
     const assetRows = rows.filter((r) => r.kind === 'asset')
     expect(assetRows.map((r) => r.label)).toEqual(['Gold', 'Cash'])
   })

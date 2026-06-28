@@ -6,7 +6,7 @@ import type { Settings } from '../storage/settings'
 import {
   buildInvestmentRows,
   legacyEquityCount,
-  type EquityDerivedRow,
+  type HoldingsDerivedRow,
   type AssetInvestmentRow,
 } from '../lib/investments'
 import { buildPositions, netWorthTotals } from '../lib/netWorth'
@@ -52,8 +52,9 @@ export function InvestmentsRoute() {
     [fetcher],
   )
 
-  const equityRows = rows.filter((r): r is EquityDerivedRow => r.kind === 'equityDerived')
+  const holdingsRows = rows.filter((r): r is HoldingsDerivedRow => r.kind === 'holdingsDerived')
   const assetRows = rows.filter((r): r is AssetInvestmentRow => r.kind === 'asset')
+  const holdingsPositions = holdingsRows.reduce((sum, r) => sum + r.positionsCount, 0)
 
   return (
     <div className="space-y-8">
@@ -78,7 +79,11 @@ export function InvestmentsRoute() {
               : `${netWorth.totalPositions} position${netWorth.totalPositions === 1 ? '' : 's'}`
           }
         />
-        <Stat label="Equity" value={`${equityRows.length}`} sub="from holdings" />
+        <Stat
+          label="Holdings"
+          value={`${holdingsPositions}`}
+          sub={holdingsPositions === 1 ? 'imported position' : 'imported positions'}
+        />
         <Stat label="Other assets" value={`${assetRows.length}`} sub="manual" />
       </section>
 
@@ -98,8 +103,8 @@ export function InvestmentsRoute() {
               </tr>
             </thead>
             <tbody>
-              {equityRows.map((r) => (
-                <EquityRowView key={r.key} row={r} base={base} />
+              {holdingsRows.map((r) => (
+                <HoldingsRowView key={r.key} row={r} base={base} />
               ))}
               {assetRows.map((r) => (
                 <AssetRowView
@@ -115,8 +120,8 @@ export function InvestmentsRoute() {
 
           {/* Mobile cards */}
           <ul className="divide-y divide-bone-100/5 md:hidden">
-            {equityRows.map((r) => (
-              <EquityCard key={r.key} row={r} base={base} />
+            {holdingsRows.map((r) => (
+              <HoldingsCard key={r.key} row={r} base={base} />
             ))}
             {assetRows.map((r) => (
               <AssetCard
@@ -153,7 +158,7 @@ export function InvestmentsRoute() {
   )
 }
 
-function EquityRowView({ row, base }: { row: EquityDerivedRow; base: BaseCurrency }) {
+function HoldingsRowView({ row, base }: { row: HoldingsDerivedRow; base: BaseCurrency }) {
   return (
     <tr className="border-b border-bone-100/5 last:border-0">
       <td className="px-4 py-3">
@@ -167,7 +172,7 @@ function EquityRowView({ row, base }: { row: EquityDerivedRow; base: BaseCurrenc
           )}
         </div>
       </td>
-      <td className="px-4 py-3 font-sans text-sm text-bone-300">Equity</td>
+      <td className="px-4 py-3 font-sans text-sm text-bone-300">{row.classLabel}</td>
       <td className="px-4 py-3 text-right font-mono text-sm tabular-nums text-bone-300">
         {money(row.investedBase, base)}
       </td>
@@ -221,14 +226,14 @@ function AssetRowView({
   )
 }
 
-function EquityCard({ row, base }: { row: EquityDerivedRow; base: BaseCurrency }) {
+function HoldingsCard({ row, base }: { row: HoldingsDerivedRow; base: BaseCurrency }) {
   return (
     <li className="space-y-2 bg-ink-900 px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="font-sans text-sm text-bone-50">{row.label}</div>
           <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
-            Equity · {row.positionsCount} position{row.positionsCount === 1 ? '' : 's'} · from holdings
+            {row.classLabel} · {row.positionsCount} position{row.positionsCount === 1 ? '' : 's'} · from holdings
           </div>
         </div>
         <div className="text-right">

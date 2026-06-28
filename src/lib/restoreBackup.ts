@@ -263,6 +263,13 @@ function validateHolding(
     }
   }
 
+  // #2: the holding risk-band override is an optional scalar — validate it (a
+  // restored garbage band would silently mis-bucket the row in Planning),
+  // mirroring the asset path. Absent is valid (→ derived at read time).
+  if (raw.riskBand !== undefined && !VALID_RISK_BANDS.has(raw.riskBand as RiskBand)) {
+    return { ok: false, error: `${prefix}: \`riskBand\` is not a valid value.` }
+  }
+
   return { ok: true, holding: raw as CanonicalHolding }
 }
 

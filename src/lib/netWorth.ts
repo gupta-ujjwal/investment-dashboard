@@ -41,7 +41,11 @@ export type NetWorthPosition = {
   hasBasis: boolean
 }
 
-const HOLDING_GROUP: Record<CanonicalHolding['assetClass'], string> = {
+/** Coarse asset-class label for each holding class. Single source of truth for
+ *  the holdings-derived allocation/grouping — used by the net-worth allocation
+ *  fold here AND by the Investments tab's per-class rows (`lib/investments.ts`),
+ *  so the two never disagree about what an `etf`/`mf`/`invit` holding is called. */
+export const HOLDING_GROUP: Record<CanonicalHolding['assetClass'], string> = {
   equity: 'Equity',
   mf: 'Mutual Funds',
   etf: 'ETF',

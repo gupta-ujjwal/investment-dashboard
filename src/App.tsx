@@ -8,6 +8,7 @@ import {
   deleteHolding,
   getAll,
   revertHoldingOverrides,
+  setHoldingRiskBand,
   setHoldingStatus,
   upsertHolding,
   type BaseCurrency,
@@ -24,6 +25,7 @@ import {
   upsertAsset,
   type ManualAsset,
   type ManualAssetClass,
+  type RiskBand,
 } from './storage/assets'
 import { getHistory, recordSnapshot } from './storage/history'
 import {
@@ -100,8 +102,14 @@ const budgetLoader = async () => {
 }
 
 const planningLoader = async () => {
-  const [assets, settings] = await Promise.all([getAllAssets(), getSettings()])
-  return { assets, settings }
+  // #2: Planning folds over the WHOLE portfolio — imported holdings (risk band
+  // derived from asset class, overridable) AND manual assets — so fetch both.
+  const [holdings, assets, settings] = await Promise.all([
+    getAll(),
+    getAllAssets(),
+    getSettings(),
+  ])
+  return { holdings, assets, settings }
 }
 
 const settingsLoader = async () => {
@@ -217,6 +225,10 @@ const FRESH_FX_WINDOW_MS = 24 * 60 * 60 * 1000
 
 function isSource(v: FormDataEntryValue | null): v is Source {
   return v === 'vested' || v === 'groww' || v === 'manual'
+}
+
+function isRiskBand(v: FormDataEntryValue | null): v is RiskBand {
+  return v === 'safe' || v === 'moderate' || v === 'high'
 }
 
 function isHoldingStatus(v: FormDataEntryValue | null): v is HoldingStatus {
@@ -397,6 +409,16 @@ const holdingsAction = async ({
       if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
       await revertHoldingOverrides(key)
       return { ok: true, mode: 'reverted' }
+    }
+
+    if (intent === 'setRiskBand') {
+      const key = readKey(form)
+      if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
+      // 'auto' (or an absent/blank band) clears the override → derived band (#2).
+      const raw = form.get('band')
+      const band = isRiskBand(raw) ? raw : undefined
+      await setHoldingRiskBand(key, band)
+      return { ok: true, mode: 'risk-band-set' }
     }
 
     // ── Manual asset intents (Phase 1) ──────────────────────────────────────

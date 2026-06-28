@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import type { ManualAsset } from '../storage/assets'
+import type { CanonicalHolding } from '../storage/holdings'
 import type { Settings } from '../storage/settings'
 import {
   bulkAllocation,
@@ -10,10 +11,10 @@ import {
 } from '../lib/planning'
 import { formatMoney } from '../lib/format'
 
-type LoaderData = { assets: ManualAsset[]; settings: Settings }
+type LoaderData = { holdings: CanonicalHolding[]; assets: ManualAsset[]; settings: Settings }
 
 export function PlanningRoute() {
-  const { assets, settings } = useLoaderData() as LoaderData
+  const { holdings, assets, settings } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   const emergency = useMemo(
@@ -21,8 +22,8 @@ export function PlanningRoute() {
     [assets, settings.emergencyMonthlyNeed, settings.emergencyMonths],
   )
   const risk = useMemo(
-    () => riskAllocation(assets, settings.allocationTargets ?? []),
-    [assets, settings.allocationTargets],
+    () => riskAllocation(holdings, assets, settings.allocationTargets ?? []),
+    [holdings, assets, settings.allocationTargets],
   )
 
   return (
