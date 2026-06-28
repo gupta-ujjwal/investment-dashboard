@@ -7,6 +7,7 @@ import type {
   Currency,
   Source,
 } from '../storage/holdings'
+import type { RiskBand } from '../storage/assets'
 import type { DerivedRow } from '../lib/holdingsView'
 import { formatDate, formatMoney, formatPercent, formatQuantity } from '../lib/format'
 import type { HoldingActionResult } from './HoldingForm'
@@ -93,15 +94,24 @@ export function Cell({
   )
 }
 
-export function StaleMarker({ importedAt }: { importedAt: number }) {
-  const detail = `Priced as of ${formatDate(importedAt)} — older than your latest import`
+/**
+ * #3: prices are dated broker-export snapshots, so a row imported before your
+ * newest import genuinely carries an older price (dsl.md R8 — computation
+ * unchanged). The old "STALE" badge read as "something is wrong" and, because
+ * importing two markets on different days is the normal case, painted half the
+ * portfolio red. Reframed to state the fact — the snapshot's as-of date — in a
+ * muted tone: informative, still a visible affordance (it only renders past the
+ * R8 newest-import threshold), but not alarming.
+ */
+export function AsOfMarker({ importedAt }: { importedAt: number }) {
+  const detail = `Priced as of ${formatDate(importedAt)} — an older snapshot than your latest import`
   return (
     <span
       title={detail}
-      aria-label={`Stale price. ${detail}`}
-      className="border border-ember-400/25 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-ember-400/70"
+      aria-label={detail}
+      className="border border-bone-100/15 px-1 font-mono text-[9px] uppercase tracking-[0.12em] text-bone-400"
     >
-      stale
+      as of {formatDate(importedAt)}
     </span>
   )
 }
@@ -136,6 +146,9 @@ export type RowActions = {
   onMarkClosed: (holding: CanonicalHolding) => void
   onReopen: (holding: CanonicalHolding) => void
   onRevertOverrides: (holding: CanonicalHolding) => void
+  /** Set the risk-band override (#2), or clear it (Auto → derived) with
+   *  `undefined`. */
+  onSetRiskBand: (holding: CanonicalHolding, band: RiskBand | undefined) => void
   onDelete: (holding: CanonicalHolding) => void
   /** Called after a successful inline-edit save with a snapshot of the
    *  pre-edit row, so the parent can pop an undo toast (Reliability Tenet 3
@@ -183,7 +196,7 @@ export function HoldingRow({ row, baseCurrency, actions }: RowProps) {
           <span className="border border-bone-100/10 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-bone-400">
             {assetClassLabels[h.assetClass]}
           </span>
-          {row.isStale && <StaleMarker importedAt={h.importedAt} />}
+          {row.isStale && <AsOfMarker importedAt={h.importedAt} />}
         </div>
       </td>
       <td className="px-4 py-4">
@@ -222,6 +235,7 @@ export function HoldingRow({ row, baseCurrency, actions }: RowProps) {
           onMarkClosed={() => actions.onMarkClosed(h)}
           onReopen={() => actions.onReopen(h)}
           onRevertOverrides={() => actions.onRevertOverrides(h)}
+          onSetRiskBand={(band) => actions.onSetRiskBand(h, band)}
           onDelete={() => actions.onDelete(h)}
         />
       </td>
@@ -426,7 +440,7 @@ export function HoldingCard({ row, baseCurrency, actions }: RowProps) {
               {marketLabels[h.currency]}
             </span>
             <span>{assetClassLabels[h.assetClass]}</span>
-            {row.isStale && <StaleMarker importedAt={h.importedAt} />}
+            {row.isStale && <AsOfMarker importedAt={h.importedAt} />}
             {edited && <EditedMarker />}
             {closed && <ClosedMarker />}
           </div>
@@ -443,6 +457,7 @@ export function HoldingCard({ row, baseCurrency, actions }: RowProps) {
             onMarkClosed={() => actions.onMarkClosed(h)}
             onReopen={() => actions.onReopen(h)}
             onRevertOverrides={() => actions.onRevertOverrides(h)}
+            onSetRiskBand={(band) => actions.onSetRiskBand(h, band)}
             onDelete={() => actions.onDelete(h)}
           />
         </div>
