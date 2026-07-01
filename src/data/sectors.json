@@ -369,11 +369,6 @@
     "sector": "Financials",
     "market": "USD"
   },
-  "CAG": {
-    "name": "Conagra Brands",
-    "sector": "Consumer Staples",
-    "market": "USD"
-  },
   "CAH": {
     "name": "Cardinal Health",
     "sector": "Health Care",
@@ -559,11 +554,6 @@
     "sector": "Financials",
     "market": "USD"
   },
-  "CPB": {
-    "name": "Campbell's Company (The)",
-    "sector": "Consumer Staples",
-    "market": "USD"
-  },
   "CPRT": {
     "name": "Copart",
     "sector": "Industrials",
@@ -744,26 +734,6 @@
     "sector": "Utilities",
     "market": "USD"
   },
-  "DU1205A01025": {
-    "name": "Dummy Vedanta Ltd. 1",
-    "sector": "Metals & Mining",
-    "market": "INR"
-  },
-  "DU2205A01025": {
-    "name": "Dummy Vedanta Ltd. 2",
-    "sector": "Power",
-    "market": "INR"
-  },
-  "DU3205A01025": {
-    "name": "Dummy Vedanta Ltd. 3",
-    "sector": "Oil Gas & Consumable Fuels",
-    "market": "INR"
-  },
-  "DU4205A01025": {
-    "name": "Dummy Vedanta Ltd. 4",
-    "sector": "Metals & Mining",
-    "market": "INR"
-  },
   "DUK": {
     "name": "Duke Energy",
     "sector": "Utilities",
@@ -792,6 +762,11 @@
   "EBAY": {
     "name": "eBay Inc.",
     "sector": "Consumer Discretionary",
+    "market": "USD"
+  },
+  "ECHO": {
+    "name": "EchoStar",
+    "sector": "Communication Services",
     "market": "USD"
   },
   "ECL": {
@@ -842,11 +817,6 @@
   "EOG": {
     "name": "EOG Resources",
     "sector": "Energy",
-    "market": "USD"
-  },
-  "EPAM": {
-    "name": "EPAM Systems",
-    "sector": "Information Technology",
     "market": "USD"
   },
   "EQIX": {
@@ -954,6 +924,11 @@
     "sector": "Industrials",
     "market": "USD"
   },
+  "FDXF": {
+    "name": "FedEx Freight",
+    "sector": "Industrials",
+    "market": "USD"
+  },
   "FE": {
     "name": "FirstEnergy",
     "sector": "Utilities",
@@ -987,6 +962,11 @@
   "FIX": {
     "name": "Comfort Systems USA",
     "sector": "Industrials",
+    "market": "USD"
+  },
+  "FLEX": {
+    "name": "Flex Ltd.",
+    "sector": "Information Technology",
     "market": "USD"
   },
   "FOX": {
@@ -1155,7 +1135,12 @@
     "market": "USD"
   },
   "HON": {
-    "name": "Honeywell",
+    "name": "Honeywell Technologies",
+    "sector": "Industrials",
+    "market": "USD"
+  },
+  "HONA": {
+    "name": "Honeywell Aerospace",
     "sector": "Industrials",
     "market": "USD"
   },
@@ -2104,6 +2089,11 @@
     "sector": "Financials",
     "market": "USD"
   },
+  "MRVL": {
+    "name": "Marvell Technology",
+    "sector": "Information Technology",
+    "market": "USD"
+  },
   "MS": {
     "name": "Morgan Stanley",
     "sector": "Financials",
@@ -2384,11 +2374,6 @@
     "sector": "Health Care",
     "market": "USD"
   },
-  "POOL": {
-    "name": "Pool Corporation",
-    "sector": "Consumer Discretionary",
-    "market": "USD"
-  },
   "PPG": {
     "name": "PPG Industries",
     "sector": "Materials",
@@ -2512,11 +2497,6 @@
   "RVTY": {
     "name": "Revvity",
     "sector": "Health Care",
-    "market": "USD"
-  },
-  "SATS": {
-    "name": "EchoStar",
-    "sector": "Communication Services",
     "market": "USD"
   },
   "SBAC": {
