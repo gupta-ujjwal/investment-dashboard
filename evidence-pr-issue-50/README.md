@@ -12,6 +12,9 @@ Desktop is 1280-wide; mobile is 390×844.
 | `budget-04-empty-zero-months.png` | fresh 0-month install | Lands directly in Add-month mode; no strip / aggregate / cancel |
 | `budget-05-mobile.png` | 390×844 golden path | Aggregate wraps, strip stays horizontal, stats 2×2, donuts stack ring-over-legend, details stack |
 | `budget-06-golden-lazy.png` | golden path, re-verified after the lazy-load refactor | Donuts mount via Suspense — renders identically |
+| `budget-07-tag-trends.png` | 4 months, per-tag trends (desktop) | "By tag · across months" — Income by tag (Salary flat, Bonus spikes then 0) + Expenses by tag (Family/Rent/Food/Travel/Utilities lines + a folded "Other") |
+| `budget-08-trend-tooltip.png` | trend hover tooltip | May 2026 point → each tag's value sorted desc (Family ₹60k … Utilities ₹6.5k), 0-value series dropped |
+| `budget-09-trends-mobile.png` | per-tag trends (390×844) | Both line charts stack full-width, legends wrap |
 
 ## Console summary
 Assertion: **no new errors or warnings introduced by this PR.**
