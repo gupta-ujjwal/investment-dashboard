@@ -17,6 +17,7 @@ import {
   type BenchmarkData,
   type SectorMap,
   type ValuePoint,
+  investedDeltaForMonth,
 } from './analytics'
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
@@ -608,5 +609,51 @@ describe('classValueSeries / assetClassChanges', () => {
     expect(equity.points).toEqual([1000, 1100])
     expect(equity.latest).toBe(1100)
     expect(equity.changePct).toBeCloseTo(0.1)
+  })
+})
+
+describe('investedDeltaForMonth (#4 Budget invested hint)', () => {
+  // A record whose single holding has investedBase = `amount` (qty 1 × avgBuyPriceBase).
+  function rec(date: string, amount: number, over: Partial<HistoryRecord> = {}): HistoryRecord {
+    return {
+      date,
+      capturedAt: 0,
+      baseCurrency: 'INR',
+      holdings: [
+        stamped({ quantity: 1, avgBuyPriceBase: amount, currentPriceBase: amount + 10 }),
+      ],
+      ...over,
+    }
+  }
+
+  it('returns the cost-basis delta between a pre-month baseline and an in-month snapshot', () => {
+    const d = investedDeltaForMonth([rec('2026-04-28', 100000), rec('2026-05-20', 150000)], 'INR', '2026-05')
+    expect(d).toBeDefined()
+    expect(d?.delta).toBe(50000)
+    expect(d?.fromDate).toBe('2026-04-28')
+    expect(d?.toDate).toBe('2026-05-20')
+  })
+
+  it('is undefined without a snapshot dated within the month (sparse history → no false number)', () => {
+    expect(investedDeltaForMonth([rec('2026-04-28', 100000)], 'INR', '2026-05')).toBeUndefined()
+  })
+
+  it('is undefined without a pre-month baseline', () => {
+    expect(investedDeltaForMonth([rec('2026-05-20', 150000)], 'INR', '2026-05')).toBeUndefined()
+  })
+
+  it('is undefined for a malformed month string', () => {
+    expect(
+      investedDeltaForMonth([rec('2026-04-28', 1), rec('2026-05-20', 2)], 'INR', 'May 2026'),
+    ).toBeUndefined()
+  })
+
+  it('skips records stamped in another base currency (R6) — never subtracts across currencies', () => {
+    const d = investedDeltaForMonth(
+      [rec('2026-04-28', 100000), rec('2026-05-20', 999999, { baseCurrency: 'USD' })],
+      'INR',
+      '2026-05',
+    )
+    expect(d).toBeUndefined() // the in-month snapshot is USD-based → skipped, no INR point in May
   })
 })

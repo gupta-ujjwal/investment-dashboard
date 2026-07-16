@@ -180,6 +180,48 @@ export function valueSeries(
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
+export type InvestedDelta = {
+  /** Base-currency cost basis added between the pre-month baseline snapshot and
+   *  the in-month snapshot — an approximation of "invested during month M". */
+  delta: number
+  /** The baseline snapshot's date (`< month`) used as the "from". */
+  fromDate: string
+  /** The in-month snapshot's date used as the "to". */
+  toDate: string
+}
+
+/**
+ * An HONEST hint for Budget's manual "invested this month" (#4): the change in
+ * total portfolio cost basis across history snapshots that bracket month `M`.
+ * This is a best-effort *hint*, never an auto-fill nor a running total — broker
+ * exports carry no buy dates and snapshots are sparse (written only on
+ * net-worth-moving days), so it returns `undefined` unless BOTH a snapshot dated
+ * within `M` and an earlier baseline snapshot exist, each with a computable
+ * base-currency invested total. When absent, the caller shows no hint rather
+ * than a wrong number. Currency-scoped via `valueSeries` (R6): mismatched-base
+ * records are skipped, so the delta never subtracts across currencies.
+ */
+export function investedDeltaForMonth(
+  history: readonly HistoryRecord[],
+  base: BaseCurrency,
+  month: string, // `YYYY-MM`
+): InvestedDelta | undefined {
+  if (!/^\d{4}-\d{2}$/.test(month)) return undefined
+  const series = valueSeries(history, base) // ascending by date, base-filtered
+  const monthStart = `${month}-01`
+  const monthEnd = `${month}-31` // lexicographic upper bound within the month
+  // Latest priced snapshot dated within month M, then the latest strictly before it.
+  const inMonth = [...series]
+    .reverse()
+    .find((p) => p.date >= monthStart && p.date <= monthEnd && p.invested !== undefined)
+  if (inMonth?.invested === undefined) return undefined
+  const before = [...series]
+    .reverse()
+    .find((p) => p.date < monthStart && p.invested !== undefined)
+  if (before?.invested === undefined) return undefined
+  return { delta: inMonth.invested - before.invested, fromDate: before.date, toDate: inMonth.date }
+}
+
 /** Position selector for the Equity tab's value series + benchmark overlay —
  *  the broker/equity portfolio only, excluding manual value-only assets. */
 export const isHoldingPosition = (p: NetWorthPosition): boolean => p.kind === 'holding'

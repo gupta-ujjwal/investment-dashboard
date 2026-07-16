@@ -96,12 +96,14 @@ const dashboardLoader = async () => {
 }
 
 const budgetLoader = async () => {
-  const [months, settings, tags] = await Promise.all([
+  const [months, settings, tags, history] = await Promise.all([
     getAllBudgetMonths(),
     getSettings(),
     FEATURE_BUDGET_TAGS ? getAllBudgetTags() : Promise.resolve([] as BudgetTag[]),
+    // #4: an honest holdings cost-basis delta hint beside "invested this month".
+    FEATURE_HISTORY ? getHistory() : Promise.resolve([]),
   ])
-  return { months, settings, tags }
+  return { months, settings, tags, history }
 }
 
 const planningLoader = async () => {

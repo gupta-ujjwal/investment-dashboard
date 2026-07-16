@@ -136,9 +136,7 @@ function NetWorthSection({
   const partial = netWorth.excludedCount > 0
   return (
     <section aria-label="Net worth" className="space-y-4">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-        Net worth
-      </h3>
+      <SectionHeading to="/investments">Net worth</SectionHeading>
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label={`Net worth · ${base}`}
@@ -229,9 +227,7 @@ function EmergencyCard({
   return (
     <section aria-label="Emergency fund" className="space-y-3">
       <div className="flex items-end justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-          Emergency fund
-        </h3>
+        <SectionHeading to="/planning">Emergency fund</SectionHeading>
         {provenance && status.monthlyNeed !== undefined && (
           <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
             need · {provenance}
@@ -278,9 +274,7 @@ function GoalCard({
   const provenance = provenanceLabel(source, avgMonths)
   return (
     <section aria-label="Goal" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-        Goal
-      </h3>
+      <SectionHeading to="/planning">Goal</SectionHeading>
       <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
         <div className="flex items-baseline justify-between">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
@@ -327,9 +321,7 @@ function CashFlowCard({
   return (
     <section aria-label="Cash flow" className="space-y-3">
       <div className="flex items-end justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-          Cash flow
-        </h3>
+        <SectionHeading to="/budget">Cash flow</SectionHeading>
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
           avg of {avg.months} month{avg.months === 1 ? '' : 's'}
         </span>
@@ -369,6 +361,24 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
       </h1>
       <p className="font-sans text-sm text-bone-400">{caption}</p>
     </div>
+  )
+}
+
+const SECTION_HEADING = 'font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300'
+
+/** A section heading that deep-links to the tab that owns it (#5) — Overview is
+ *  the hub, so each card is a jumping-off point. `to` omitted → a plain heading. */
+function SectionHeading({ children, to }: { children: React.ReactNode; to?: string }) {
+  if (!to) return <h3 className={SECTION_HEADING}>{children}</h3>
+  return (
+    <h3 className={SECTION_HEADING}>
+      <Link to={to} className="group inline-flex items-center gap-1.5 transition hover:text-tick-400">
+        {children}
+        <span aria-hidden="true" className="text-[10px] opacity-0 transition group-hover:opacity-100">
+          →
+        </span>
+      </Link>
+    </h3>
   )
 }
 
