@@ -5,8 +5,10 @@ import {
   expenseBreakdown,
   monthlyAverages,
   monthOverMonth,
+  OTHER_TAG_KEY,
   summarizeAll,
   summarizeMonth,
+  tagTimeSeries,
 } from './budget'
 
 function month(over: Partial<BudgetMonth> = {}): BudgetMonth {
@@ -179,5 +181,73 @@ describe('monthOverMonth', () => {
     expect(d.expenses).toBe(0)
     expect(d.invested).toBe(10000)
     expect(d.remaining).toBe(-10000) // spent same, invested 10k more → 10k less remaining
+  })
+})
+
+describe('tagTimeSeries', () => {
+  it('returns empty labels/rows when there is no positive data', () => {
+    expect(tagTimeSeries([], 'expense')).toEqual({ labels: [], rows: [] })
+    expect(tagTimeSeries([month({ expenses: [] })], 'expense')).toEqual({ labels: [], rows: [] })
+  })
+
+  it('tracks each category per month, oldest→newest, 0 for absent months', () => {
+    const t = tagTimeSeries(
+      [
+        month({ month: '2026-06', expenses: [{ category: 'Rent', amount: 43000 }] }),
+        month({
+          month: '2026-05',
+          expenses: [
+            { category: 'Rent', amount: 40000 },
+            { category: 'Travel', amount: 18000 },
+          ],
+        }),
+      ],
+      'expense',
+    )
+    // chronological
+    expect(t.rows.map((r) => r.month)).toEqual(['2026-05', '2026-06'])
+    // Rent ranks above Travel by total; Travel is 0 in the month it's absent
+    expect(t.labels).toEqual(['Rent', 'Travel'])
+    expect(t.rows[0]).toMatchObject({ month: '2026-05', Rent: 40000, Travel: 18000 })
+    expect(t.rows[1]).toMatchObject({ month: '2026-06', Rent: 43000, Travel: 0 })
+  })
+
+  it('picks the income line list for kind=income', () => {
+    const t = tagTimeSeries(
+      [month({ income: [{ category: 'Salary', amount: 280000 }] })],
+      'income',
+    )
+    expect(t.labels).toEqual(['Salary'])
+    expect(t.rows[0]).toMatchObject({ Salary: 280000 })
+  })
+
+  it('sums duplicate labels (trimmed) within a month and drops non-positive lines', () => {
+    const t = tagTimeSeries(
+      [
+        month({
+          expenses: [
+            { category: 'Food', amount: 5000 },
+            { category: ' Food ', amount: 3000 },
+            { category: 'Bad', amount: -1 },
+            { category: '  ', amount: 100 },
+          ],
+        }),
+      ],
+      'expense',
+    )
+    expect(t.labels).toEqual(['Food'])
+    expect(t.rows[0]).toMatchObject({ Food: 8000 })
+  })
+
+  it('folds the tail beyond the cap into a single Other series, per month', () => {
+    const expenses = Array.from({ length: 8 }, (_, i) => ({
+      category: `C${i}`,
+      amount: (8 - i) * 1000, // C0=8000 … C7=1000
+    }))
+    const t = tagTimeSeries([month({ expenses })], 'expense', 6)
+    // 5 head series + Other
+    expect(t.labels).toEqual(['C0', 'C1', 'C2', 'C3', 'C4', OTHER_TAG_KEY])
+    // Other = C5+C6+C7 = 3000+2000+1000
+    expect(t.rows[0][OTHER_TAG_KEY]).toBe(6000)
   })
 })

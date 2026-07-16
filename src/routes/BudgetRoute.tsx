@@ -22,6 +22,12 @@ import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 // by lazy-loading them exactly as Overview/Equity do (productContext/dsl.md §
 // dsl-decision-guide). The month strip above stays eager — it is plain markup.
 const BudgetCharts = lazy(() => import('../components/charts/BudgetCharts'))
+// Per-tag line charts across months — also Recharts, same lazy bulkhead.
+const TagTrends = lazy(() => import('../components/charts/TagTrends'))
+
+/** A per-tag trend needs at least this many logged months to read as a line
+ *  rather than a lone dot. Below it the section is hidden entirely. */
+const MIN_MONTHS_FOR_TAG_TRENDS = 2
 
 /** Action response from `budgetAction`. */
 export type BudgetActionResult =
@@ -134,6 +140,12 @@ export function BudgetRoute() {
           base={base}
           onEdit={() => setEditing(true)}
         />
+      )}
+
+      {FEATURE_BUDGET_TAGS && months.length >= MIN_MONTHS_FOR_TAG_TRENDS && (
+        <Suspense fallback={<ChartsFallback />}>
+          <TagTrends months={months} baseCurrency={base} />
+        </Suspense>
       )}
     </div>
   )

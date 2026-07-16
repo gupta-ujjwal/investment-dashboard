@@ -110,3 +110,26 @@ rule covered the golden path (desktop + mobile) and every degenerate state
 (0-month, 1-month/first, income=0, overspent) with zero new console errors, including a
 re-verify after the lazy-load refactor. The only console noise is a pre-existing
 react-router hydration warning and a favicon 404 — neither introduced here.
+
+## Addendum — per-tag trends across months
+
+A follow-on feature on the same branch: since budget tags are labels written into
+`BudgetLine.category`, "analytics over tags" is a cross-month aggregation by category
+label. Two **multi-line charts** — *Income by tag* and *Expenses by tag* — track each
+category's amount month to month (X = months, one line per tag), in a "By tag · across
+months" section at the bottom of the Budget page.
+
+- **Helper** `tagTimeSeries(months, kind, max=6)` (`lib/budget.ts`, +5 tests): sums each
+  category by trimmed label per month, ranks by total across months, folds the tail beyond
+  `max` into an `OTHER_TAG_KEY` series, and emits one row per month oldest→newest (`0` for a
+  category absent in a month — the honest value for a trend line, matching the stacked-area
+  `ClassRow` convention). Pure and total: `{ labels: [], rows: [] }` when there is no
+  positive data. Includes free-text categories, not only saved tags (R11 — over existing
+  lines, nothing synthesised).
+- **Component** `TagTrends` (`components/charts/TagTrends.tsx`): two Recharts `LineChart`s
+  (custom legend + tooltip that drops 0-value series), **lazy-loaded** via `React.lazy` +
+  `Suspense` like `BudgetCharts` — Recharts stays in its own chunk, out of the initial
+  bundle. Gated behind `FEATURE_BUDGET_TAGS` and shown only with ≥2 logged months
+  (`MIN_MONTHS_FOR_TAG_TRENDS`), below which a lone dot is not a trend.
+- **Verification**: 269/269 tests; Playwright confirmed both charts, the "Other" fold, the
+  hover tooltip, and mobile stacking, zero new console errors.

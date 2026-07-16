@@ -210,6 +210,84 @@ export function expenseBreakdown(
   }))
 }
 
+// ── Per-tag trend across months (income / expense line charts) ──
+
+/** The folded-tail series key — categories beyond the top N collapse into it. */
+export const OTHER_TAG_KEY = '__other'
+
+/** One point of the per-tag trend: a month plus an amount column per series key.
+ *  The index signature lets the string `month` coexist with the numeric series
+ *  columns Recharts reads by key (mirrors analytics `ClassRow`). */
+export type TagTrendPoint = { month: string } & Record<string, number | string>
+
+export type TagTrend = {
+  /** Series keys, ordered by total across months (largest first); includes
+   *  `OTHER_TAG_KEY` last when the tail was folded. Empty when no data. */
+  labels: string[]
+  /** One row per month, oldest→newest. A label absent in a month is `0` — you
+   *  earned/spent nothing on it that month, which is the honest value for a
+   *  trend line (matches the stacked-area `ClassRow` convention), not a gap. */
+  rows: TagTrendPoint[]
+}
+
+/**
+ * Per-category amount over time for one line list (income or expense) — the data
+ * behind the "track a tag across months" line chart. Categories are summed by
+ * trimmed label within each month, ranked by total across all months, and the
+ * tail beyond `max` is folded into a single `OTHER_TAG_KEY` series so the chart
+ * never becomes spaghetti. Non-positive / blank lines are dropped. Pure and
+ * total: `{ labels: [], rows: [] }` when there is no positive data. Categories
+ * are `BudgetLine.category` labels (which is what a tag writes) — no tag-id
+ * lookup, and free-text categories that were never saved as tags are included
+ * too, so the trend is honest about every line the user entered (R11 — over
+ * existing lines, nothing synthesised).
+ */
+export function tagTimeSeries(
+  months: readonly BudgetMonth[],
+  kind: 'income' | 'expense',
+  max: number = MAX_EXPENSE_SLICES,
+): TagTrend {
+  const ordered = [...months].sort((a, b) => a.month.localeCompare(b.month))
+  const linesFor = (m: BudgetMonth): readonly BudgetLine[] =>
+    kind === 'income' ? m.income : m.expenses
+
+  // Per-month category sums, and the running grand total per category.
+  const perMonth = ordered.map((m) => {
+    const byCat = new Map<string, number>()
+    for (const line of linesFor(m)) {
+      const label = line.category.trim()
+      if (label === '' || !(line.amount > 0)) continue
+      byCat.set(label, (byCat.get(label) ?? 0) + line.amount)
+    }
+    return { month: m.month, byCat }
+  })
+
+  const totals = new Map<string, number>()
+  for (const { byCat } of perMonth) {
+    for (const [label, amount] of byCat) totals.set(label, (totals.get(label) ?? 0) + amount)
+  }
+  if (totals.size === 0) return { labels: [], rows: [] }
+
+  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([label]) => label)
+  const folded = ranked.length > max
+  const headLabels = folded ? ranked.slice(0, max - 1) : ranked
+  const tail = new Set(folded ? ranked.slice(max - 1) : [])
+  const labels = folded ? [...headLabels, OTHER_TAG_KEY] : headLabels
+
+  const rows: TagTrendPoint[] = perMonth.map(({ month, byCat }) => {
+    const row: TagTrendPoint = { month }
+    for (const label of headLabels) row[label] = byCat.get(label) ?? 0
+    if (folded) {
+      let other = 0
+      for (const [label, amount] of byCat) if (tail.has(label)) other += amount
+      row[OTHER_TAG_KEY] = other
+    }
+    return row
+  })
+
+  return { labels, rows }
+}
+
 /** Signed month-over-month movement of the headline figures. Positive means the
  *  current month is larger than the prior one on that axis. */
 export type MonthDelta = {
