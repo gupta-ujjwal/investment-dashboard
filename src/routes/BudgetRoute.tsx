@@ -1,14 +1,33 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
 import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
 import { tagDedupeKey } from '../storage/budgetTags'
 import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
-import { summarizeAll, summarizeMonth, type BudgetSummary } from '../lib/budget'
+import {
+  monthlyAverages,
+  monthOverMonth,
+  summarizeAll,
+  summarizeMonth,
+  type BudgetSummary,
+} from '../lib/budget'
 import { investedDeltaForMonth } from '../lib/analytics'
 import { formatMoney } from '../lib/format'
+import { formatMonthKey } from '../components/charts/chartTheme'
+import { MonthStrip } from '../components/charts/MonthStrip'
 import { FEATURE_BUDGET_TAGS } from '../featureFlags'
+
+// The two donuts pull in Recharts (~100KB+); keep them out of the initial bundle
+// by lazy-loading them exactly as Overview/Equity do (productContext/dsl.md §
+// dsl-decision-guide). The month strip above stays eager — it is plain markup.
+const BudgetCharts = lazy(() => import('../components/charts/BudgetCharts'))
+// Per-tag line charts across months — also Recharts, same lazy bulkhead.
+const TagTrends = lazy(() => import('../components/charts/TagTrends'))
+
+/** A per-tag trend needs at least this many logged months to read as a line
+ *  rather than a lone dot. Below it the section is hidden entirely. */
+const MIN_MONTHS_FOR_TAG_TRENDS = 2
 
 /** Action response from `budgetAction`. */
 export type BudgetActionResult =
@@ -40,8 +59,50 @@ export function BudgetRoute() {
   const { months, settings, tags, history } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
-  const [editingMonth, setEditingMonth] = useState<string | null>(null)
+  // `focused` is the month key in view; `null` means the add-a-month form. On a
+  // fresh (empty) budget we land straight in add mode. `editing` swaps the
+  // focused-month panel between its read view and the inline line editor.
+  const [focused, setFocused] = useState<string | null>(months[0]?.month ?? null)
+  const [editing, setEditing] = useState<boolean>(months.length === 0)
+
   const all = useMemo(() => summarizeAll(months), [months])
+  const averages = useMemo(() => monthlyAverages(months), [months])
+
+  // Resolve the focused month and its chronological predecessor. `months` is
+  // newest-first (loader sort), so the previous month is the *next* index.
+  const focusedIndex = focused === null ? -1 : months.findIndex((m) => m.month === focused)
+  const focusedMonth = focusedIndex >= 0 ? months[focusedIndex] : undefined
+  const prevSummary =
+    focusedIndex >= 0 && focusedIndex + 1 < months.length
+      ? summarizeMonth(months[focusedIndex + 1])
+      : undefined
+
+  // If the focused month vanished (deleted, and revalidation dropped it), fall
+  // back to the newest remaining month in read mode rather than the add form.
+  useEffect(() => {
+    if (!editing && focused !== null && focusedIndex < 0) {
+      setFocused(months[0]?.month ?? null)
+    }
+  }, [editing, focused, focusedIndex, months])
+
+  const focusMonth = (m: string) => {
+    setFocused(m)
+    setEditing(false)
+  }
+  const startAdd = () => {
+    setFocused(null)
+    setEditing(true)
+  }
+  const onSaved = (savedMonth: string) => {
+    setFocused(savedMonth)
+    setEditing(false)
+  }
+  const cancelEdit = () => {
+    setEditing(false)
+    if (focused === null) setFocused(months[0]?.month ?? null)
+  }
+
+  const showEditor = editing || !focusedMonth
 
   return (
     <div className="space-y-8">
@@ -50,91 +111,108 @@ export function BudgetRoute() {
         caption="Monthly cash flow — income, expenses, and what you invested"
       />
 
+      {months.length > 0 && <AggregateSummary all={all} averages={averages} base={base} />}
+
       {months.length > 0 && (
-        <section
-          aria-label="Across all months"
-          className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
-        >
-          <Stat label={`Income · ${base}`} value={formatMoney(all.totalIncome, base)} tone="tick" />
-          <Stat
-            label="Spent"
-            value={pct(all.spentPct)}
-            sub={formatMoney(all.totalExpenses, base)}
-            tone="ember"
-          />
-          <Stat
-            label="Invested"
-            value={pct(all.investedPct)}
-            sub={formatMoney(all.invested, base)}
-            tone="jade"
-          />
-          <Stat
-            label="Remaining"
-            value={pct(all.remainingPct)}
-            sub={formatMoney(all.remaining, base)}
-            tone={all.remaining >= 0 ? 'mute' : 'ember'}
-          />
-        </section>
+        <MonthStrip
+          months={months}
+          base={base}
+          focused={showEditor && focused === null ? null : focused}
+          onFocus={focusMonth}
+          onAdd={startAdd}
+        />
       )}
 
-      <BudgetEditor
-        key={editingMonth ?? 'new'}
-        base={base}
-        tags={tags}
-        history={history}
-        existing={editingMonth ? months.find((m) => m.month === editingMonth) : undefined}
-        onDone={() => setEditingMonth(null)}
-      />
+      {showEditor ? (
+        <BudgetEditor
+          key={focused ?? 'new'}
+          base={base}
+          tags={tags}
+          history={history}
+          existing={focusedMonth}
+          onSaved={onSaved}
+          onCancel={months.length > 0 ? cancelEdit : undefined}
+        />
+      ) : (
+        <FocusedMonthView
+          month={focusedMonth}
+          prevSummary={prevSummary}
+          base={base}
+          onEdit={() => setEditing(true)}
+        />
+      )}
 
-      <section aria-label="Saved months" className="space-y-3">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-          Months
-        </h3>
-        {months.length === 0 ? (
-          <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-12 text-center font-sans text-sm text-bone-300">
-            No months yet. Add one above to start tracking cash flow.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {months.map((m) => (
-              <MonthCard
-                key={m.month}
-                month={m}
-                base={base}
-                onEdit={() => setEditingMonth(m.month)}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
+      {FEATURE_BUDGET_TAGS && months.length >= MIN_MONTHS_FOR_TAG_TRENDS && (
+        <Suspense fallback={<ChartsFallback />}>
+          <TagTrends months={months} baseCurrency={base} />
+        </Suspense>
+      )}
     </div>
   )
 }
 
-function MonthCard({
+/** Demoted "across all months" summary — one quiet line, not the old 4-tile grid.
+ *  The per-month bars in the strip carry the trend; this answers "what's my
+ *  typical month" over the whole history. */
+function AggregateSummary({
+  all,
+  averages,
+  base,
+}: {
+  all: BudgetSummary
+  averages: ReturnType<typeof monthlyAverages>
+  base: Settings['baseCurrency']
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 border-l-2 border-bone-100/10 pl-4 font-mono text-[11px] text-bone-400">
+      <span>
+        lifetime income{' '}
+        <span className="tabular-nums text-bone-100">{formatMoney(all.totalIncome, base)}</span>
+      </span>
+      <span>
+        invested{' '}
+        <span className="tabular-nums text-jade-300">{formatMoney(all.invested, base)}</span>
+      </span>
+      {averages && (
+        <span>
+          avg savings rate{' '}
+          <span className="tabular-nums text-bone-100">
+            {averages.savingsRate === undefined ? '—' : `${Math.round(averages.savingsRate * 100)}%`}
+          </span>{' '}
+          <span className="text-bone-500">· avg of {averages.months} mo</span>
+        </span>
+      )}
+    </div>
+  )
+}
+
+function FocusedMonthView({
   month,
+  prevSummary,
   base,
   onEdit,
 }: {
   month: BudgetMonth
+  prevSummary: BudgetSummary | undefined
   base: Settings['baseCurrency']
   onEdit: () => void
 }) {
   const fetcher = useFetcher()
-  const s: BudgetSummary = summarizeMonth(month)
+  const s = summarizeMonth(month)
+  const delta = monthOverMonth(s, prevSummary)
+
   return (
-    <li className="border border-bone-100/10 bg-ink-900 p-4">
+    <section aria-label={`${formatMonthKey(month.month)} detail`} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="font-display text-lg tabular-nums text-bone-50">{month.month}</div>
-        <div className="flex items-center gap-4 font-mono text-[11px] text-bone-300">
-          <span>
-            inc <span className="tabular-nums text-bone-100">{formatMoney(s.totalIncome, base)}</span>
-          </span>
-          <span className="text-ember-300">spent {pct(s.spentPct)}</span>
-          <span className="text-jade-300">inv {pct(s.investedPct)}</span>
-          <span className={s.remaining >= 0 ? 'text-bone-300' : 'text-ember-300'}>
-            rem {pct(s.remainingPct)}
-          </span>
+        <div className="flex items-baseline gap-3">
+          <h3 className="font-display text-xl tabular-nums text-bone-50">
+            {formatMonthKey(month.month)}
+          </h3>
+          {!delta && (
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-500">
+              first month · no prior to compare
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -150,7 +228,8 @@ function MonthCard({
             <button
               type="submit"
               onClick={(e) => {
-                if (!window.confirm(`Delete budget for ${month.month}?`)) e.preventDefault()
+                if (!window.confirm(`Delete budget for ${formatMonthKey(month.month)}?`))
+                  e.preventDefault()
               }}
               className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
             >
@@ -159,7 +238,95 @@ function MonthCard({
           </fetcher.Form>
         </div>
       </div>
-    </li>
+
+      <section
+        aria-label="This month"
+        className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
+      >
+        <Stat
+          label={`Income · ${base}`}
+          value={formatMoney(s.totalIncome, base)}
+          sub={deltaText(delta?.income, base)}
+          tone="tick"
+        />
+        <Stat
+          label="Spent"
+          value={pct(s.spentPct)}
+          sub={deltaText(delta?.expenses, base)}
+          tone="ember"
+        />
+        <Stat
+          label="Invested"
+          value={pct(s.investedPct)}
+          sub={deltaText(delta?.invested, base)}
+          tone="jade"
+        />
+        <Stat
+          label="Remaining"
+          value={pct(s.remainingPct)}
+          sub={deltaText(delta?.remaining, base)}
+          tone={s.remaining >= 0 ? 'mute' : 'ember'}
+        />
+      </section>
+
+      <Suspense fallback={<ChartsFallback />}>
+        <BudgetCharts month={month} summary={s} baseCurrency={base} />
+      </Suspense>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <LineDetails title="Income" lines={month.income} base={base} />
+        <LineDetails title="Expenses" lines={month.expenses} base={base} />
+      </div>
+    </section>
+  )
+}
+
+/** Signed month-over-month movement for a stat's sub-line. `undefined` delta
+ *  (no prior month) renders nothing; the panel header carries the "first month"
+ *  note instead. `±0` is honest for a genuine no-change. */
+function deltaText(n: number | undefined, base: Settings['baseCurrency']): string | undefined {
+  if (n === undefined) return undefined
+  if (n === 0) return '±0 vs last mo'
+  const arrow = n > 0 ? '▲' : '▼'
+  return `${arrow} ${formatMoney(Math.abs(n), base)} vs last mo`
+}
+
+function LineDetails({
+  title,
+  lines,
+  base,
+}: {
+  title: string
+  lines: BudgetLine[]
+  base: Settings['baseCurrency']
+}) {
+  const total = lines.reduce((s, l) => s + l.amount, 0)
+  return (
+    <div className="border border-bone-100/10 bg-ink-900 p-4">
+      <div className="flex items-baseline justify-between">
+        <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
+        <span className="font-mono text-[11px] tabular-nums text-bone-300">
+          {formatMoney(total, base)}
+        </span>
+      </div>
+      {lines.length === 0 ? (
+        <p className="mt-3 font-sans text-xs text-bone-500">No {title.toLowerCase()} lines.</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {lines.map((l, i) => (
+            <li
+              key={`${l.category}-${i}`}
+              className="flex items-center justify-between gap-3 font-sans text-sm"
+            >
+              <span className="min-w-0 flex-1 truncate text-bone-200">{l.category}</span>
+              <span className="shrink-0 font-mono text-[13px] tabular-nums text-bone-300">
+                {formatMoney(l.amount, base)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -168,13 +335,15 @@ function BudgetEditor({
   tags,
   history,
   existing,
-  onDone,
+  onSaved,
+  onCancel,
 }: {
   base: Settings['baseCurrency']
   tags: BudgetTag[]
   history: HistoryRecord[]
   existing: BudgetMonth | undefined
-  onDone: () => void
+  onSaved: (month: string) => void
+  onCancel: (() => void) | undefined
 }) {
   const fetcher = useFetcher<BudgetActionResult>()
   // A separate fetcher for tag create/delete — these are independent of the
@@ -185,10 +354,7 @@ function BudgetEditor({
   const expenseTags = useMemo(() => tags.filter((t) => t.kind === 'expense'), [tags])
 
   const onCreateTag = (label: string, kind: BudgetTagKind) => {
-    tagFetcher.submit(
-      { intent: 'createTag', label, kind },
-      { method: 'post', action: '/budget' },
-    )
+    tagFetcher.submit({ intent: 'createTag', label, kind }, { method: 'post', action: '/budget' })
   }
   const onDeleteTag = (id: string) => {
     tagFetcher.submit({ intent: 'deleteTag', id }, { method: 'post', action: '/budget' })
@@ -214,7 +380,18 @@ function BudgetEditor({
   const incomeJson = JSON.stringify(linesToPayload(income))
   const expensesJson = JSON.stringify(linesToPayload(expenses))
   const saving = fetcher.state !== 'idle'
-  const saved = fetcher.state === 'idle' && fetcher.data?.ok === true
+  const saved = fetcher.state === 'idle' && fetcher.data?.ok === true && fetcher.data.mode === 'saved'
+
+  // Edit-in-place is a *view* concern only: the save writes through the unchanged
+  // `budgetAction`/`storage/budget` path (no new write path, no data-model risk).
+  // Once the save lands, hand the saved month back so the parent drops to the
+  // read view focused on it.
+  useEffect(() => {
+    if (saved) onSaved(month)
+    // `month` is stable across the in-flight save; `onSaved` is a fresh closure
+    // each render but only fires on the save→idle edge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved])
 
   return (
     <section
@@ -223,28 +400,20 @@ function BudgetEditor({
     >
       <div className="flex items-center justify-between">
         <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-          {existing ? `Edit ${existing.month}` : 'Add month'}
+          {existing ? `Edit ${formatMonthKey(existing.month)}` : 'Add month'}
         </h3>
-        {existing && (
+        {onCancel && (
           <button
             type="button"
-            onClick={onDone}
+            onClick={onCancel}
             className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400 transition hover:text-bone-100"
           >
-            New month
+            Cancel
           </button>
         )}
       </div>
 
-      <fetcher.Form
-        method="post"
-        action="/budget"
-        className="grid gap-5"
-        onSubmit={() => {
-          // After a successful save of an edit, drop back to the new-month form.
-          if (existing) setTimeout(onDone, 0)
-        }}
-      >
+      <fetcher.Form method="post" action="/budget" className="grid gap-5">
         <input type="hidden" name="intent" value="saveMonth" />
         <input type="hidden" name="incomeJson" value={incomeJson} />
         <input type="hidden" name="expensesJson" value={expensesJson} />
@@ -312,11 +481,6 @@ function BudgetEditor({
         {fetcher.data && !fetcher.data.ok && (
           <div role="alert" className="border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
             {fetcher.data.error}
-          </div>
-        )}
-        {saved && (
-          <div role="status" className="font-mono text-[11px] uppercase tracking-[0.16em] text-jade-300">
-            saved
           </div>
         )}
 
@@ -468,6 +632,24 @@ function linesToPayload(lines: Line[]): BudgetLine[] {
 
 function pct(value: number | undefined): string {
   return value === undefined ? '—' : `${(value * 100).toFixed(0)}%`
+}
+
+/** Suspense fallback while the lazy `BudgetCharts` (Recharts) chunk loads —
+ *  mirrors the Overview/Equity chart fallbacks so the wait reads consistently. */
+function ChartsFallback() {
+  return (
+    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400"
+        />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+          Loading charts
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function PageHead({ title, caption }: { title: string; caption: string }) {

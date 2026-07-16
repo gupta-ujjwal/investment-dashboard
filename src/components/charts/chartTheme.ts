@@ -53,6 +53,14 @@ export function formatDateKey(key: string): string {
   return `${day} ${MONTHS[month - 1]}`
 }
 
+/** `2026-06` → `Jun 2026`. Same string-parse discipline as `formatDateKey` — no
+ *  `Date`, so a UTC offset can't shift a month-boundary key into the prior month. */
+export function formatMonthKey(key: string): string {
+  const [year, month] = key.split('-').map(Number)
+  if (!year || !month || month < 1 || month > 12) return key
+  return `${MONTHS[month - 1]} ${year}`
+}
+
 /** Compact currency for axis ticks — `₹2.7K`, `₹5L`, `₹2Cr`, `$1.2K`, `$3.4M`.
  *  Hand-rolled rather than `Intl` compact notation: `en-IN`'s compact form
  *  abbreviates thousands as "T", which reads as "trillion" on a finance axis.
