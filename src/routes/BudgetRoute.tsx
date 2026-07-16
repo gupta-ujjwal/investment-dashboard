@@ -3,8 +3,10 @@ import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
 import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
 import { tagDedupeKey } from '../storage/budgetTags'
+import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import { summarizeAll, summarizeMonth, type BudgetSummary } from '../lib/budget'
+import { investedDeltaForMonth } from '../lib/analytics'
 import { formatMoney } from '../lib/format'
 import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 
@@ -15,7 +17,12 @@ export type BudgetActionResult =
   | { ok: true; mode: 'tag-deleted' }
   | { ok: false; error: string }
 
-type LoaderData = { months: BudgetMonth[]; settings: Settings; tags: BudgetTag[] }
+type LoaderData = {
+  months: BudgetMonth[]
+  settings: Settings
+  tags: BudgetTag[]
+  history: HistoryRecord[]
+}
 
 type Line = { id: number; category: string; amount: string }
 
@@ -30,7 +37,7 @@ function currentMonthKey(): string {
 }
 
 export function BudgetRoute() {
-  const { months, settings, tags } = useLoaderData() as LoaderData
+  const { months, settings, tags, history } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   const [editingMonth, setEditingMonth] = useState<string | null>(null)
@@ -74,6 +81,7 @@ export function BudgetRoute() {
         key={editingMonth ?? 'new'}
         base={base}
         tags={tags}
+        history={history}
         existing={editingMonth ? months.find((m) => m.month === editingMonth) : undefined}
         onDone={() => setEditingMonth(null)}
       />
@@ -158,11 +166,13 @@ function MonthCard({
 function BudgetEditor({
   base,
   tags,
+  history,
   existing,
   onDone,
 }: {
   base: Settings['baseCurrency']
   tags: BudgetTag[]
+  history: HistoryRecord[]
   existing: BudgetMonth | undefined
   onDone: () => void
 }) {
@@ -192,6 +202,14 @@ function BudgetEditor({
     existing ? toLines(existing.expenses) : [{ id: lineSeq++, category: '', amount: '' }],
   )
   const [invested, setInvested] = useState(existing ? String(existing.invested) : '')
+
+  // #4: an honest read-only hint — how much the holdings cost basis moved across
+  // history snapshots bracketing this month. Not an auto-fill; `undefined` (no
+  // hint) when snapshots don't cleanly bracket the month.
+  const investedHint = useMemo(
+    () => investedDeltaForMonth(history, base, month),
+    [history, base, month],
+  )
 
   const incomeJson = JSON.stringify(linesToPayload(income))
   const expensesJson = JSON.stringify(linesToPayload(expenses))
@@ -279,6 +297,16 @@ function BudgetEditor({
             placeholder="e.g. 50000"
             className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
           />
+          {investedHint && (
+            <span className="font-sans text-[11px] text-bone-500">
+              Your holdings cost basis moved{' '}
+              <span className="tabular-nums text-bone-300">
+                {investedHint.delta >= 0 ? '+' : '−'}
+                {formatMoney(Math.abs(investedHint.delta), base)}
+              </span>{' '}
+              between snapshots ({investedHint.fromDate} → {investedHint.toDate}) — a rough guide, not an entry.
+            </span>
+          )}
         </label>
 
         {fetcher.data && !fetcher.data.ok && (
