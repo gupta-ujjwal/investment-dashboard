@@ -3,6 +3,7 @@ import { Link, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import type { ManualAsset } from '../storage/assets'
+import type { BudgetMonth } from '../storage/budget'
 import type { Settings } from '../storage/settings'
 import { portfolioTotals } from '../lib/analytics'
 import {
@@ -14,10 +15,19 @@ import {
 } from '../lib/netWorth'
 import { emergencyFundStatus, type EmergencyFundStatus } from '../lib/planning'
 import { projectGoal, type GoalProjection } from '../lib/goals'
+import { monthlyAverages, type MonthlyAverages } from '../lib/budget'
+import {
+  effectiveValue,
+  liquidAssets,
+  provenanceLabel,
+  runwayMonths,
+  type ValueSource,
+} from '../lib/cashflow'
 import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
 import {
   FEATURE_BASE_CURRENCY,
+  FEATURE_BUDGET,
   FEATURE_GOALS,
   FEATURE_HISTORY,
   FEATURE_PLANNING,
@@ -32,6 +42,7 @@ type LoaderData = {
   settings: Settings
   history: HistoryRecord[]
   assets: ManualAsset[]
+  budgetMonths: BudgetMonth[]
 }
 
 /**
@@ -41,7 +52,7 @@ type LoaderData = {
  * fund status, goal projection, and the historical/by-class charts.
  */
 export function OverviewRoute() {
-  const { holdings, settings, history, assets } = useLoaderData() as LoaderData
+  const { holdings, settings, history, assets, budgetMonths } = useLoaderData() as LoaderData
   const assetList = assets ?? []
 
   if (holdings.length === 0 && assetList.length === 0) {
@@ -54,13 +65,21 @@ export function OverviewRoute() {
   const allocation = netWorthAllocation(positions)
   // Net-worth-level "refresh needed" hint: any position lacking a base value.
   const totals = portfolioTotals(holdings)
+
+  // W2 — budget-fed figures. `avg` is undefined under 2 logged months (no
+  // unstable single-point average); the derived feeds then fall back to unset.
+  const avg = FEATURE_BUDGET ? monthlyAverages(budgetMonths) : undefined
+  // Settings value is the explicit override; budget-derived is the fallback.
+  const emergencyNeed = effectiveValue(settings.emergencyMonthlyNeed, avg?.avgExpenses)
+  const contribution = effectiveValue(settings.monthlyContribution, avg?.avgInvested)
+
   const goal: GoalProjection | undefined =
     FEATURE_GOALS && (settings.goalCorpus ?? 0) > 0
-      ? projectGoal(netWorth.knownCurrentValue, settings.goalCorpus, settings.monthlyContribution)
+      ? projectGoal(netWorth.knownCurrentValue, settings.goalCorpus, contribution.value)
       : undefined
   const emergency: EmergencyFundStatus | undefined =
     FEATURE_PLANNING && assetList.length > 0
-      ? emergencyFundStatus(assetList, settings.emergencyMonthlyNeed, settings.emergencyMonths)
+      ? emergencyFundStatus(assetList, emergencyNeed.value, settings.emergencyMonths)
       : undefined
 
   return (
@@ -73,9 +92,13 @@ export function OverviewRoute() {
 
       <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
 
-      {emergency && <EmergencyCard status={emergency} base={base} />}
+      {avg && (
+        <CashFlowCard avg={avg} runway={runwayMonths(liquidAssets(assetList), avg.avgExpenses)} base={base} />
+      )}
 
-      {goal && <GoalCard goal={goal} base={base} />}
+      {emergency && <EmergencyCard status={emergency} base={base} source={emergencyNeed.source} avgMonths={avg?.months} />}
+
+      {goal && <GoalCard goal={goal} base={base} source={contribution.source} avgMonths={avg?.months} />}
 
       {FEATURE_HISTORY && (
         <section aria-label="History">
@@ -188,15 +211,33 @@ function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseC
 
 /** Emergency-fund status — a compact card on the homepage mirroring the Planning
  *  tab's fuller view (same `emergencyFundStatus` fold, one source of truth). */
-function EmergencyCard({ status, base }: { status: EmergencyFundStatus; base: BaseCurrency }) {
+function EmergencyCard({
+  status,
+  base,
+  source,
+  avgMonths,
+}: {
+  status: EmergencyFundStatus
+  base: BaseCurrency
+  source: ValueSource
+  avgMonths: number | undefined
+}) {
   const coverage = status.coverageMonths
   const funded = status.fundedPct
   const tone: KpiTone = funded === undefined ? 'mute' : funded >= 1 ? 'gain' : 'loss'
+  const provenance = provenanceLabel(source, avgMonths)
   return (
     <section aria-label="Emergency fund" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-        Emergency fund
-      </h3>
+      <div className="flex items-end justify-between">
+        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+          Emergency fund
+        </h3>
+        {provenance && status.monthlyNeed !== undefined && (
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+            need · {provenance}
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi label={`Fund · ${base}`} value={formatMoney(status.current, base)} sub="tagged assets" tone="tick" />
         <Kpi
@@ -223,7 +264,18 @@ function EmergencyCard({ status, base }: { status: EmergencyFundStatus; base: Ba
 }
 
 /** Goal projection card — corpus progress + time-to-goal under a stated model. */
-function GoalCard({ goal, base }: { goal: GoalProjection; base: BaseCurrency }) {
+function GoalCard({
+  goal,
+  base,
+  source,
+  avgMonths,
+}: {
+  goal: GoalProjection
+  base: BaseCurrency
+  source: ValueSource
+  avgMonths: number | undefined
+}) {
+  const provenance = provenanceLabel(source, avgMonths)
   return (
     <section aria-label="Goal" className="space-y-3">
       <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
@@ -248,10 +300,62 @@ function GoalCard({ goal, base }: { goal: GoalProjection; base: BaseCurrency }) 
           {goal.reached
             ? 'Goal reached 🎉'
             : goal.monthsToGoal === undefined
-              ? 'Set a monthly contribution in Settings to project a timeline.'
-              : `~${goal.monthsToGoal} month${goal.monthsToGoal === 1 ? '' : 's'} to goal (${goal.yearsToGoal} yr) at ${formatMoney(goal.monthlyContribution, base)}/mo.`}
+              ? 'Set a monthly contribution in Settings — or log two budget months — to project a timeline.'
+              : `~${goal.monthsToGoal} month${goal.monthsToGoal === 1 ? '' : 's'} to goal (${goal.yearsToGoal} yr) at ${formatMoney(goal.monthlyContribution, base)}/mo${provenance ? ` (${provenance})` : ''}.`}
           <span className="mt-1 block text-bone-500">{goal.assumptionNote}</span>
         </p>
+      </div>
+    </section>
+  )
+}
+
+/** W2 cash-flow card — the budget-native surface on Overview. Savings rate leads
+ *  (the metric nothing else shows); avg income/expenses/invested/leftover fill in;
+ *  months-of-runway (total liquid ÷ avg expenses) is a supporting detail, framed
+ *  distinctly from the emergency-fund coverage so the two don't read as one gauge. */
+function CashFlowCard({
+  avg,
+  runway,
+  base,
+}: {
+  avg: MonthlyAverages
+  runway: number | undefined
+  base: BaseCurrency
+}) {
+  const savingsTone: KpiTone =
+    avg.savingsRate === undefined ? 'mute' : avg.savingsRate >= 0 ? 'gain' : 'loss'
+  return (
+    <section aria-label="Cash flow" className="space-y-3">
+      <div className="flex items-end justify-between">
+        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+          Cash flow
+        </h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+          avg of {avg.months} month{avg.months === 1 ? '' : 's'}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+        <Kpi
+          label="Savings rate"
+          value={avg.savingsRate === undefined ? '—' : formatPercent(avg.savingsRate)}
+          sub="of income kept"
+          tone={savingsTone}
+        />
+        <Kpi label={`Income · ${base}`} value={formatMoney(avg.avgIncome, base)} sub="avg / month" tone="mute" />
+        <Kpi label={`Expenses · ${base}`} value={formatMoney(avg.avgExpenses, base)} sub="avg / month" tone="mute" />
+        <Kpi label={`Invested · ${base}`} value={formatMoney(avg.avgInvested, base)} sub="avg / month" tone="mute" />
+        <Kpi
+          label={`Left over · ${base}`}
+          value={formatMoney(avg.avgNet, base)}
+          sub="avg / month"
+          tone={avg.avgNet >= 0 ? 'mute' : 'loss'}
+        />
+        <Kpi
+          label="Runway"
+          value={runway === undefined ? '—' : `${runway.toFixed(1)} mo`}
+          sub="liquid buffer ÷ expenses"
+          tone="tick"
+        />
       </div>
     </section>
   )
