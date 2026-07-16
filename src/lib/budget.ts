@@ -41,6 +41,46 @@ export function summarizeMonth(month: BudgetMonth): BudgetSummary {
   }
 }
 
+/**
+ * Per-month averages over the logged months — the budget-native feed for the
+ * flywheel (W2): avg expenses seeds a derived emergency need, avg invested seeds
+ * a derived goal contribution, and the savings rate is the Overview cash-flow
+ * card's hero. Deliberately returns `undefined` for the whole struct when fewer
+ * than `MIN_MONTHS` are logged: one or two data points make an average violently
+ * unstable, and a confident-but-meaningless figure would then propagate onto
+ * three surfaces at once. `undefined` (not `0`) is the honest "no opinion" (R1),
+ * so the `??` precedence fallbacks never fire on garbage.
+ */
+export const MIN_MONTHS_FOR_AVERAGE = 2
+
+export type MonthlyAverages = {
+  /** How many months the averages were taken over — drives the "avg of N months" label. */
+  months: number
+  avgIncome: number
+  avgExpenses: number
+  avgInvested: number
+  /** Unallocated leftover per month: avgIncome − avgExpenses − avgInvested. */
+  avgNet: number
+  /** Personal savings rate over the combined totals: (income − expenses) / income,
+   *  `undefined` when total income is 0 (never divide into a sentinel). */
+  savingsRate: number | undefined
+}
+
+export function monthlyAverages(months: readonly BudgetMonth[]): MonthlyAverages | undefined {
+  const n = months.length
+  if (n < MIN_MONTHS_FOR_AVERAGE) return undefined
+  const all = summarizeAll(months)
+  return {
+    months: n,
+    avgIncome: all.totalIncome / n,
+    avgExpenses: all.totalExpenses / n,
+    avgInvested: all.invested / n,
+    avgNet: (all.totalIncome - all.totalExpenses - all.invested) / n,
+    savingsRate:
+      all.totalIncome > 0 ? (all.totalIncome - all.totalExpenses) / all.totalIncome : undefined,
+  }
+}
+
 /** Roll several months into running totals — used for an at-a-glance "across N
  *  months" figure. Pure sum; percentages recomputed over the combined income. */
 export function summarizeAll(months: readonly BudgetMonth[]): BudgetSummary {

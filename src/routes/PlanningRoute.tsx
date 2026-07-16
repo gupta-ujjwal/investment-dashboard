@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import type { ManualAsset } from '../storage/assets'
 import type { CanonicalHolding } from '../storage/holdings'
+import type { BudgetMonth } from '../storage/budget'
 import type { Settings } from '../storage/settings'
 import {
   bulkAllocation,
@@ -9,17 +10,29 @@ import {
   riskAllocation,
   type RiskSlice,
 } from '../lib/planning'
+import { monthlyAverages } from '../lib/budget'
+import { effectiveValue, provenanceLabel, type ValueSource } from '../lib/cashflow'
 import { formatMoney } from '../lib/format'
 
-type LoaderData = { holdings: CanonicalHolding[]; assets: ManualAsset[]; settings: Settings }
+type LoaderData = {
+  holdings: CanonicalHolding[]
+  assets: ManualAsset[]
+  settings: Settings
+  budgetMonths: BudgetMonth[]
+}
 
 export function PlanningRoute() {
-  const { holdings, assets, settings } = useLoaderData() as LoaderData
+  const { holdings, assets, settings, budgetMonths } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
+  // W2: the emergency monthly need falls back to average monthly spend from the
+  // Budget tab when it isn't set explicitly in Settings (Settings still overrides).
+  const avg = useMemo(() => monthlyAverages(budgetMonths), [budgetMonths])
+  const emergencyNeed = effectiveValue(settings.emergencyMonthlyNeed, avg?.avgExpenses)
+
   const emergency = useMemo(
-    () => emergencyFundStatus(assets, settings.emergencyMonthlyNeed, settings.emergencyMonths),
-    [assets, settings.emergencyMonthlyNeed, settings.emergencyMonths],
+    () => emergencyFundStatus(assets, emergencyNeed.value, settings.emergencyMonths),
+    [assets, emergencyNeed.value, settings.emergencyMonths],
   )
   const risk = useMemo(
     () => riskAllocation(holdings, assets, settings.allocationTargets ?? []),
@@ -33,7 +46,12 @@ export function PlanningRoute() {
         caption="Emergency fund, risk mix, and a bulk-invest what-if — derived from your tagged assets"
       />
 
-      <EmergencyFundCard status={emergency} base={base} />
+      <EmergencyFundCard
+        status={emergency}
+        base={base}
+        source={emergencyNeed.source}
+        avgMonths={avg?.months}
+      />
       <RiskMixCard slices={risk} base={base} hasTargets={(settings.allocationTargets ?? []).length > 0} />
       <BulkInvestCard settings={settings} base={base} />
     </div>
@@ -43,17 +61,29 @@ export function PlanningRoute() {
 function EmergencyFundCard({
   status,
   base,
+  source,
+  avgMonths,
 }: {
   status: ReturnType<typeof emergencyFundStatus>
   base: Settings['baseCurrency']
+  source: ValueSource
+  avgMonths: number | undefined
 }) {
   const funded = status.fundedPct
   const tone = funded === undefined ? 'mute' : funded >= 1 ? 'jade' : funded >= 0.5 ? 'tick' : 'ember'
+  const provenance = provenanceLabel(source, avgMonths)
   return (
     <section aria-label="Emergency fund" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-        Emergency fund
-      </h3>
+      <div className="flex items-end justify-between">
+        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+          Emergency fund
+        </h3>
+        {provenance && status.monthlyNeed !== undefined && (
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+            need · {provenance}
+          </span>
+        )}
+      </div>
       <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">

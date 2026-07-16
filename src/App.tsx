@@ -83,13 +83,16 @@ import {
 import type { BudgetActionResult } from './routes/BudgetRoute'
 
 const dashboardLoader = async () => {
-  const [holdings, settings, history, assets] = await Promise.all([
+  const [holdings, settings, history, assets, budgetMonths] = await Promise.all([
     getAll(),
     getSettings(),
     FEATURE_HISTORY ? getHistory() : Promise.resolve([]),
     FEATURE_ASSETS ? getAllAssets() : Promise.resolve([]),
+    // W2: Overview reads budget months to derive the cash-flow card + the
+    // budget-fed emergency need / goal contribution. Empty when Budget unused.
+    FEATURE_BUDGET ? getAllBudgetMonths() : Promise.resolve([] as BudgetMonth[]),
   ])
-  return { holdings, settings, history, assets }
+  return { holdings, settings, history, assets, budgetMonths }
 }
 
 const budgetLoader = async () => {
@@ -104,12 +107,15 @@ const budgetLoader = async () => {
 const planningLoader = async () => {
   // #2: Planning folds over the WHOLE portfolio — imported holdings (risk band
   // derived from asset class, overridable) AND manual assets — so fetch both.
-  const [holdings, assets, settings] = await Promise.all([
+  // W2: also read budget months so the emergency need can fall back to the
+  // average monthly spend when it isn't set explicitly in Settings.
+  const [holdings, assets, settings, budgetMonths] = await Promise.all([
     getAll(),
     getAllAssets(),
     getSettings(),
+    FEATURE_BUDGET ? getAllBudgetMonths() : Promise.resolve([] as BudgetMonth[]),
   ])
-  return { holdings, assets, settings }
+  return { holdings, assets, settings, budgetMonths }
 }
 
 const settingsLoader = async () => {
