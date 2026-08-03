@@ -1,27 +1,34 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink-950: #07080B;
-  --color-ink-900: #0C0E13;
-  --color-ink-850: #11141B;
-  --color-ink-800: #161A22;
-  --color-ink-700: #1E232D;
-  --color-ink-600: #2A303B;
-  --color-ink-500: #3A414F;
-  --color-ink-400: #555D6E;
+  /* ── Nocturne design system tokens ──────────────────────────────────────
+     Dark surfaces (ink) → Nocturne's bg / surface / neutral-dark ramp.
+     Light text (bone)   → Nocturne's text / neutral-light ramp.
+     Accent (tick)       → Nocturne blurple (#9184d9) + tonal ramp.
+     Jade / Ember        → kept as green / red, tuned for the new palette. */
 
-  --color-bone-50: #FBF7EE;
-  --color-bone-100: #F2EBDB;
-  --color-bone-200: #DFD6BF;
-  --color-bone-300: #B5AC93;
-  --color-bone-400: #8A8270;
-  --color-bone-500: #5F594B;
+  --color-ink-950: #161826;
+  --color-ink-900: #1c1e2c;
+  --color-ink-850: #20222f;
+  --color-ink-800: #232532;
+  --color-ink-700: #292b31;
+  --color-ink-600: #3f424d;
+  --color-ink-500: #595d6c;
+  --color-ink-400: #75798c;
 
-  --color-tick-200: #F8DCA1;
-  --color-tick-400: #E8B14C;
-  --color-tick-500: #D89A2A;
-  --color-tick-700: #6E5224;
-  --color-tick-900: #2E2110;
+  --color-bone-50: #f3f5fe;
+  --color-bone-100: #e9e9ed;
+  --color-bone-200: #e4e7f5;
+  --color-bone-300: #cfd3e5;
+  --color-bone-400: #9397ab;
+  --color-bone-500: #75798c;
+
+  --color-tick-200: #e7e5fe;
+  --color-tick-300: #d2cefd;
+  --color-tick-400: #9184d9;
+  --color-tick-500: #796cbf;
+  --color-tick-700: #5d5294;
+  --color-tick-900: #2b2741;
 
   --color-jade-300: #9EDCB6;
   --color-jade-400: #6BCB8F;
@@ -29,15 +36,15 @@
   --color-jade-800: #1F4030;
   --color-jade-900: #14241B;
 
-  --color-ember-300: #F0A39A;
-  --color-ember-400: #E6736B;
-  --color-ember-500: #D9534A;
-  --color-ember-800: #4A2622;
-  --color-ember-900: #2A1715;
+  --color-ember-300: #e08a7a;
+  --color-ember-400: #d97766;
+  --color-ember-500: #c96554;
+  --color-ember-800: #4a2e26;
+  --color-ember-900: #2e1b16;
 
-  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-display: "Inter", system-ui, sans-serif;
   --font-sans:
-    "Instrument Sans", ui-sans-serif, system-ui, -apple-system,
+    "Inter", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
@@ -60,85 +67,49 @@
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    background:
-      radial-gradient(
-        ellipse 80% 60% at 50% -10%,
-        rgba(232, 177, 76, 0.07) 0%,
-        rgba(232, 177, 76, 0) 60%
-      ),
-      radial-gradient(
-        ellipse 60% 40% at 100% 100%,
-        rgba(107, 203, 143, 0.04) 0%,
-        rgba(107, 203, 143, 0) 60%
-      ),
-      linear-gradient(180deg, #0A0C11 0%, #07080B 100%);
-    background-attachment: fixed;
   }
 
-  /* Film grain overlay — fixed, non-interactive, blends into everything */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0.06;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  /* Scrollbar — Nocturne style */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ink-600);
+    border-radius: 8px;
   }
-
-  /* Faint horizontal scan lines — barely-there texture */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0.35;
-    background-image: repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.012) 0px,
-      rgba(255, 255, 255, 0.012) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-  }
-
-  #root {
-    position: relative;
-    z-index: 2;
-  }
+  ::-webkit-scrollbar-track { background: transparent; }
 
   ::selection {
-    background: var(--color-tick-400);
-    color: var(--color-ink-950);
+    background: color-mix(in srgb, var(--color-tick-400) 30%, transparent);
+    color: var(--color-bone-50);
   }
 
   *:focus-visible {
-    outline: 1px solid var(--color-tick-400);
+    outline: 2px solid var(--color-tick-400);
     outline-offset: 2px;
     border-radius: 2px;
   }
 }
 
 @layer utilities {
-  .tick-frame {
-    --tick: rgba(232, 177, 76, 0.35);
-    background-image:
-      linear-gradient(to right, var(--tick) 0, var(--tick) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--tick) 0, var(--tick) 1px, transparent 1px);
-    background-size: 8px 100%, 100% 8px;
-    background-repeat: no-repeat, no-repeat;
+  /* Fading horizontal rule — a Nocturne signature.
+     Freestanding rules fade to transparent at both ends. */
+  .hr-fade {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(to right,
+      transparent,
+      color-mix(in srgb, var(--color-bone-100) 16%, transparent) 48px,
+      color-mix(in srgb, var(--color-bone-100) 16%, transparent) calc(100% - 48px),
+      transparent);
   }
 
   .hairline-b {
-    box-shadow: inset 0 -1px 0 0 rgba(242, 235, 219, 0.08);
+    box-shadow: inset 0 -1px 0 0 rgba(233, 233, 237, 0.08);
   }
   .hairline-t {
-    box-shadow: inset 0 1px 0 0 rgba(242, 235, 219, 0.08);
+    box-shadow: inset 0 1px 0 0 rgba(233, 233, 237, 0.08);
   }
   .hairline-r {
-    box-shadow: inset -1px 0 0 0 rgba(242, 235, 219, 0.08);
+    box-shadow: inset -1px 0 0 0 rgba(233, 233, 237, 0.08);
   }
 
   .text-balance {

@@ -18,7 +18,7 @@ export const chartColor = {
    *  it shares a hue with the `invested` cost-basis line. */
   benchmark: 'var(--color-bone-500)',
   axis: 'var(--color-bone-400)',
-  grid: 'rgba(242, 235, 219, 0.07)',
+  grid: 'rgba(233, 233, 237, 0.07)',
 } as const
 
 /** Donut slice palette — amber lead fading through bone, neutral ink for the
