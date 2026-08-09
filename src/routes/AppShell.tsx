@@ -15,7 +15,7 @@ export function AppShell() {
   const title = import.meta.env.VITE_APP_TITLE ?? 'Investment Dashboard'
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       {/* Sidebar — desktop */}
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-bone-100/10 px-4 py-6 md:flex">
         <div className="flex items-center gap-2.5 px-2">
