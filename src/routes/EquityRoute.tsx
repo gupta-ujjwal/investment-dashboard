@@ -481,7 +481,7 @@ function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: strin
         {label}
       </div>
       <div
-        className={`mt-3 break-words font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+        className={`mt-3 whitespace-nowrap font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
       >
         {value}
       </div>

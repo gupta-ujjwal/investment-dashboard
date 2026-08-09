@@ -98,7 +98,7 @@ function EmergencyFundCard({
             {formatMoney(status.current, base)}
             {status.target !== undefined && <> of {formatMoney(status.target, base)}</>}
           </span>
-          <span className={`font-display text-2xl tabular-nums ${railText[tone]}`}>
+          <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
             {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
           </span>
         </div>
@@ -184,7 +184,7 @@ function RiskMixCard({
             <li key={s.band} className="space-y-1">
               <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
                 <span className="uppercase tracking-[0.14em]">{s.label}</span>
-                <span className="tabular-nums text-bone-400">
+                <span className="tabular-nums whitespace-nowrap text-bone-400">
                   {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
                   {s.targetPct !== undefined && (
                     <span className="text-tick-400"> / target {(s.targetPct * 100).toFixed(0)}%</span>
@@ -275,7 +275,7 @@ function BulkInvestCard({
                     <span className="uppercase tracking-[0.14em] text-bone-300">
                       {r.label} · {r.targetPct}%
                     </span>
-                    <span className="tabular-nums text-bone-50">{formatMoney(r.toInvest, base)}</span>
+                    <span className="tabular-nums whitespace-nowrap text-bone-50">{formatMoney(r.toInvest, base)}</span>
                   </li>
                 ))}
               </ul>

@@ -167,16 +167,16 @@ function AggregateSummary({
     <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 border-l-2 border-bone-100/10 pl-4 font-mono text-[11px] text-bone-400">
       <span>
         lifetime income{' '}
-        <span className="tabular-nums text-bone-100">{formatMoney(all.totalIncome, base)}</span>
+        <span className="tabular-nums whitespace-nowrap text-bone-100">{formatMoney(all.totalIncome, base)}</span>
       </span>
       <span>
         invested{' '}
-        <span className="tabular-nums text-jade-300">{formatMoney(all.invested, base)}</span>
+        <span className="tabular-nums whitespace-nowrap text-jade-300">{formatMoney(all.invested, base)}</span>
       </span>
       {averages && (
         <span>
           avg savings rate{' '}
-          <span className="tabular-nums text-bone-100">
+          <span className="tabular-nums whitespace-nowrap text-bone-100">
             {averages.savingsRate === undefined ? '—' : `${Math.round(averages.savingsRate * 100)}%`}
           </span>{' '}
           <span className="text-bone-500">· avg of {averages.months} mo</span>
@@ -305,7 +305,7 @@ function LineDetails({
     <div className="border border-bone-100/10 bg-ink-900 p-4">
       <div className="flex items-baseline justify-between">
         <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
-        <span className="font-mono text-[11px] tabular-nums text-bone-300">
+         <span className="font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-300">
           {formatMoney(total, base)}
         </span>
       </div>
@@ -319,7 +319,7 @@ function LineDetails({
               className="flex items-center justify-between gap-3 font-sans text-sm"
             >
               <span className="min-w-0 flex-1 truncate text-bone-200">{l.category}</span>
-              <span className="shrink-0 font-mono text-[13px] tabular-nums text-bone-300">
+              <span className="shrink-0 font-mono text-[13px] tabular-nums whitespace-nowrap text-bone-300">
                 {formatMoney(l.amount, base)}
               </span>
             </li>
@@ -469,7 +469,7 @@ function BudgetEditor({
           {investedHint && (
             <span className="font-sans text-[11px] text-bone-500">
               Your holdings cost basis moved{' '}
-              <span className="tabular-nums text-bone-300">
+              <span className="tabular-nums whitespace-nowrap text-bone-300">
                 {investedHint.delta >= 0 ? '+' : '−'}
                 {formatMoney(Math.abs(investedHint.delta), base)}
               </span>{' '}
@@ -694,10 +694,10 @@ function Stat({
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}
       </div>
-      <div className={`mt-3 font-display text-2xl leading-none tabular-nums ${toneText[tone]}`}>
+      <div className={`mt-3 font-display text-2xl leading-none tabular-nums whitespace-nowrap ${toneText[tone]}`}>
         {value}
       </div>
-      {sub && <div className="mt-2 font-mono text-[11px] tabular-nums text-bone-400">{sub}</div>}
+      {sub && <div className="mt-2 font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-400">{sub}</div>}
     </div>
   )
 }

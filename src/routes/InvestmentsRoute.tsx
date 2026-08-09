@@ -173,10 +173,10 @@ function HoldingsRowView({ row, base }: { row: HoldingsDerivedRow; base: BaseCur
         </div>
       </td>
       <td className="px-4 py-3 font-sans text-sm text-bone-300">{row.classLabel}</td>
-      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums text-bone-300">
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-300">
         {money(row.investedBase, base)}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums text-bone-50">
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">
         {money(row.currentValueBase, base)}
       </td>
       <td className="px-4 py-3 text-right">
@@ -213,10 +213,10 @@ function AssetRowView({
         </div>
       </td>
       <td className="px-4 py-3 font-sans text-sm text-bone-300">{row.group}</td>
-      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums text-bone-300">
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-300">
         {money(row.investedBase, base)}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums text-bone-50">
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">
         {money(row.currentValueBase, base)}
       </td>
       <td className="px-4 py-3 text-right">
@@ -237,7 +237,7 @@ function HoldingsCard({ row, base }: { row: HoldingsDerivedRow; base: BaseCurren
           </div>
         </div>
         <div className="text-right">
-          <div className="font-mono text-sm tabular-nums text-bone-50">{money(row.currentValueBase, base)}</div>
+          <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
           <Link to="/equity" className="font-mono text-[10px] uppercase tracking-[0.14em] text-tick-400">
             View →
           </Link>
@@ -268,7 +268,7 @@ function AssetCard({
             {row.asset.emergencyFund && <span className="text-tick-400">emergency</span>}
           </div>
         </div>
-        <div className="font-mono text-sm tabular-nums text-bone-50">{money(row.currentValueBase, base)}</div>
+        <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
       </div>
       <RowActions onEdit={onEdit} onDelete={onDelete} />
     </li>
@@ -343,7 +343,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
         <span className="h-px w-3 bg-tick-400/60" />
         {label}
       </div>
-      <div className="mt-3 font-display text-2xl leading-none tabular-nums text-bone-50">{value}</div>
+      <div className="mt-3 whitespace-nowrap font-display text-2xl leading-none tabular-nums text-bone-50">{value}</div>
       <div className="mt-2 font-mono text-[11px] text-bone-400">{sub}</div>
     </div>
   )

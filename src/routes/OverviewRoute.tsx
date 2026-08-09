@@ -191,7 +191,7 @@ function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseC
         <li key={s.key} className="space-y-1">
           <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
             <span className="uppercase tracking-[0.14em]">{s.label}</span>
-            <span className="tabular-nums text-bone-400">
+            <span className="tabular-nums whitespace-nowrap text-bone-400">
               {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
             </span>
           </div>
@@ -280,7 +280,7 @@ function GoalCard({
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(goal.current, base)} of {formatMoney(goal.target, base)}
           </span>
-          <span className="font-display text-2xl tabular-nums text-tick-300">
+          <span className="font-display text-2xl tabular-nums whitespace-nowrap text-tick-300">
             {(goal.progressPct * 100).toFixed(1)}%
           </span>
         </div>
@@ -405,7 +405,7 @@ function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: strin
         {label}
       </div>
       <div
-        className={`mt-3 break-words font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+        className={`mt-3 whitespace-nowrap font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
       >
         {value}
       </div>
