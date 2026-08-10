@@ -10,7 +10,7 @@ import {
 } from '../../lib/analytics'
 import { formatMoney, formatPercent } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { donutOther, donutPalette } from './chartTheme'
+import { donutOther, categoricalColor } from './chartTheme'
 
 type Props = {
   rows: DerivedRow[]
@@ -39,10 +39,10 @@ function withOther(slices: SectorSlice[]): SectorSlice[] {
   ]
 }
 
-function sliceColor(slice: SectorSlice, index: number): string {
+function sliceColor(slice: SectorSlice): string {
   if (slice.key === '__other') return donutOther
   if (slice.key === UNKNOWN_SECTOR_KEY) return donutOther
-  return donutPalette[index % donutPalette.length]
+  return categoricalColor(slice.key)
 }
 
 /**
@@ -99,8 +99,8 @@ export function SectorDonut({ rows, baseCurrency, sectors }: Props) {
                   strokeWidth={1.5}
                   isAnimationActive={false}
                 >
-                  {slices.map((slice, index) => (
-                    <Cell key={slice.key} fill={sliceColor(slice, index)} />
+                  {slices.map((slice) => (
+                    <Cell key={slice.key} fill={sliceColor(slice)} />
                   ))}
                 </Pie>
                 <Tooltip content={<Tip baseCurrency={baseCurrency} />} />
@@ -116,12 +116,12 @@ export function SectorDonut({ rows, baseCurrency, sectors }: Props) {
             </div>
           </div>
           <ul className="w-full min-w-0 space-y-1.5">
-            {slices.map((slice, index) => (
+            {slices.map((slice) => (
               <li key={slice.key} className="flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
                   className="h-2.5 w-2.5 shrink-0"
-                  style={{ backgroundColor: sliceColor(slice, index) }}
+                  style={{ backgroundColor: sliceColor(slice) }}
                 />
                 <span className="min-w-0 flex-1 truncate font-sans text-xs text-bone-200">
                   {slice.label}

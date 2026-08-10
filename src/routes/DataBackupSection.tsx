@@ -90,7 +90,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
 
       <div className="space-y-3">
         <h3 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
-          <span className="h-px w-3 bg-tick-400/60" />
+          <span className="h-px w-3 bg-bone-200/60" />
           Download
         </h3>
         <p className="font-sans text-[12px] text-bone-400">
@@ -103,7 +103,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           type="button"
           onClick={handleDownload}
           disabled={currentCount === 0}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           ↓ Download .json
         </button>
@@ -118,7 +118,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           Replaces all holdings, assets, and budget months on this device with
           the contents of a backup file, atomically. Cannot be undone.
         </p>
-        <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-tick-400 has-[:focus-visible]:outline-offset-2">
+        <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -229,15 +229,15 @@ function RestoreConfirmPanel({
       </div>
 
       {largest ? (
-        <div className="border-l-2 border-tick-400/60 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
-          <span className="font-mono uppercase tracking-[0.16em] text-tick-400">
+        <div className="border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+          <span className="font-mono uppercase tracking-[0.16em] text-bone-200">
             sanity check ·{' '}
           </span>
           largest holding {formatQuantity(largest.quantity)} {largest.name}
         </div>
       ) : (
-        <div className="border-l-2 border-tick-400/60 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
-          <span className="font-mono uppercase tracking-[0.16em] text-tick-400">
+        <div className="border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+          <span className="font-mono uppercase tracking-[0.16em] text-bone-200">
             sanity check ·{' '}
           </span>
           backup is empty — this will wipe all current holdings.
@@ -267,13 +267,13 @@ function RestoreConfirmPanel({
 type Tone = 'jade' | 'tick' | 'ember' | 'mute'
 const toneAccent: Record<Tone, string> = {
   jade: 'text-jade-400',
-  tick: 'text-tick-400',
+  tick: 'text-bone-200',
   ember: 'text-ember-400',
   mute: 'text-bone-300',
 }
 const toneRail: Record<Tone, string> = {
   jade: 'bg-jade-400/70',
-  tick: 'bg-tick-400/70',
+  tick: 'bg-bone-300/70',
   ember: 'bg-ember-400/70',
   mute: 'bg-bone-300/50',
 }

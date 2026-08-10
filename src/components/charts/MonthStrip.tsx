@@ -62,7 +62,7 @@ export function MonthStrip({ months, base, focused, onFocus, onAdd }: Props) {
             title={`${formatMonthKey(month.month)} · income ${compactMoney(s.totalIncome, base)}`}
             className={`group flex shrink-0 snap-start flex-col items-center gap-1.5 border px-3 pt-2 pb-1.5 transition ${
               isFocused
-                ? 'border-tick-400 bg-ink-800'
+                ? 'border-act-400 bg-ink-800'
                 : 'border-bone-100/10 bg-ink-900 hover:border-bone-100/25'
             }`}
           >
@@ -73,7 +73,7 @@ export function MonthStrip({ months, base, focused, onFocus, onAdd }: Props) {
             </div>
             <span
               className={`whitespace-nowrap font-mono text-[10px] tabular-nums ${
-                isFocused ? 'text-tick-400' : 'text-bone-400 group-hover:text-bone-200'
+                isFocused ? 'text-act-400' : 'text-bone-400 group-hover:text-bone-200'
               }`}
             >
               {formatMonthKey(month.month)}
@@ -89,8 +89,8 @@ export function MonthStrip({ months, base, focused, onFocus, onAdd }: Props) {
         aria-pressed={focused === null}
         className={`flex h-[104px] shrink-0 snap-start items-center justify-center border border-dashed px-4 font-mono text-lg transition ${
           focused === null
-            ? 'border-tick-400 text-tick-400'
-            : 'border-bone-100/20 text-bone-400 hover:border-tick-400 hover:text-tick-400'
+            ? 'border-act-400 text-act-400'
+            : 'border-bone-100/20 text-bone-400 hover:border-act-400 hover:text-act-400'
         }`}
       >
         +

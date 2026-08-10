@@ -187,12 +187,12 @@ function RiskMixCard({
                 <span className="tabular-nums whitespace-nowrap text-bone-400">
                   {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
                   {s.targetPct !== undefined && (
-                    <span className="text-tick-400"> / target {(s.targetPct * 100).toFixed(0)}%</span>
+                    <span className="text-bone-200"> / target {(s.targetPct * 100).toFixed(0)}%</span>
                   )}
                 </span>
               </div>
               <div className="relative h-2 w-full overflow-hidden bg-bone-100/10">
-                <div className="h-full bg-tick-400/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
+                <div className="h-full bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
                 {s.targetPct !== undefined && (
                   <span
                     aria-hidden="true"
@@ -262,7 +262,7 @@ function BulkInvestCard({
                 value={lump}
                 onChange={(e) => setLump(e.target.value)}
                 placeholder="e.g. 1000000"
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
               />
             </label>
             {rows.length > 0 && (
@@ -298,7 +298,7 @@ const railText: Record<string, string> = {
 }
 const railBar: Record<string, string> = {
   jade: 'bg-jade-400',
-  tick: 'bg-tick-400',
+  tick: 'bg-bone-300',
   ember: 'bg-ember-400',
   mute: 'bg-bone-300/50',
 }
@@ -351,14 +351,14 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
             defaultValue={f.defaultValue ?? ''}
             placeholder={f.placeholder}
             onChange={() => setDirty(true)}
-            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
         </label>
       ))}
       <button
         type="submit"
         disabled={saving}
-        className="border border-tick-400 bg-tick-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-tick-400 transition hover:bg-tick-400 hover:text-ink-950 disabled:opacity-50"
+        className="border border-act-400 bg-act-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950 disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>

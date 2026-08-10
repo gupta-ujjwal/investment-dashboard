@@ -10,7 +10,6 @@ import {
   type SectorMap,
 } from '../../lib/analytics'
 import {
-  FEATURE_ANALYTICS_DEPTH,
   FEATURE_BENCHMARK_OVERLAY,
   FEATURE_HISTORY,
   FEATURE_SECTOR_DONUT,
@@ -21,7 +20,6 @@ import sp500Json from '../../data/benchmarks/sp500.json'
 import { ValueOverTime, type BenchmarkOverlay } from './ValueOverTime'
 import { PnlOverTime } from './PnlOverTime'
 import { AllocationDonut } from './AllocationDonut'
-import { CurrencyExposureDonut } from './CurrencyExposureDonut'
 import { SectorDonut } from './SectorDonut'
 import { TopMovers } from './TopMovers'
 
@@ -105,9 +103,6 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
         </>
       )}
       <AllocationDonut rows={rows} baseCurrency={baseCurrency} />
-      {FEATURE_ANALYTICS_DEPTH && (
-        <CurrencyExposureDonut rows={rows} baseCurrency={baseCurrency} />
-      )}
       {FEATURE_SECTOR_DONUT && (
         <SectorDonut rows={rows} baseCurrency={baseCurrency} sectors={sectors} />
       )}

@@ -157,14 +157,14 @@ export function EquityRoute() {
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               to="/import"
-              className="inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+              className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300"
             >
               Go to Import →
             </Link>
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-tick-400 hover:text-tick-400"
+              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
             >
               + Add manually
             </button>
@@ -208,13 +208,13 @@ export function EquityRoute() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="inline-flex w-fit items-center gap-2 border border-tick-400 bg-tick-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-tick-400 transition hover:bg-tick-400 hover:text-ink-950"
+            className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
           >
             + Add holding
           </button>
           <Link
             to="/import"
-            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             + Import
           </Link>
@@ -334,7 +334,7 @@ function HoldingsControls({
               aria-pressed={active}
               onClick={() => onFilters({ ...filters, market: opt.value })}
               className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition ${
-                active ? 'bg-tick-400 text-ink-950' : 'text-bone-400 hover:text-bone-100'
+                active ? 'bg-act-400 text-ink-950' : 'text-bone-400 hover:text-bone-100'
               }`}
             >
               {opt.label}
@@ -358,12 +358,12 @@ function HoldingsControls({
       </label>
 
       {closedCount > 0 && (
-        <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-tick-400 has-[:checked]:text-tick-400">
+        <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
           <input
             type="checkbox"
             checked={filters.showClosed === true}
             onChange={(e) => onFilters({ ...filters, showClosed: e.target.checked })}
-            className="h-3 w-3 accent-tick-400"
+            className="h-3 w-3 accent-act-400"
           />
           Show closed ({closedCount})
         </label>
@@ -386,7 +386,7 @@ function HoldingsControls({
           type="button"
           onClick={onToggleDir}
           aria-label={`Sort direction: ${sort.dir === 'asc' ? 'ascending' : 'descending'}`}
-          className="border border-bone-100/15 px-3 py-1.5 font-mono text-xs text-tick-400 transition hover:border-tick-400"
+          className="border border-bone-100/15 px-3 py-1.5 font-mono text-xs text-act-400 transition hover:border-act-400"
         >
           {sort.dir === 'asc' ? '▲' : '▼'}
         </button>
@@ -402,7 +402,7 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
       <button
         type="button"
         onClick={onClear}
-        className="mt-4 inline-flex items-center gap-2 border border-bone-100/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+        className="mt-4 inline-flex items-center gap-2 border border-bone-100/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
       >
         Clear filters
       </button>
@@ -461,7 +461,7 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
 
 type KpiTone = 'tick' | 'mute' | 'gain' | 'loss'
 const kpiRail: Record<KpiTone, string> = {
-  tick: 'bg-tick-400/60',
+  tick: 'bg-bone-200/60',
   mute: 'bg-bone-300/40',
   gain: 'bg-jade-400/70',
   loss: 'bg-ember-400/70',
@@ -494,7 +494,7 @@ function ChartsFallback() {
   return (
     <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400" />
+        <span aria-hidden="true" className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400" />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
         </span>

@@ -8,7 +8,7 @@ import type { BaseCurrency } from '../../storage/holdings'
  */
 
 export const chartColor = {
-  value: 'var(--color-tick-400)',
+  value: 'var(--color-bone-200)',
   invested: 'var(--color-bone-400)',
   gain: 'var(--color-jade-400)',
   loss: 'var(--color-ember-400)',
@@ -21,17 +21,48 @@ export const chartColor = {
   grid: 'rgba(233, 233, 237, 0.07)',
 } as const
 
-/** Donut slice palette — amber lead fading through bone, neutral ink for the
- *  grouped "Other" tail. */
+/** Categorical chart ramp (8 steps + neutral tail). Hue-separated AND
+ *  luminance-separated for colour-blind safety. Assign by stable key via
+ *  `categoricalColor()`, never by array index — a slice must keep its colour
+ *  when ordering or filtering changes. */
 export const donutPalette = [
-  'var(--color-tick-400)',
-  'var(--color-bone-300)',
-  'var(--color-tick-500)',
-  'var(--color-bone-400)',
-  'var(--color-tick-700)',
-  'var(--color-bone-500)',
+  'var(--cat-1)',
+  'var(--cat-2)',
+  'var(--cat-3)',
+  'var(--cat-4)',
+  'var(--cat-5)',
+  'var(--cat-6)',
+  'var(--cat-7)',
+  'var(--cat-8)',
 ] as const
-export const donutOther = 'var(--color-ink-500)'
+export const donutOther = 'var(--cat-other)'
+
+/** First-seen order for sequential colour assignment. The first 8 distinct
+ *  keys are guaranteed distinct colours; subsequent keys cycle. A key keeps
+ *  its colour when ordering or filtering changes within a session. */
+const colorOrder: string[] = []
+const colorIndex = new Map<string, number>()
+
+/** Stable colour per categorical key. Assigns palette colours sequentially by
+ *  first-seen order so the first 8 distinct keys are always distinct. Returns
+ *  `donutOther` for the grouped-tail key. Never assigns by array index — a
+ *  slice keeps its colour when ordering or filtering changes. */
+export function categoricalColor(key: string): string {
+  if (key === '__other') return donutOther
+  let idx = colorIndex.get(key)
+  if (idx === undefined) {
+    idx = colorOrder.length
+    colorOrder.push(key)
+    colorIndex.set(key, idx)
+  }
+  return donutPalette[idx % donutPalette.length]
+}
+
+/** Reset the colour assignment map. For test isolation only. */
+export function _resetColorMap(): void {
+  colorOrder.length = 0
+  colorIndex.clear()
+}
 
 /** Axis tick text — mono, tiny, bone-400, matching the app's micro-labels. */
 export const axisTick = {

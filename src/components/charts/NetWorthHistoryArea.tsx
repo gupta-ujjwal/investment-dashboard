@@ -11,7 +11,7 @@ import type { BaseCurrency } from '../../storage/holdings'
 import type { ClassSeries } from '../../lib/analytics'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { axisTick, chartColor, compactMoney, donutPalette, formatDateKey } from './chartTheme'
+import { axisTick, chartColor, compactMoney, categoricalColor, formatDateKey } from './chartTheme'
 
 type Props = {
   series: ClassSeries
@@ -21,10 +21,10 @@ type Props = {
 type TipPayload = { dataKey?: string | number; value?: number; color?: string }
 type TipProps = { active?: boolean; payload?: TipPayload[]; label?: string }
 
-/** Stable colour per asset-class group — cycles the shared donut palette so the
- *  Overview history reads in the same hues as the allocation surfaces. */
-function groupColor(index: number): string {
-  return donutPalette[index % donutPalette.length]
+/** Stable colour per asset-class group — keyed by group name so a band keeps
+ *  its colour when ordering changes. */
+function groupColor(group: string): string {
+  return categoricalColor(group)
 }
 
 /**
@@ -84,7 +84,7 @@ export function NetWorthHistoryArea({ series, baseCurrency }: Props) {
             ))}
           <div className="mt-1 flex items-center justify-between gap-6 border-t border-bone-100/10 pt-1">
             <dt className="text-bone-300">Total</dt>
-            <dd className="tabular-nums text-tick-400">{formatMoney(total, baseCurrency)}</dd>
+            <dd className="tabular-nums text-bone-200">{formatMoney(total, baseCurrency)}</dd>
           </div>
         </dl>
       </div>
@@ -121,15 +121,15 @@ export function NetWorthHistoryArea({ series, baseCurrency }: Props) {
                 width={56}
               />
               <Tooltip content={<Tip />} cursor={{ stroke: chartColor.grid }} />
-              {groups.map((group, i) => (
+              {groups.map((group) => (
                 <Area
                   key={group}
                   type="monotone"
                   dataKey={group}
                   name={group}
                   stackId="networth"
-                  stroke={groupColor(i)}
-                  fill={groupColor(i)}
+                  stroke={groupColor(group)}
+                  fill={groupColor(group)}
                   fillOpacity={0.25}
                   strokeWidth={1.2}
                   isAnimationActive={false}

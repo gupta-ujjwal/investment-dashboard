@@ -52,7 +52,7 @@ export function SourcePicker({ dispatch }: Props) {
             className="group relative flex flex-col items-start gap-4 bg-ink-900 px-6 py-7 text-left transition hover:bg-ink-850 focus:outline-none"
           >
             <div className="flex w-full items-center justify-between">
-              <span className="font-sans text-lg font-semibold tracking-tight text-bone-50 transition group-hover:text-tick-400">
+              <span className="font-sans text-lg font-semibold tracking-tight text-bone-50 transition group-hover:text-act-400">
                 {opt.title}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
@@ -62,7 +62,7 @@ export function SourcePicker({ dispatch }: Props) {
             <div className="font-sans text-sm text-bone-300">{opt.subtitle}</div>
             <div className="mt-auto flex w-full items-center justify-between border-t border-bone-100/10 pt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
               <span>{opt.market}</span>
-              <span className="text-tick-400 opacity-0 transition group-hover:opacity-100">→</span>
+              <span className="text-act-400 opacity-0 transition group-hover:opacity-100">→</span>
             </div>
           </button>
         ))}

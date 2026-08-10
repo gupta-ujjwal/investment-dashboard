@@ -4,7 +4,7 @@ import type { BudgetMonth } from '../../storage/budget'
 import { expenseBreakdown, type ExpenseSlice } from '../../lib/budget'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { compactMoney, donutOther, donutPalette } from './chartTheme'
+import { compactMoney, donutOther, categoricalColor } from './chartTheme'
 import { DonutShell, type DonutDatum } from './DonutShell'
 
 type Props = {
@@ -12,8 +12,8 @@ type Props = {
   baseCurrency: BaseCurrency
 }
 
-function sliceColor(slice: ExpenseSlice, index: number): string {
-  return slice.key === '__other' ? donutOther : donutPalette[index % donutPalette.length]
+function sliceColor(slice: ExpenseSlice): string {
+  return slice.key === '__other' ? donutOther : categoricalColor(slice.key)
 }
 
 /**
@@ -26,10 +26,10 @@ export function BudgetExpenseDonut({ month, baseCurrency }: Props) {
   const slices = useMemo(() => expenseBreakdown(month), [month])
   const total = slices.reduce((sum, s) => sum + s.amount, 0)
 
-  const data: DonutDatum[] = slices.map((s, index) => ({
+  const data: DonutDatum[] = slices.map((s) => ({
     key: s.key,
     label: s.label,
-    color: sliceColor(s, index),
+    color: sliceColor(s),
     value: s.amount,
     legendRight: s.pct === undefined ? '—' : `${Math.round(s.pct * 100)}%`,
     tooltipText: `${formatMoney(s.amount, baseCurrency)}${

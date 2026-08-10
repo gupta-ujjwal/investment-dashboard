@@ -218,7 +218,7 @@ function FocusedMonthView({
           <button
             type="button"
             onClick={onEdit}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Edit
           </button>
@@ -428,7 +428,7 @@ function BudgetEditor({
             required
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
         </label>
 
@@ -464,7 +464,7 @@ function BudgetEditor({
             value={invested}
             onChange={(e) => setInvested(e.target.value)}
             placeholder="e.g. 50000"
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
           {investedHint && (
             <span className="font-sans text-[11px] text-bone-500">
@@ -488,7 +488,7 @@ function BudgetEditor({
           <button
             type="submit"
             disabled={saving}
-            className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:opacity-50"
+            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
           >
             {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
           </button>
@@ -557,14 +557,14 @@ function LineEditor({
             onChange={(e) => update(l.id, { category: e.target.value })}
             placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
             list={tagsOn ? listId : undefined}
-            className="flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
           {tagsOn && isUntagged(l.category) && (
             <button
               type="button"
               onClick={() => onCreateTag(l.category.trim(), kind)}
               title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
-              className="whitespace-nowrap border border-tick-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-tick-400 transition hover:border-tick-400 hover:text-tick-200"
+              className="whitespace-nowrap border border-act-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-act-400 transition hover:border-act-400 hover:text-act-300"
             >
               + tag
             </button>
@@ -576,7 +576,7 @@ function LineEditor({
             value={l.amount}
             onChange={(e) => update(l.id, { amount: e.target.value })}
             placeholder="Amount"
-            className="w-32 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-32 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none"
           />
           <button
             type="button"
@@ -591,7 +591,7 @@ function LineEditor({
       <button
         type="button"
         onClick={add}
-        className="w-fit font-mono text-[10px] uppercase tracking-[0.16em] text-tick-400 transition hover:text-tick-200"
+        className="w-fit font-mono text-[10px] uppercase tracking-[0.16em] text-act-400 transition hover:text-act-300"
       >
         + Add line
       </button>
@@ -642,7 +642,7 @@ function ChartsFallback() {
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400"
+          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
@@ -665,7 +665,7 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
 
 type Tone = 'tick' | 'jade' | 'ember' | 'mute'
 const toneRail: Record<Tone, string> = {
-  tick: 'bg-tick-400/60',
+  tick: 'bg-bone-200/60',
   jade: 'bg-jade-400/70',
   ember: 'bg-ember-400/70',
   mute: 'bg-bone-300/40',

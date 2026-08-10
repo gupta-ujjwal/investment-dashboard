@@ -126,7 +126,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
           <select
             name="assetClass"
             defaultValue={initial.assetClass}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           >
             {classOptions.map((a) => (
               <option key={a.value} value={a.value}>
@@ -145,7 +145,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
             {currencies.map((c) => (
               <label
                 key={c.value}
-                className="flex cursor-pointer flex-col gap-1 bg-ink-900 px-3 py-2.5 transition has-[:checked]:bg-tick-400/10 has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-tick-400"
+                className="flex cursor-pointer flex-col gap-1 bg-ink-900 px-3 py-2.5 transition has-[:checked]:bg-act-400/10 has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-act-400"
               >
                 <input
                   type="radio"
@@ -198,7 +198,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
               <select
                 name="riskBand"
                 defaultValue={initial.riskBand}
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
               >
                 {riskBands.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -207,13 +207,13 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
                 ))}
               </select>
             </Field>
-            <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-tick-400 has-[:checked]:text-tick-400">
+            <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
               <input
                 type="checkbox"
                 name="emergencyFund"
                 value="true"
                 defaultChecked={initial.emergencyFund}
-                className="h-3 w-3 accent-tick-400"
+                className="h-3 w-3 accent-act-400"
               />
               Part of emergency fund
             </label>
@@ -241,7 +241,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
           <button
             type="submit"
             disabled={submitting}
-            className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:opacity-50"
+            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
           >
             {submitting ? 'Saving…' : mode === 'add' ? 'Add asset' : 'Save changes'}
           </button>

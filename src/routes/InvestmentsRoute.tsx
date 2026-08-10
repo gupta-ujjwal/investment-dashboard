@@ -63,7 +63,7 @@ export function InvestmentsRoute() {
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="inline-flex w-fit items-center gap-2 border border-tick-400 bg-tick-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-tick-400 transition hover:bg-tick-400 hover:text-ink-950"
+          className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
         >
           + Add asset
         </button>
@@ -182,7 +182,7 @@ function HoldingsRowView({ row, base }: { row: HoldingsDerivedRow; base: BaseCur
       <td className="px-4 py-3 text-right">
         <Link
           to="/equity"
-          className="inline-flex items-center border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+          className="inline-flex items-center border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
         >
           View →
         </Link>
@@ -208,7 +208,7 @@ function AssetRowView({
         <div className="font-sans text-sm text-bone-50">{row.label}</div>
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
           {row.asset.currency}
-          {row.asset.emergencyFund && <span className="text-tick-400">emergency</span>}
+          {row.asset.emergencyFund && <span className="text-act-400">emergency</span>}
           {row.isLegacyEquity && <span className="text-bone-400">manual equity</span>}
         </div>
       </td>
@@ -238,7 +238,7 @@ function HoldingsCard({ row, base }: { row: HoldingsDerivedRow; base: BaseCurren
         </div>
         <div className="text-right">
           <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
-          <Link to="/equity" className="font-mono text-[10px] uppercase tracking-[0.14em] text-tick-400">
+          <Link to="/equity" className="font-mono text-[10px] uppercase tracking-[0.14em] text-act-400">
             View →
           </Link>
         </div>
@@ -265,7 +265,7 @@ function AssetCard({
           <div className="font-sans text-sm text-bone-50">{row.label}</div>
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
             {row.group} · {row.asset.currency}
-            {row.asset.emergencyFund && <span className="text-tick-400">emergency</span>}
+            {row.asset.emergencyFund && <span className="text-act-400">emergency</span>}
           </div>
         </div>
         <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
@@ -281,7 +281,7 @@ function RowActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
       <button
         type="button"
         onClick={onEdit}
-        className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+        className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
       >
         Edit
       </button>
@@ -309,14 +309,14 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           to="/import"
-          className="inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+          className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300"
         >
           Go to Import →
         </Link>
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-tick-400 hover:text-tick-400"
+          className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
         >
           + Add asset
         </button>
@@ -340,7 +340,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
   return (
     <div className="bg-ink-900 px-5 py-5">
       <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
-        <span className="h-px w-3 bg-tick-400/60" />
+        <span className="h-px w-3 bg-bone-200/60" />
         {label}
       </div>
       <div className="mt-3 whitespace-nowrap font-display text-2xl leading-none tabular-nums text-bone-50">{value}</div>

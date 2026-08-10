@@ -187,7 +187,7 @@ function SortHeader({
         type="button"
         onClick={() => onSort(col.key)}
         className={`inline-flex items-center gap-1 uppercase tracking-[0.18em] transition ${
-          active ? 'text-tick-400' : 'text-bone-400 hover:text-bone-100'
+          active ? 'text-act-400' : 'text-bone-400 hover:text-bone-100'
         }`}
       >
         {col.label}

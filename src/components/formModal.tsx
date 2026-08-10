@@ -84,5 +84,5 @@ export function inputClass(hasError: boolean): string {
     'w-full border bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 placeholder:text-bone-500 focus:outline-none'
   return hasError
     ? `${base} border-ember-400/60 focus:border-ember-400`
-    : `${base} border-bone-100/15 focus:border-tick-400`
+    : `${base} border-bone-100/15 focus:border-act-400`
 }

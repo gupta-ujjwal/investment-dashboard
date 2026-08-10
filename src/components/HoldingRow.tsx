@@ -121,7 +121,7 @@ function EditedMarker() {
     <span
       title="You've edited fields on this row. Future broker imports will keep your edits for those fields."
       aria-label="Edited — future broker imports preserve your edits on the changed fields"
-      className="border border-tick-400/35 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-tick-400/80"
+      className="border border-act-400/35 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-act-400/80"
     >
       ✎ edited
     </span>
@@ -269,7 +269,7 @@ function InlineEditRow({ holding, onExit, onSaved }: InlineEditProps) {
   }, [fetcher.state, fetcher.data, holding, onSaved, onExit])
 
   return (
-    <tr className="border-b border-tick-400/40 bg-tick-400/[0.04]">
+    <tr className="border-b border-act-400/40 bg-act-400/[0.04]">
       <td colSpan={10} className="px-3 py-3">
         <fetcher.Form
           method="post"
@@ -334,7 +334,7 @@ function InlineEditRow({ holding, onExit, onSaved }: InlineEditProps) {
             <button
               type="submit"
               disabled={submitting}
-              className="border border-tick-400 bg-tick-400 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:opacity-50"
+              className="border border-act-400 bg-act-400 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Save'}
             </button>
@@ -386,7 +386,7 @@ function NumberOrTextField({
         autoFocus={autoFocus}
         aria-invalid={Boolean(error)}
         className={`w-full border bg-ink-950 px-2 py-1 font-mono text-sm tabular-nums text-bone-100 focus:outline-none ${
-          error ? 'border-ember-400/60 focus:border-ember-400' : 'border-bone-100/15 focus:border-tick-400'
+          error ? 'border-ember-400/60 focus:border-ember-400' : 'border-bone-100/15 focus:border-act-400'
         } ${align === 'right' ? 'text-right' : 'text-left'}`}
       />
       {error && <span role="alert" className="font-sans text-[11px] text-ember-400">{error}</span>}
@@ -410,7 +410,7 @@ function AssetClassField({ defaultValue }: { defaultValue: AssetClass }) {
       <select
         name="assetClass"
         defaultValue={defaultValue}
-        className="w-full border border-bone-100/15 bg-ink-950 px-2 py-1 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+        className="w-full border border-bone-100/15 bg-ink-950 px-2 py-1 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
       >
         {(Object.keys(assetClassLabels) as AssetClass[]).map((k) => (
           <option key={k} value={k}>
