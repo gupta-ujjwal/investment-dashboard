@@ -112,7 +112,7 @@ export function PreviewStep({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={handleBackup}
-            className="hidden border border-bone-100/15 px-3 py-2 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 sm:block"
+            className="hidden border border-bone-100/15 px-3 py-2 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 sm:block"
           >
             ↓ Backup .json
           </button>
@@ -154,7 +154,7 @@ export function PreviewStep({ state, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-upload' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
           ← Reject
         </button>
@@ -162,7 +162,7 @@ export function PreviewStep({ state, dispatch }: Props) {
           type="button"
           onClick={handleCommit}
           disabled={insertCount === 0 && updateCount === 0 && missingCount === 0}
-          className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
+          className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
         >
           Commit changes →
         </button>
@@ -188,7 +188,7 @@ const toneRail: Record<StatTone, string> = {
 function Stat({ label, value, tone }: { label: string; value: number; tone: StatTone }) {
   return (
     <div className="bg-ink-900 px-4 py-5">
-      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <dt className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}
       </dt>
@@ -224,21 +224,21 @@ function MissingRowsPanel({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
-            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
           >
             Keep all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'close' })}
-            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Close all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'delete' })}
-            className="border border-ember-400/40 px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] text-ember-300 transition hover:border-ember-400 hover:text-ember-400"
+            className="border border-ember-400/40 px-3 py-1.5 font-sans text-[10px] font-medium  text-ember-300 transition hover:border-ember-400 hover:text-ember-400"
           >
             Delete all
           </button>
@@ -320,7 +320,7 @@ function DecisionButton({
   tone: 'default' | 'tick' | 'ember'
 }) {
   const base =
-    'border px-3 py-1.5 font-sans text-[10px] font-medium uppercase tracking-[0.16em] transition'
+    'border px-3 py-1.5 font-sans text-[10px] font-medium  transition'
   let classes: string
   if (active && tone === 'ember') classes = 'border-ember-400 bg-ember-400 text-ink-950'
   else if (active && tone === 'tick') classes = 'border-act-400 bg-act-400 text-ink-950'

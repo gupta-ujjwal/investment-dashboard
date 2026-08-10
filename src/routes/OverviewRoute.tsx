@@ -103,7 +103,7 @@ export function OverviewRoute() {
       {FEATURE_HISTORY && (
         <section aria-label="History">
           <div className="flex items-end justify-between">
-            <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+            <h3 className="font-sans text-sm font-medium text-bone-300">
               History
             </h3>
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
@@ -364,7 +364,7 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
   )
 }
 
-const SECTION_HEADING = 'font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300'
+const SECTION_HEADING = 'font-sans text-sm font-medium text-bone-300'
 
 /** A section heading that deep-links to the tab that owns it (#5) — Overview is
  *  the hub, so each card is a jumping-off point. `to` omitted → a plain heading. */
@@ -400,7 +400,7 @@ const kpiValueColor: Record<KpiTone, string> = {
 function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
@@ -441,13 +441,13 @@ function EmptyState() {
         <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             to="/import"
-            className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300"
+            className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium  text-ink-950 transition hover:bg-act-300"
           >
             Go to Import →
           </Link>
           <Link
             to="/portfolio"
-            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
+            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium  text-bone-200 transition hover:border-act-400 hover:text-act-400"
           >
             Add an investment →
           </Link>

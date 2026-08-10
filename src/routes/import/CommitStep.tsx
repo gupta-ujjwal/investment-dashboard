@@ -44,7 +44,7 @@ export function CommitStep(props: Props) {
       <button
         type="button"
         onClick={props.onContinue}
-        className="mt-8 border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300"
+        className="mt-8 border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300"
       >
         View analytics →
       </button>

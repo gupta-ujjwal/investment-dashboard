@@ -83,7 +83,7 @@ function EmergencyFundCard({
   return (
     <section aria-label="Emergency fund" className="space-y-3">
       <div className="flex items-end justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        <h3 className="font-sans text-sm font-medium text-bone-300">
           Emergency fund
         </h3>
         {provenance && status.monthlyNeed !== undefined && (
@@ -170,7 +170,7 @@ function RiskMixCard({
 }) {
   return (
     <section aria-label="Risk mix" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
         Risk allocation
       </h3>
       {slices.length === 0 ? (
@@ -241,7 +241,7 @@ function BulkInvestCard({
 
   return (
     <section aria-label="Bulk invest" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
         Bulk invest — what-if
       </h3>
       <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">

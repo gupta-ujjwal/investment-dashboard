@@ -131,7 +131,7 @@ export function SettingsForm() {
           name="intent"
           value="refresh"
           disabled={submitting}
-          className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
+          className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
         >
           {submitting && fetcher.formData?.get('intent') === 'refresh'
             ? 'Refreshing…'
@@ -144,7 +144,7 @@ export function SettingsForm() {
             name="intent"
             value="save"
             disabled={submitting}
-            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
+            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
           >
             Save profile
           </button>
@@ -176,7 +176,7 @@ export function SettingsForm() {
               name="intent"
               value="manual"
               disabled={submitting || manualRate === ''}
-              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Apply manual rate
             </button>
@@ -287,7 +287,7 @@ function PlanningTargets({
         name="intent"
         value="save"
         disabled={submitting}
-        className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:opacity-50"
+        className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Save targets
       </button>
@@ -369,7 +369,7 @@ function RadioPill({
 function Meta({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <div className="bg-ink-900 px-4 py-4">
-      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <dt className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className="h-px w-3 bg-act-400/60" />
         {label}
       </dt>

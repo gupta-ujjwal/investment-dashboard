@@ -26,7 +26,7 @@ export function SettingsRoute() {
         <section aria-labelledby="profile-heading" className="space-y-4">
           <h2
             id="profile-heading"
-            className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300"
+            className="font-sans text-sm font-medium text-bone-300"
           >
             Profile &amp; FX
           </h2>
@@ -37,7 +37,7 @@ export function SettingsRoute() {
       <section aria-labelledby="data-heading" className="space-y-4">
         <h2
           id="data-heading"
-          className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300"
+          className="font-sans text-sm font-medium text-bone-300"
         >
           Data
         </h2>

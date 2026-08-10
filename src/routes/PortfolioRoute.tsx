@@ -168,14 +168,14 @@ export function PortfolioRoute() {
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               to="/import"
-              className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300"
+              className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium  text-ink-950 transition hover:bg-act-300"
             >
               Go to Import →
             </Link>
             <button
               type="button"
               onClick={() => setAddAssetOpen(true)}
-              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
+              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium  text-bone-200 transition hover:border-act-400 hover:text-act-400"
             >
               + Add manually
             </button>
@@ -220,14 +220,14 @@ export function PortfolioRoute() {
           <button
             type="button"
             onClick={() => setAddHoldingOpen(true)}
-            className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
+            className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium  text-act-400 transition hover:bg-act-400 hover:text-ink-950"
           >
             + Add holding
           </button>
           <button
             type="button"
             onClick={() => setAddAssetOpen(true)}
-            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             + Add asset
           </button>
@@ -267,7 +267,7 @@ export function PortfolioRoute() {
       {FEATURE_ANALYTICS_DEPTH && (
         <section aria-label="Charts">
           <div className="flex items-end justify-between">
-            <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+            <h3 className="font-sans text-sm font-medium text-bone-300">
               Charts
             </h3>
             {FEATURE_HISTORY && (
@@ -285,7 +285,7 @@ export function PortfolioRoute() {
       )}
 
       <section aria-label="Holdings" className="space-y-4">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        <h3 className="font-sans text-sm font-medium text-bone-300">
           Holdings
         </h3>
         {pricedAt !== undefined && (
@@ -312,7 +312,7 @@ export function PortfolioRoute() {
 
       {manualAssetRows.length > 0 && (
         <section aria-label="Other assets" className="space-y-4">
-          <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+          <h3 className="font-sans text-sm font-medium text-bone-300">
             Other assets
           </h3>
           <div className="overflow-hidden border border-bone-100/10">
@@ -498,30 +498,69 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
 }
 
 function RiskRow({ concentration: c }: { concentration: Concentration }) {
-  const hhiBandLabel: Record<HhiBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High' }
+  const verdicts: { label: string; verdict: string; metric?: string; tone: KpiTone }[] = []
+
+  if (c.top5Pct !== undefined) {
+    verdicts.push({
+      label: 'Top-5 weight',
+      verdict: `${pctNoSign(c.top5Pct)} of portfolio`,
+      metric: `Top 5 holdings = ${pctNoSign(c.top5Pct)}`,
+      tone: c.top5Pct > 0.5 ? 'loss' : 'mute',
+    })
+  } else {
+    verdicts.push({
+      label: 'Top-5 weight',
+      verdict: 'No priced holdings',
+      tone: 'mute',
+    })
+  }
+
+  if (c.singleStockRisk !== undefined) {
+    verdicts.push({
+      label: 'Largest position',
+      verdict: `${c.singleStockRisk.holding.name} is ${pctNoSign(c.singleStockRisk.weight)} of your portfolio`,
+      metric: `Single-stock risk: ${pctNoSign(c.singleStockRisk.weight)}`,
+      tone: c.singleStockRisk.weight > 0.15 ? 'loss' : 'mute',
+    })
+  } else {
+    verdicts.push({
+      label: 'Largest position',
+      verdict: 'No single position is more than 10% of your portfolio',
+      metric: c.hhi !== undefined ? `HHI ${c.hhi.toFixed(2)}` : undefined,
+      tone: 'mute',
+    })
+  }
+
+  if (c.hhiBand !== undefined) {
+    const bandLabels: Record<HhiBand, string> = { low: 'low', moderate: 'moderate', high: 'high' }
+    verdicts.push({
+      label: 'Concentration',
+      verdict: `Concentration is ${bandLabels[c.hhiBand]}`,
+      metric: c.hhi !== undefined ? `HHI ${c.hhi.toFixed(2)} · Top-5 ${c.top5Pct !== undefined ? pctNoSign(c.top5Pct) : 'n/a'}` : undefined,
+      tone: c.hhiBand === 'high' ? 'loss' : 'mute',
+    })
+  } else {
+    verdicts.push({
+      label: 'Concentration',
+      verdict: 'Not enough priced holdings to measure',
+      tone: 'mute',
+    })
+  }
+
   return (
     <section
       aria-label="Risk"
       className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
     >
-      <Kpi
-        label="Top-5 weight"
-        value={c.top5Pct === undefined ? '—' : pctNoSign(c.top5Pct)}
-        sub={c.top5Pct === undefined ? 'no priced holdings' : 'of portfolio value'}
-        tone="mute"
-      />
-      <Kpi
-        label="Concentration"
-        value={c.hhiBand === undefined ? '—' : hhiBandLabel[c.hhiBand]}
-        sub={c.hhi === undefined ? 'HHI unavailable' : `HHI ${c.hhi.toFixed(2)}`}
-        tone={c.hhiBand === 'high' ? 'loss' : 'mute'}
-      />
-      <Kpi
-        label="Single-stock risk"
-        value={c.singleStockRisk === undefined ? '—' : c.singleStockRisk.holding.name}
-        sub={c.singleStockRisk === undefined ? 'no position >10%' : `${pctNoSign(c.singleStockRisk.weight)} of portfolio`}
-        tone={c.singleStockRisk === undefined ? 'mute' : 'loss'}
-      />
+      {verdicts.map((v) => (
+        <Kpi
+          key={v.label}
+          label={v.label}
+          value={v.verdict}
+          sub={v.metric ?? ''}
+          tone={v.tone}
+        />
+      ))}
     </section>
   )
 }
@@ -625,7 +664,7 @@ const kpiValueColor: Record<KpiTone, string> = {
 function SummaryFigure({ label, value, sub, tone = 'mute' }: { label: string; value: string; sub?: string; tone?: KpiTone }) {
   return (
     <div>
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-500">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-500">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
@@ -640,16 +679,17 @@ function SummaryFigure({ label, value, sub, tone = 'mute' }: { label: string; va
 function Kpi({ label, value, sub, tone = 'mute' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
       <div
-        className={`mt-3 whitespace-nowrap font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+        className={`mt-3 whitespace-nowrap font-display text-sm leading-tight tracking-tight tabular-nums lg:text-base xl:text-lg ${kpiValueColor[tone]}`}
+        title={sub || undefined}
       >
         {value}
       </div>
-      <div className="mt-2 font-mono text-[11px] text-bone-400">{sub}</div>
+      {sub && <div className="mt-2 font-mono text-[10px] text-bone-500">{sub}</div>}
     </div>
   )
 }

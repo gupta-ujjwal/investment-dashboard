@@ -399,7 +399,7 @@ function BudgetEditor({
       className="space-y-5 border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        <h3 className="font-sans text-sm font-medium text-bone-300">
           {existing ? `Edit ${formatMonthKey(existing.month)}` : 'Add month'}
         </h3>
         {onCancel && (
@@ -488,7 +488,7 @@ function BudgetEditor({
           <button
             type="submit"
             disabled={saving}
-            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
+            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
           >
             {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
           </button>
@@ -690,7 +690,7 @@ function Stat({
 }) {
   return (
     <div className="bg-ink-900 px-5 py-5">
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}
       </div>

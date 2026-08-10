@@ -103,7 +103,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           type="button"
           onClick={handleDownload}
           disabled={currentCount === 0}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           ↓ Download .json
         </button>
@@ -118,7 +118,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           Replaces all holdings, assets, and budget months on this device with
           the contents of a backup file, atomically. Cannot be undone.
         </p>
-        <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2">
+        <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -248,14 +248,14 @@ function RestoreConfirmPanel({
         <button
           type="button"
           onClick={onCancel}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="border border-ember-400 bg-ember-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-ember-300"
+          className="border border-ember-400 bg-ember-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-ember-300"
         >
           Replace all data
         </button>
@@ -289,7 +289,7 @@ function Stat({
 }) {
   return (
     <div className="bg-ink-900 px-4 py-5">
-      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <dt className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}
       </dt>

@@ -103,7 +103,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
           ← Back
         </button>
