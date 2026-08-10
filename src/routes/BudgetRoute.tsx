@@ -413,12 +413,12 @@ function BudgetEditor({
         )}
       </div>
 
-      <fetcher.Form method="post" action="/budget" className="grid gap-5">
+      <fetcher.Form method="post" action="/budget" className="grid min-w-0 gap-5">
         <input type="hidden" name="intent" value="saveMonth" />
         <input type="hidden" name="incomeJson" value={incomeJson} />
         <input type="hidden" name="expensesJson" value={expensesJson} />
 
-        <label className="grid gap-1.5 sm:max-w-[12rem]">
+        <label className="grid max-w-full gap-1.5 sm:max-w-[12rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
             Month
           </span>
@@ -453,7 +453,7 @@ function BudgetEditor({
           onDeleteTag={onDeleteTag}
         />
 
-        <label className="grid gap-1.5 sm:max-w-[16rem]">
+        <label className="grid max-w-full gap-1.5 sm:max-w-[16rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
             Invested this month · {base}
           </span>
@@ -535,7 +535,7 @@ function LineEditor({
   }
 
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid min-w-0 gap-2">
       <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
         {title} · {base}
       </legend>
@@ -549,15 +549,15 @@ function LineEditor({
       )}
 
       {lines.map((l) => (
-        <div key={l.id} className="flex items-center gap-2">
-          <input
-            type="text"
-            aria-label={`${title} category`}
-            value={l.category}
-            onChange={(e) => update(l.id, { category: e.target.value })}
-            placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
-            list={tagsOn ? listId : undefined}
-            className="flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+        <div key={l.id} className="flex min-w-0 items-center gap-2">
+           <input
+             type="text"
+             aria-label={`${title} category`}
+             value={l.category}
+             onChange={(e) => update(l.id, { category: e.target.value })}
+             placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
+             list={tagsOn ? listId : undefined}
+             className="min-w-0 flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
           {tagsOn && isUntagged(l.category) && (
             <button
@@ -576,7 +576,7 @@ function LineEditor({
             value={l.amount}
             onChange={(e) => update(l.id, { amount: e.target.value })}
             placeholder="Amount"
-            className="w-32 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none"
+            className="w-24 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none sm:w-32"
           />
           <button
             type="button"
