@@ -136,7 +136,7 @@ function NetWorthSection({
   const partial = netWorth.excludedCount > 0
   return (
     <section aria-label="Net worth" className="space-y-4">
-      <SectionHeading to="/investments">Net worth</SectionHeading>
+      <SectionHeading to="/portfolio">Net worth</SectionHeading>
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label={`Net worth · ${base}`}
@@ -446,7 +446,7 @@ function EmptyState() {
             Go to Import →
           </Link>
           <Link
-            to="/investments"
+            to="/portfolio"
             className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
           >
             Add an investment →

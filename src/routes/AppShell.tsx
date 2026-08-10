@@ -10,7 +10,7 @@ type Tab = {
 
 const primaryTabs: Tab[] = [
   { to: '/overview', label: 'Today', icon: TodayIcon, enabled: true },
-  { to: '/investments', label: 'Portfolio', icon: PortfolioIcon, enabled: true },
+  { to: '/portfolio', label: 'Portfolio', icon: PortfolioIcon, enabled: true },
   { to: '/budget', label: 'Cash flow', icon: CashflowIcon, enabled: FEATURE_BUDGET },
   { to: '/planning', label: 'Plan', icon: PlanIcon, enabled: FEATURE_PLANNING },
 ].filter((t) => t.enabled)

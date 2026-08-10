@@ -57,8 +57,7 @@ import type { HoldingActionResult } from './components/HoldingForm'
 import type { AssetActionResult } from './components/AssetForm'
 import { AppShell } from './routes/AppShell'
 import { OverviewRoute } from './routes/OverviewRoute'
-import { InvestmentsRoute } from './routes/InvestmentsRoute'
-import { EquityRoute } from './routes/EquityRoute'
+import { PortfolioRoute } from './routes/PortfolioRoute'
 import { BudgetRoute } from './routes/BudgetRoute'
 import { PlanningRoute } from './routes/PlanningRoute'
 import { ImportRoute } from './routes/import/ImportRoute'
@@ -629,13 +628,12 @@ const router = createBrowserRouter(
         // forms on Investments post to it and react-router revalidates the
         // Investments loader.
         { path: 'overview', Component: OverviewRoute, loader: dashboardLoader },
-        { path: 'investments', Component: InvestmentsRoute, loader: dashboardLoader },
+        { path: 'portfolio', Component: PortfolioRoute, loader: dashboardLoader, action: holdingsAction },
         {
           path: 'equity',
-          Component: EquityRoute,
-          loader: dashboardLoader,
-          action: holdingsAction,
+          loader: () => redirect('/portfolio'),
         },
+        { path: 'investments', loader: () => redirect('/portfolio') },
         // Redirects preserve old bookmarks / external links after the rename.
         { path: 'analytics', loader: () => redirect('/overview') },
         { path: 'holdings', loader: () => redirect('/equity') },

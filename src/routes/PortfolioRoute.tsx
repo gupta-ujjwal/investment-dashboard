@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
 import { upsertHolding, type BaseCurrency, type CanonicalHolding } from '../storage/holdings'
-import type { RiskBand } from '../storage/assets'
+import type { ManualAsset, RiskBand } from '../storage/assets'
 import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import {
@@ -16,6 +16,12 @@ import {
   type SortKey,
 } from '../lib/holdingsView'
 import {
+  buildInvestmentRows,
+  legacyEquityCount,
+  type AssetInvestmentRow,
+} from '../lib/investments'
+import { buildPositions, netWorthTotals } from '../lib/netWorth'
+import {
   concentration,
   portfolioTotals,
   type Concentration,
@@ -24,6 +30,7 @@ import {
 import { formatDate, formatMoney, formatPercent } from '../lib/format'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
+import { AssetForm } from '../components/AssetForm'
 import type { RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { useUndoableAction } from '../components/useUndoableAction'
@@ -34,61 +41,46 @@ import {
   FEATURE_HISTORY,
 } from '../featureFlags'
 
-/** Equity charts (Recharts ~100KB+) stay lazy, exactly as on the old Analytics
- *  page — this panel is now equity-only (holdings folds + the index benchmark). */
 const ChartsPanel = lazy(() => import('../components/charts/ChartsPanel'))
 
-/** Columns whose natural first-click direction is ascending (text-like). */
 const ASC_FIRST: ReadonlySet<SortKey> = new Set<SortKey>(['name', 'market', 'broker'])
 
 function defaultDir(key: SortKey): Sort['dir'] {
   return ASC_FIRST.has(key) ? 'asc' : 'desc'
 }
 
-const marketOptions: { value: MarketFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'INR', label: 'India' },
-  { value: 'USD', label: 'US' },
-]
-
-const sortOptions: { key: SortKey; label: string }[] = [
-  { key: 'name', label: 'Name' },
-  { key: 'market', label: 'Market' },
-  { key: 'quantity', label: 'Quantity' },
-  { key: 'avgBuyPrice', label: 'Avg buy' },
-  { key: 'currentPrice', label: 'Current price' },
-  { key: 'invested', label: 'Invested' },
-  { key: 'currentValue', label: 'Current value' },
-  { key: 'profit', label: 'Profit %' },
-  { key: 'broker', label: 'Broker' },
-]
-
 type LoaderData = {
   holdings: CanonicalHolding[]
   settings: Settings
   history: HistoryRecord[]
+  assets: ManualAsset[]
 }
 
-/**
- * The Equity tab — the per-ticker holdings portfolio plus all equity-specific
- * analytics (P&L KPIs, concentration/risk, allocation / sector / movers charts,
- * value-over-time with the index benchmark). Equity is one asset class on the
- * Overview; this is where you drill into it. Manual non-equity assets live on
- * the Investments tab, not here.
- */
-export function EquityRoute() {
-  const { holdings, settings, history } = useLoaderData() as LoaderData
+export function PortfolioRoute() {
+  const { holdings, settings, history, assets } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT)
-  const [addOpen, setAddOpen] = useState(false)
+  const [addHoldingOpen, setAddHoldingOpen] = useState(false)
+  const [addAssetOpen, setAddAssetOpen] = useState(false)
   const [editing, setEditing] = useState<CanonicalHolding | null>(null)
 
   const rows = useMemo(() => viewRows(holdings, filters, sort), [holdings, filters, sort])
   const existingKeys = useMemo(
     () => holdings.map((h) => ({ source: h.source, sourceSymbol: h.sourceSymbol })),
     [holdings],
+  )
+
+  const investmentRows = useMemo(() => buildInvestmentRows(holdings, assets), [holdings, assets])
+  const manualAssetRows = investmentRows.filter(
+    (r): r is AssetInvestmentRow => r.kind === 'asset',
+  )
+  const legacyEquity = legacyEquityCount(investmentRows)
+
+  const netWorth = useMemo(
+    () => netWorthTotals(buildPositions(holdings, assets)),
+    [holdings, assets],
   )
 
   const fetcher = useFetcher()
@@ -119,7 +111,7 @@ export function EquityRoute() {
       formData.set('source', h.source)
       formData.set('sourceSymbol', h.sourceSymbol)
       for (const [k, v] of Object.entries(extra ?? {})) formData.set(k, v)
-      fetcher.submit(formData, { method: 'post', action: '/equity' })
+      fetcher.submit(formData, { method: 'post', action: '/portfolio' })
     },
     [fetcher],
   )
@@ -131,10 +123,18 @@ export function EquityRoute() {
     },
     [submitHolding, undoable],
   )
-  const onMarkClosed = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'closed' }), [submitHolding])
-  const onReopen = useCallback((h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'open' }), [submitHolding])
-  const onRevertOverrides = useCallback((h: CanonicalHolding) => submitHolding('revertOverrides', h), [submitHolding])
-  // `band` undefined → Auto: send empty 'band' so the action clears the override (#2).
+  const onMarkClosed = useCallback(
+    (h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'closed' }),
+    [submitHolding],
+  )
+  const onReopen = useCallback(
+    (h: CanonicalHolding) => submitHolding('setStatus', h, { status: 'open' }),
+    [submitHolding],
+  )
+  const onRevertOverrides = useCallback(
+    (h: CanonicalHolding) => submitHolding('revertOverrides', h),
+    [submitHolding],
+  )
   const onSetRiskBand = useCallback(
     (h: CanonicalHolding, band: RiskBand | undefined) =>
       submitHolding('setRiskBand', h, { band: band ?? '' }),
@@ -146,13 +146,24 @@ export function EquityRoute() {
     [onEditModal, onEditSaved, onDelete, onMarkClosed, onReopen, onRevertOverrides, onSetRiskBand],
   )
 
-  if (holdings.length === 0) {
+  const onDeleteAsset = useCallback(
+    (asset: ManualAsset) => {
+      if (!window.confirm(`Delete asset "${asset.name}"? This cannot be undone.`)) return
+      const formData = new FormData()
+      formData.set('intent', 'deleteAsset')
+      formData.set('id', asset.id)
+      fetcher.submit(formData, { method: 'post', action: '/portfolio' })
+    },
+    [fetcher],
+  )
+
+  if (holdings.length === 0 && assets.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHead title="Equity" caption="No equity positions yet" />
+        <PageHead title="Portfolio" caption="No positions yet" />
         <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
           <p className="font-sans text-base text-bone-200">
-            Import a broker file to see your positions and equity analytics — or add one manually.
+            Import a broker file to see your positions — or add one manually.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
@@ -163,21 +174,19 @@ export function EquityRoute() {
             </Link>
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={() => setAddAssetOpen(true)}
               className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-act-400 hover:text-act-400"
             >
               + Add manually
             </button>
           </div>
         </div>
-        <HoldingForm open={addOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddOpen(false)} />
+        <AssetForm open={addAssetOpen} mode="add" onClose={() => setAddAssetOpen(false)} />
       </div>
     )
   }
 
   const openHoldings = holdings.filter((h) => h.status !== 'closed')
-  const inr = openHoldings.filter((h) => h.currency === 'INR').length
-  const usd = openHoldings.filter((h) => h.currency === 'USD').length
   const closedCount = holdings.length - openHoldings.length
   const unstamped = holdings.filter(
     (h) => h.avgBuyPriceBase === undefined && h.status !== 'closed',
@@ -191,6 +200,9 @@ export function EquityRoute() {
     ? concentration(deriveRows(openHoldings))
     : undefined
 
+  const totalPositions = netWorth.totalPositions
+  const manualCount = manualAssetRows.length
+
   function onSort(key: SortKey) {
     setSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: defaultDir(key) },
@@ -201,23 +213,24 @@ export function EquityRoute() {
     <div className="space-y-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <PageHead
-          title="Equity"
-          caption={`${openHoldings.length} open · ${inr} INR · ${usd} USD${closedCount > 0 ? ` · ${closedCount} closed` : ''}`}
+          title="Portfolio"
+          caption={`${totalPositions} position${totalPositions === 1 ? '' : 's'}${manualCount > 0 ? ` · ${manualCount} manual` : ''}${closedCount > 0 ? ` · ${closedCount} closed` : ''}`}
         />
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setAddOpen(true)}
+            onClick={() => setAddHoldingOpen(true)}
             className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
           >
             + Add holding
           </button>
-          <Link
-            to="/import"
+          <button
+            type="button"
+            onClick={() => setAddAssetOpen(true)}
             className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
-            + Import
-          </Link>
+            + Add asset
+          </button>
         </div>
       </div>
 
@@ -225,48 +238,52 @@ export function EquityRoute() {
         <RefreshBanner unstamped={unstamped} baseCurrency={base} />
       )}
 
-      {/* Equity KPIs */}
-      <section aria-label="Equity key figures">
-        <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
-          <Kpi
-            label={`Value · ${base}`}
-            value={money(totals.totalValueBase, base)}
-            sub={totals.unstamped > 0 ? 'refresh needed' : 'current market value'}
-            tone="tick"
-          />
-          <Kpi label={`Invested · ${base}`} value={money(totals.totalInvestedBase, base)} sub="cost basis" tone="mute" />
-          <Kpi
-            label={`P&L · ${base}`}
-            value={money(totals.totalProfitBase, base)}
-            sub={totals.totalProfitPct === undefined ? '—' : formatPercent(totals.totalProfitPct)}
-            tone={pnlTone}
-          />
-          <Kpi label="Positions" value={String(totals.positions)} sub={`${inr} India · ${usd} US`} tone="mute" />
-        </div>
+      <section aria-label="Summary" className="hairline-t hairline-b flex flex-wrap gap-x-11 gap-y-3 py-4">
+        <SummaryFigure
+          label={`Value · ${base}`}
+          value={formatMoney(netWorth.knownCurrentValue, base)}
+          tone="tick"
+        />
+        <SummaryFigure
+          label="Invested"
+          value={money(netWorth.knownInvested, base)}
+          tone="mute"
+        />
+        <SummaryFigure
+          label="Profit"
+          value={money(netWorth.profitKnown, base)}
+          sub={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
+          tone={pnlTone}
+        />
+        <SummaryFigure
+          label={`Return · ${base}`}
+          value={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
+          tone={pnlTone}
+        />
       </section>
 
       {conc && <RiskRow concentration={conc} />}
 
-      {/* Equity charts */}
-      <section aria-label="Charts">
-        <div className="flex items-end justify-between">
-          <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
-            Charts
-          </h3>
-          {FEATURE_HISTORY && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
-              {history.length} snapshot{history.length === 1 ? '' : 's'}
-            </span>
-          )}
-        </div>
-        <div className="mt-4">
-          <Suspense fallback={<ChartsFallback />}>
-            <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
-          </Suspense>
-        </div>
-      </section>
+      {FEATURE_ANALYTICS_DEPTH && (
+        <section aria-label="Charts">
+          <div className="flex items-end justify-between">
+            <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+              Charts
+            </h3>
+            {FEATURE_HISTORY && (
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+                {history.length} snapshot{history.length === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
+          <div className="mt-4">
+            <Suspense fallback={<ChartsFallback />}>
+              <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+            </Suspense>
+          </div>
+        </section>
+      )}
 
-      {/* Holdings table */}
       <section aria-label="Holdings" className="space-y-4">
         <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
           Holdings
@@ -293,7 +310,58 @@ export function EquityRoute() {
         )}
       </section>
 
-      <HoldingForm open={addOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddOpen(false)} />
+      {manualAssetRows.length > 0 && (
+        <section aria-label="Other assets" className="space-y-4">
+          <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+            Other assets
+          </h3>
+          <div className="overflow-hidden border border-bone-100/10">
+            <table className="hidden w-full border-collapse md:table">
+              <thead>
+                <tr className="border-b border-bone-100/10 bg-ink-850 text-left">
+                  <Th>Asset</Th>
+                  <Th>Class</Th>
+                  <Th className="text-right">Invested</Th>
+                  <Th className="text-right">Current value</Th>
+                  <Th className="text-right">Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {manualAssetRows.map((r) => (
+                  <AssetRowView
+                    key={r.key}
+                    row={r}
+                    base={base}
+                    onEdit={() => {
+                      const asset = assets.find((a) => a.id === r.asset.id)
+                      if (asset) setAddAssetOpen(true)
+                    }}
+                    onDelete={() => onDeleteAsset(r.asset)}
+                  />
+                ))}
+              </tbody>
+            </table>
+            <ul className="divide-y divide-bone-100/5 md:hidden">
+              {manualAssetRows.map((r) => (
+                <AssetCard
+                  key={r.key}
+                  row={r}
+                  base={base}
+                  onDelete={() => onDeleteAsset(r.asset)}
+                />
+              ))}
+            </ul>
+          </div>
+          {legacyEquity > 0 && (
+            <p className="font-sans text-xs text-bone-400">
+              {legacyEquity} manually-added equity asset{legacyEquity === 1 ? '' : 's'} {legacyEquity === 1 ? 'is' : 'are'} shown
+              above and included in the portfolio totals.
+            </p>
+          )}
+        </section>
+      )}
+
+      <HoldingForm open={addHoldingOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddHoldingOpen(false)} />
       <HoldingForm
         open={editing !== null}
         mode="edit"
@@ -301,6 +369,7 @@ export function EquityRoute() {
         existingKeys={existingKeys}
         onClose={() => setEditing(null)}
       />
+      <AssetForm open={addAssetOpen} mode="add" onClose={() => setAddAssetOpen(false)} />
 
       <UndoToast toast={undoable.active} onUndo={undoable.undo} onDismiss={undoable.dismiss} />
     </div>
@@ -395,6 +464,24 @@ function HoldingsControls({
   )
 }
 
+const marketOptions: { value: MarketFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'INR', label: 'India' },
+  { value: 'USD', label: 'US' },
+]
+
+const sortOptions: { key: SortKey; label: string }[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'market', label: 'Market' },
+  { key: 'quantity', label: 'Quantity' },
+  { key: 'avgBuyPrice', label: 'Avg buy' },
+  { key: 'currentPrice', label: 'Current price' },
+  { key: 'invested', label: 'Invested' },
+  { key: 'currentValue', label: 'Current value' },
+  { key: 'profit', label: 'Profit %' },
+  { key: 'broker', label: 'Broker' },
+]
+
 function FilteredEmpty({ onClear }: { onClear: () => void }) {
   return (
     <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-14 text-center">
@@ -410,7 +497,6 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
   )
 }
 
-/** Risk sub-row — concentration metrics derived from priced holdings. */
 function RiskRow({ concentration: c }: { concentration: Concentration }) {
   const hhiBandLabel: Record<HhiBand, string> = { low: 'Low', moderate: 'Moderate', high: 'High' }
   return (
@@ -440,22 +526,85 @@ function RiskRow({ concentration: c }: { concentration: Concentration }) {
   )
 }
 
-function pctNoSign(value: number): string {
-  return formatPercent(value).replace('+', '')
-}
-
-function money(value: number | undefined, currency: BaseCurrency): string {
-  return value === undefined ? '—' : formatMoney(value, currency)
-}
-
-function PageHead({ title, caption }: { title: string; caption: string }) {
+function AssetRowView({
+  row,
+  base,
+  onEdit,
+  onDelete,
+}: {
+  row: AssetInvestmentRow
+  base: BaseCurrency
+  onEdit: () => void
+  onDelete: () => void
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <h1 className="font-sans text-2xl font-semibold tracking-tight text-bone-50 sm:text-3xl">
-        {title}
-      </h1>
-      <p className="font-sans text-sm text-bone-400">{caption}</p>
-    </div>
+    <tr className="border-b border-bone-100/5 last:border-0">
+      <td className="px-4 py-3">
+        <div className="font-sans text-sm text-bone-50">{row.label}</div>
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
+          {row.asset.currency}
+          {row.asset.emergencyFund && <span className="text-act-400">emergency</span>}
+          {row.isLegacyEquity && <span className="text-bone-400">manual equity</span>}
+        </div>
+      </td>
+      <td className="px-4 py-3 font-sans text-sm text-bone-300">{row.group}</td>
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-300">
+        {money(row.investedBase, base)}
+      </td>
+      <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">
+        {money(row.currentValueBase, base)}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+          >
+            Delete
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+function AssetCard({
+  row,
+  base,
+  onDelete,
+}: {
+  row: AssetInvestmentRow
+  base: BaseCurrency
+  onDelete: () => void
+}) {
+  return (
+    <li className="space-y-2 bg-ink-900 px-4 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-sans text-sm text-bone-50">{row.label}</div>
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
+            {row.group} · {row.asset.currency}
+            {row.asset.emergencyFund && <span className="text-act-400">emergency</span>}
+          </div>
+        </div>
+        <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+      >
+        Delete
+      </button>
+    </li>
   )
 }
 
@@ -473,7 +622,22 @@ const kpiValueColor: Record<KpiTone, string> = {
   loss: 'text-ember-300',
 }
 
-function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
+function SummaryFigure({ label, value, sub, tone = 'mute' }: { label: string; value: string; sub?: string; tone?: KpiTone }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-500">
+        <span className={`h-px w-3 ${kpiRail[tone]}`} />
+        {label}
+      </div>
+      <div className={`mt-1 whitespace-nowrap font-display text-xl font-semibold tracking-tight tabular-nums lg:text-2xl ${kpiValueColor[tone]}`}>
+        {value}
+      </div>
+      {sub && <div className="mt-0.5 font-mono text-[11px] text-bone-400">{sub}</div>}
+    </div>
+  )
+}
+
+function Kpi({ label, value, sub, tone = 'mute' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
       <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
@@ -500,5 +664,34 @@ function ChartsFallback() {
         </span>
       </div>
     </div>
+  )
+}
+
+function pctNoSign(value: number): string {
+  return formatPercent(value).replace('+', '')
+}
+
+function money(value: number | undefined, currency: BaseCurrency): string {
+  return value === undefined ? '—' : formatMoney(value, currency)
+}
+
+function PageHead({ title, caption }: { title: string; caption: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h1 className="font-sans text-2xl font-semibold tracking-tight text-bone-50 sm:text-3xl">
+        {title}
+      </h1>
+      <p className="font-sans text-sm text-bone-400">{caption}</p>
+    </div>
+  )
+}
+
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`px-4 py-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-bone-400 ${className}`}
+    >
+      {children}
+    </th>
   )
 }
