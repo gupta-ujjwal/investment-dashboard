@@ -83,7 +83,7 @@ function EmergencyFundCard({
   return (
     <section aria-label="Emergency fund" className="space-y-3">
       <div className="flex items-end justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        <h3 className="font-sans text-sm font-medium text-bone-300">
           Emergency fund
         </h3>
         {provenance && status.monthlyNeed !== undefined && (
@@ -98,7 +98,7 @@ function EmergencyFundCard({
             {formatMoney(status.current, base)}
             {status.target !== undefined && <> of {formatMoney(status.target, base)}</>}
           </span>
-          <span className={`font-display text-2xl tabular-nums ${railText[tone]}`}>
+          <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
             {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
           </span>
         </div>
@@ -170,7 +170,7 @@ function RiskMixCard({
 }) {
   return (
     <section aria-label="Risk mix" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
         Risk allocation
       </h3>
       {slices.length === 0 ? (
@@ -184,15 +184,15 @@ function RiskMixCard({
             <li key={s.band} className="space-y-1">
               <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
                 <span className="uppercase tracking-[0.14em]">{s.label}</span>
-                <span className="tabular-nums text-bone-400">
+                <span className="tabular-nums whitespace-nowrap text-bone-400">
                   {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
                   {s.targetPct !== undefined && (
-                    <span className="text-tick-400"> / target {(s.targetPct * 100).toFixed(0)}%</span>
+                    <span className="text-bone-200"> / target {(s.targetPct * 100).toFixed(0)}%</span>
                   )}
                 </span>
               </div>
               <div className="relative h-2 w-full overflow-hidden bg-bone-100/10">
-                <div className="h-full bg-tick-400/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
+                <div className="h-full bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
                 {s.targetPct !== undefined && (
                   <span
                     aria-hidden="true"
@@ -241,7 +241,7 @@ function BulkInvestCard({
 
   return (
     <section aria-label="Bulk invest" className="space-y-3">
-      <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
         Bulk invest — what-if
       </h3>
       <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
@@ -262,7 +262,7 @@ function BulkInvestCard({
                 value={lump}
                 onChange={(e) => setLump(e.target.value)}
                 placeholder="e.g. 1000000"
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
               />
             </label>
             {rows.length > 0 && (
@@ -275,7 +275,7 @@ function BulkInvestCard({
                     <span className="uppercase tracking-[0.14em] text-bone-300">
                       {r.label} · {r.targetPct}%
                     </span>
-                    <span className="tabular-nums text-bone-50">{formatMoney(r.toInvest, base)}</span>
+                    <span className="tabular-nums whitespace-nowrap text-bone-50">{formatMoney(r.toInvest, base)}</span>
                   </li>
                 ))}
               </ul>
@@ -298,7 +298,7 @@ const railText: Record<string, string> = {
 }
 const railBar: Record<string, string> = {
   jade: 'bg-jade-400',
-  tick: 'bg-tick-400',
+  tick: 'bg-bone-300',
   ember: 'bg-ember-400',
   mute: 'bg-bone-300/50',
 }
@@ -351,14 +351,14 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
             defaultValue={f.defaultValue ?? ''}
             placeholder={f.placeholder}
             onChange={() => setDirty(true)}
-            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
         </label>
       ))}
       <button
         type="submit"
         disabled={saving}
-        className="border border-tick-400 bg-tick-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-tick-400 transition hover:bg-tick-400 hover:text-ink-950 disabled:opacity-50"
+        className="border border-act-400 bg-act-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950 disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>

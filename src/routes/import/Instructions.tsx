@@ -44,7 +44,7 @@ export function Instructions({ source, dispatch }: Props) {
       <ol className="mt-6 space-y-1 border-t border-bone-100/10">
         {info.steps.map((step, i) => (
           <li key={i} className="flex gap-5 border-b border-bone-100/10 py-4">
-            <span className="font-mono text-[11px] tabular-nums text-tick-400">
+            <span className="font-mono text-[11px] tabular-nums text-act-400">
               {String(i + 1).padStart(2, '0')}
             </span>
             <span className="font-sans text-sm text-bone-100">{step}</span>
@@ -55,14 +55,14 @@ export function Instructions({ source, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
           ← Back
         </button>
         <button
           type="button"
           onClick={() => dispatch({ type: 'instructions-acknowledged' })}
-          className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+          className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300"
         >
           I have the file →
         </button>

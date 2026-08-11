@@ -59,14 +59,14 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       </div>
       <p className="mt-2 max-w-xl font-sans text-sm text-bone-400">
         Pick the{' '}
-        <code className="font-mono text-[12px] text-tick-400">.xlsx</code> you just downloaded.
+        <code className="font-mono text-[12px] text-act-400">.xlsx</code> you just downloaded.
         Parsing happens here, in your browser.
       </p>
 
-      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-bone-100/20 bg-ink-850 px-6 py-16 text-center transition hover:border-tick-400/60 hover:bg-ink-800">
+      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-bone-100/20 bg-ink-850 px-6 py-16 text-center transition hover:border-act-400/60 hover:bg-ink-800">
         <span
           aria-hidden="true"
-          className={`font-mono text-2xl text-tick-400 ${busy ? 'spin-slow' : ''}`}
+          className={`font-mono text-2xl text-act-400 ${busy ? 'spin-slow' : ''}`}
         >
           {busy ? '◐' : '⤓'}
         </span>
@@ -103,7 +103,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'back-to-source' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
         >
           ← Back
         </button>

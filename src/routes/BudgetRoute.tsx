@@ -167,16 +167,16 @@ function AggregateSummary({
     <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 border-l-2 border-bone-100/10 pl-4 font-mono text-[11px] text-bone-400">
       <span>
         lifetime income{' '}
-        <span className="tabular-nums text-bone-100">{formatMoney(all.totalIncome, base)}</span>
+        <span className="tabular-nums whitespace-nowrap text-bone-100">{formatMoney(all.totalIncome, base)}</span>
       </span>
       <span>
         invested{' '}
-        <span className="tabular-nums text-jade-300">{formatMoney(all.invested, base)}</span>
+        <span className="tabular-nums whitespace-nowrap text-jade-300">{formatMoney(all.invested, base)}</span>
       </span>
       {averages && (
         <span>
           avg savings rate{' '}
-          <span className="tabular-nums text-bone-100">
+          <span className="tabular-nums whitespace-nowrap text-bone-100">
             {averages.savingsRate === undefined ? '—' : `${Math.round(averages.savingsRate * 100)}%`}
           </span>{' '}
           <span className="text-bone-500">· avg of {averages.months} mo</span>
@@ -218,7 +218,7 @@ function FocusedMonthView({
           <button
             type="button"
             onClick={onEdit}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400"
+            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Edit
           </button>
@@ -305,7 +305,7 @@ function LineDetails({
     <div className="border border-bone-100/10 bg-ink-900 p-4">
       <div className="flex items-baseline justify-between">
         <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
-        <span className="font-mono text-[11px] tabular-nums text-bone-300">
+         <span className="font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-300">
           {formatMoney(total, base)}
         </span>
       </div>
@@ -319,7 +319,7 @@ function LineDetails({
               className="flex items-center justify-between gap-3 font-sans text-sm"
             >
               <span className="min-w-0 flex-1 truncate text-bone-200">{l.category}</span>
-              <span className="shrink-0 font-mono text-[13px] tabular-nums text-bone-300">
+              <span className="shrink-0 font-mono text-[13px] tabular-nums whitespace-nowrap text-bone-300">
                 {formatMoney(l.amount, base)}
               </span>
             </li>
@@ -399,7 +399,7 @@ function BudgetEditor({
       className="space-y-5 border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+        <h3 className="font-sans text-sm font-medium text-bone-300">
           {existing ? `Edit ${formatMonthKey(existing.month)}` : 'Add month'}
         </h3>
         {onCancel && (
@@ -413,12 +413,12 @@ function BudgetEditor({
         )}
       </div>
 
-      <fetcher.Form method="post" action="/budget" className="grid gap-5">
+      <fetcher.Form method="post" action="/budget" className="grid min-w-0 gap-5">
         <input type="hidden" name="intent" value="saveMonth" />
         <input type="hidden" name="incomeJson" value={incomeJson} />
         <input type="hidden" name="expensesJson" value={expensesJson} />
 
-        <label className="grid gap-1.5 sm:max-w-[12rem]">
+        <label className="grid max-w-full gap-1.5 sm:max-w-[12rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
             Month
           </span>
@@ -428,7 +428,7 @@ function BudgetEditor({
             required
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
         </label>
 
@@ -453,7 +453,7 @@ function BudgetEditor({
           onDeleteTag={onDeleteTag}
         />
 
-        <label className="grid gap-1.5 sm:max-w-[16rem]">
+        <label className="grid max-w-full gap-1.5 sm:max-w-[16rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
             Invested this month · {base}
           </span>
@@ -464,12 +464,12 @@ function BudgetEditor({
             value={invested}
             onChange={(e) => setInvested(e.target.value)}
             placeholder="e.g. 50000"
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
           {investedHint && (
             <span className="font-sans text-[11px] text-bone-500">
               Your holdings cost basis moved{' '}
-              <span className="tabular-nums text-bone-300">
+              <span className="tabular-nums whitespace-nowrap text-bone-300">
                 {investedHint.delta >= 0 ? '+' : '−'}
                 {formatMoney(Math.abs(investedHint.delta), base)}
               </span>{' '}
@@ -488,7 +488,7 @@ function BudgetEditor({
           <button
             type="submit"
             disabled={saving}
-            className="border border-tick-400 bg-tick-400 px-6 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:opacity-50"
+            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
           >
             {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
           </button>
@@ -535,7 +535,7 @@ function LineEditor({
   }
 
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid min-w-0 gap-2">
       <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
         {title} · {base}
       </legend>
@@ -549,22 +549,22 @@ function LineEditor({
       )}
 
       {lines.map((l) => (
-        <div key={l.id} className="flex items-center gap-2">
-          <input
-            type="text"
-            aria-label={`${title} category`}
-            value={l.category}
-            onChange={(e) => update(l.id, { category: e.target.value })}
-            placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
-            list={tagsOn ? listId : undefined}
-            className="flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-tick-400 focus:outline-none"
+        <div key={l.id} className="flex min-w-0 items-center gap-2">
+           <input
+             type="text"
+             aria-label={`${title} category`}
+             value={l.category}
+             onChange={(e) => update(l.id, { category: e.target.value })}
+             placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
+             list={tagsOn ? listId : undefined}
+             className="min-w-0 flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
           />
           {tagsOn && isUntagged(l.category) && (
             <button
               type="button"
               onClick={() => onCreateTag(l.category.trim(), kind)}
               title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
-              className="whitespace-nowrap border border-tick-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-tick-400 transition hover:border-tick-400 hover:text-tick-200"
+              className="whitespace-nowrap border border-act-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-act-400 transition hover:border-act-400 hover:text-act-300"
             >
               + tag
             </button>
@@ -576,7 +576,7 @@ function LineEditor({
             value={l.amount}
             onChange={(e) => update(l.id, { amount: e.target.value })}
             placeholder="Amount"
-            className="w-32 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-tick-400 focus:outline-none"
+            className="w-24 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none sm:w-32"
           />
           <button
             type="button"
@@ -591,7 +591,7 @@ function LineEditor({
       <button
         type="button"
         onClick={add}
-        className="w-fit font-mono text-[10px] uppercase tracking-[0.16em] text-tick-400 transition hover:text-tick-200"
+        className="w-fit font-mono text-[10px] uppercase tracking-[0.16em] text-act-400 transition hover:text-act-300"
       >
         + Add line
       </button>
@@ -642,7 +642,7 @@ function ChartsFallback() {
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400"
+          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
@@ -665,7 +665,7 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
 
 type Tone = 'tick' | 'jade' | 'ember' | 'mute'
 const toneRail: Record<Tone, string> = {
-  tick: 'bg-tick-400/60',
+  tick: 'bg-bone-200/60',
   jade: 'bg-jade-400/70',
   ember: 'bg-ember-400/70',
   mute: 'bg-bone-300/40',
@@ -690,14 +690,14 @@ function Stat({
 }) {
   return (
     <div className="bg-ink-900 px-5 py-5">
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}
       </div>
-      <div className={`mt-3 font-display text-2xl leading-none tabular-nums ${toneText[tone]}`}>
+      <div className={`mt-3 font-display text-2xl leading-none tabular-nums whitespace-nowrap ${toneText[tone]}`}>
         {value}
       </div>
-      {sub && <div className="mt-2 font-mono text-[11px] tabular-nums text-bone-400">{sub}</div>}
+      {sub && <div className="mt-2 font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-400">{sub}</div>}
     </div>
   )
 }

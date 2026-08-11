@@ -47,7 +47,7 @@ export function SettingsForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-sans text-sm text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+            className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-sans text-sm text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
           />
         </label>
 
@@ -131,7 +131,7 @@ export function SettingsForm() {
           name="intent"
           value="refresh"
           disabled={submitting}
-          className="border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
+          className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
         >
           {submitting && fetcher.formData?.get('intent') === 'refresh'
             ? 'Refreshing…'
@@ -144,7 +144,7 @@ export function SettingsForm() {
             name="intent"
             value="save"
             disabled={submitting}
-            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
+            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
           >
             Save profile
           </button>
@@ -168,7 +168,7 @@ export function SettingsForm() {
                 value={manualRate}
                 onChange={(e) => setManualRate(e.target.value)}
                 placeholder="e.g. 95.77"
-                className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+                className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
               />
             </label>
             <button
@@ -176,7 +176,7 @@ export function SettingsForm() {
               name="intent"
               value="manual"
               disabled={submitting || manualRate === ''}
-              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-tick-400 hover:text-tick-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Apply manual rate
             </button>
@@ -287,7 +287,7 @@ function PlanningTargets({
         name="intent"
         value="save"
         disabled={submitting}
-        className="border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200 disabled:cursor-not-allowed disabled:opacity-50"
+        className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:opacity-50"
       >
         Save targets
       </button>
@@ -321,7 +321,7 @@ function TargetInput({
         name={name}
         defaultValue={defaultValue !== undefined ? String(defaultValue) : ''}
         placeholder={placeholder}
-        className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-tick-400 focus:outline-none"
+        className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
       />
     </label>
   )
@@ -347,9 +347,9 @@ function RadioPill({
     // the solid amber fill — the same active treatment as every other
     // segmented control in the app — rather than a faint 10% wash.
     <label
-      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-tick-400 has-[:focus-visible]:outline-offset-2 ${
+      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2 ${
         checked
-          ? 'border-tick-400 bg-tick-400 text-ink-950'
+          ? 'border-act-400 bg-act-400 text-ink-950'
           : 'border-bone-100/15 bg-ink-850 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
       }`}
     >
@@ -369,8 +369,8 @@ function RadioPill({
 function Meta({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <div className="bg-ink-900 px-4 py-4">
-      <dt className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
-        <span className="h-px w-3 bg-tick-400/60" />
+      <dt className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
+        <span className="h-px w-3 bg-act-400/60" />
         {label}
       </dt>
       <dd className="mt-2 font-mono text-sm tabular-nums text-bone-50">{value}</dd>

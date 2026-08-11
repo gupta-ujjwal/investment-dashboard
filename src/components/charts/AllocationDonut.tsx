@@ -5,7 +5,7 @@ import type { DerivedRow } from '../../lib/holdingsView'
 import { allocation, type AllocationMode, type AllocationSlice } from '../../lib/analytics'
 import { formatMoney, formatPercent } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { donutOther, donutPalette } from './chartTheme'
+import { donutOther, categoricalColor } from './chartTheme'
 
 type Props = { rows: DerivedRow[]; baseCurrency: BaseCurrency }
 
@@ -28,8 +28,8 @@ function withOther(slices: AllocationSlice[]): AllocationSlice[] {
   ]
 }
 
-function sliceColor(slice: AllocationSlice, index: number): string {
-  return slice.key === '__other' ? donutOther : donutPalette[index % donutPalette.length]
+function sliceColor(slice: AllocationSlice): string {
+  return slice.key === '__other' ? donutOther : categoricalColor(slice.key)
 }
 
 /**
@@ -65,7 +65,7 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
           onClick={() => setMode(m)}
           className={`px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] transition ${
             mode === m
-              ? 'bg-tick-400 text-ink-950'
+              ? 'bg-act-400 text-ink-950'
               : 'text-bone-400 hover:text-bone-100'
           }`}
         >
@@ -99,8 +99,8 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
                   strokeWidth={1.5}
                   isAnimationActive={false}
                 >
-                  {slices.map((slice, index) => (
-                    <Cell key={slice.key} fill={sliceColor(slice, index)} />
+                  {slices.map((slice) => (
+                    <Cell key={slice.key} fill={sliceColor(slice)} />
                   ))}
                 </Pie>
                 <Tooltip content={<Tip baseCurrency={baseCurrency} />} />
@@ -116,12 +116,12 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
             </div>
           </div>
           <ul className="w-full min-w-0 space-y-1.5">
-            {slices.map((slice, index) => (
+            {slices.map((slice) => (
               <li key={slice.key} className="flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
                   className="h-2.5 w-2.5 shrink-0"
-                  style={{ backgroundColor: sliceColor(slice, index) }}
+                  style={{ backgroundColor: sliceColor(slice) }}
                 />
                 <span className="min-w-0 flex-1 truncate font-sans text-xs text-bone-200">
                   {slice.label}

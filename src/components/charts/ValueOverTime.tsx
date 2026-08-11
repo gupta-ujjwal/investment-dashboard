@@ -133,7 +133,7 @@ export function ValueOverTime({ series, baseCurrency, benchmark }: Props) {
           {label ? formatDateKey(label) : ''}
         </p>
         <dl className="mt-1.5 space-y-0.5 font-mono text-[11px]">
-          <Row label="Value" tone="text-tick-400" text={money(value, baseCurrency)} />
+          <Row label="Value" tone="text-bone-200" text={money(value, baseCurrency)} />
           <Row label="Invested" tone="text-bone-300" text={money(invested, baseCurrency)} />
           <Row
             label="P&L"
@@ -257,8 +257,9 @@ function BenchmarkLegend({
 }) {
   if (mixedCurrency) {
     return (
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-400">
-        Benchmark hidden — switch base to compare against a single index.
+      <p className="mb-2 max-w-md font-sans text-[11px] leading-relaxed text-bone-400">
+        Your portfolio spans two markets, so there's no single index to compare against. Set a base
+        currency of INR or USD in Settings to overlay NIFTY 50 or the S&amp;P 500.
       </p>
     )
   }

@@ -103,7 +103,7 @@ export function OverviewRoute() {
       {FEATURE_HISTORY && (
         <section aria-label="History">
           <div className="flex items-end justify-between">
-            <h3 className="font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300">
+            <h3 className="font-sans text-sm font-medium text-bone-300">
               History
             </h3>
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
@@ -136,7 +136,7 @@ function NetWorthSection({
   const partial = netWorth.excludedCount > 0
   return (
     <section aria-label="Net worth" className="space-y-4">
-      <SectionHeading to="/investments">Net worth</SectionHeading>
+      <SectionHeading to="/portfolio">Net worth</SectionHeading>
       <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label={`Net worth · ${base}`}
@@ -191,13 +191,13 @@ function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseC
         <li key={s.key} className="space-y-1">
           <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
             <span className="uppercase tracking-[0.14em]">{s.label}</span>
-            <span className="tabular-nums text-bone-400">
+            <span className="tabular-nums whitespace-nowrap text-bone-400">
               {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden bg-bone-100/10">
             <div
-              className="h-full bg-tick-400/70"
+              className="h-full bg-bone-300/70"
               style={{ width: `${Math.max(2, s.pct * 100)}%` }}
             />
           </div>
@@ -280,13 +280,13 @@ function GoalCard({
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(goal.current, base)} of {formatMoney(goal.target, base)}
           </span>
-          <span className="font-display text-2xl tabular-nums text-tick-300">
+          <span className="font-display text-2xl tabular-nums whitespace-nowrap text-tick-300">
             {(goal.progressPct * 100).toFixed(1)}%
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden bg-bone-100/10">
           <div
-            className="h-full bg-tick-400"
+            className="h-full bg-bone-300"
             style={{ width: `${Math.min(100, goal.progressPct * 100)}%` }}
           />
         </div>
@@ -364,7 +364,7 @@ function PageHead({ title, caption }: { title: string; caption: string }) {
   )
 }
 
-const SECTION_HEADING = 'font-sans text-sm font-medium uppercase tracking-[0.16em] text-bone-300'
+const SECTION_HEADING = 'font-sans text-sm font-medium text-bone-300'
 
 /** A section heading that deep-links to the tab that owns it (#5) — Overview is
  *  the hub, so each card is a jumping-off point. `to` omitted → a plain heading. */
@@ -372,7 +372,7 @@ function SectionHeading({ children, to }: { children: React.ReactNode; to?: stri
   if (!to) return <h3 className={SECTION_HEADING}>{children}</h3>
   return (
     <h3 className={SECTION_HEADING}>
-      <Link to={to} className="group inline-flex items-center gap-1.5 transition hover:text-tick-400">
+      <Link to={to} className="group inline-flex items-center gap-1.5 transition hover:text-act-400">
         {children}
         <span aria-hidden="true" className="text-[10px] opacity-0 transition group-hover:opacity-100">
           →
@@ -385,7 +385,7 @@ function SectionHeading({ children, to }: { children: React.ReactNode; to?: stri
 type KpiTone = 'tick' | 'mute' | 'gain' | 'loss'
 
 const kpiRail: Record<KpiTone, string> = {
-  tick: 'bg-tick-400/60',
+  tick: 'bg-bone-200/60',
   mute: 'bg-bone-300/40',
   gain: 'bg-jade-400/70',
   loss: 'bg-ember-400/70',
@@ -400,12 +400,12 @@ const kpiValueColor: Record<KpiTone, string> = {
 function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
   return (
     <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
-      <div className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-bone-400">
+      <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
       </div>
       <div
-        className={`mt-3 break-words font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
+        className={`mt-3 whitespace-nowrap font-display text-xl leading-tight tracking-tight tabular-nums lg:text-3xl xl:text-4xl ${kpiValueColor[tone]}`}
       >
         {value}
       </div>
@@ -420,7 +420,7 @@ function ChartsFallback() {
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-tick-400"
+          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
@@ -441,13 +441,13 @@ function EmptyState() {
         <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             to="/import"
-            className="inline-flex items-center gap-2 border border-tick-400 bg-tick-400 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-tick-200"
+            className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium  text-ink-950 transition hover:bg-act-300"
           >
             Go to Import →
           </Link>
           <Link
-            to="/investments"
-            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-bone-200 transition hover:border-tick-400 hover:text-tick-400"
+            to="/portfolio"
+            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium  text-bone-200 transition hover:border-act-400 hover:text-act-400"
           >
             Add an investment →
           </Link>

@@ -80,7 +80,7 @@ function StepIndicator({ current }: { current: WizardStep }) {
               <span
                 className={`inline-flex h-5 w-5 items-center justify-center font-mono text-[10px] ${
                   active
-                    ? 'bg-tick-400 text-ink-950'
+                    ? 'bg-act-400 text-ink-950'
                     : done
                       ? 'border border-jade-400 text-jade-400'
                       : 'border border-bone-100/15 text-bone-400'

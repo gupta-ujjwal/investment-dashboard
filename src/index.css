@@ -23,7 +23,7 @@
   --color-bone-400: #9397ab;
   --color-bone-500: #75798c;
 
-  --color-tick-200: #e7e5fe;
+  --color-act-300: #e7e5fe;
   --color-tick-300: #d2cefd;
   --color-tick-400: #9184d9;
   --color-tick-500: #796cbf;
@@ -41,6 +41,36 @@
   --color-ember-500: #c96554;
   --color-ember-800: #4a2e26;
   --color-ember-900: #2e1b16;
+
+  /* ── Action accent (reserved) ───────────────────────────────────────────
+     The single "act here" hue. Primary buttons and action-rail CTAs only.
+     tick-* is demoted to nav-active + focus rings; it must stop appearing on
+     CTAs, progress fills, and chart series. */
+  --color-act-300: #f7c98a;
+  --color-act-400: #f0a13c;
+  --color-act-500: #d9862a;
+  --color-act-900: #3a2610;
+
+  /* ── Severity ───────────────────────────────────────────────────────────
+     Severity ≠ money direction. jade/ember mean value up/down; these mean
+     "needs attention / is fine". A red card is an unmet target, not a loss. */
+  --color-sev-crit: #e8756a;
+  --color-sev-warn: #e0a63c;
+  --color-sev-info: #5b7fa8;
+  --color-sev-ok: #4bbfa8;
+
+  /* ── Categorical chart ramp (8 steps + neutral tail) ─────────────────────
+     Hue-separated AND luminance-separated for colour-blind safety. Assign by
+     stable key, never by array index. */
+  --cat-1: #5b8ff9;
+  --cat-2: #4bbfa8;
+  --cat-3: #f0a13c;
+  --cat-4: #9270ca;
+  --cat-5: #e8756a;
+  --cat-6: #5ad8a6;
+  --cat-7: #d4a0d8;
+  --cat-8: #9aa3b0;
+  --cat-other: #4a505c;
 
   --font-display: "Inter", system-ui, sans-serif;
   --font-sans:
