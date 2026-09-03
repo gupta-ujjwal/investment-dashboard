@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { ManualAsset, RiskBand } from '../storage/assets'
 import type { CanonicalHolding } from '../storage/holdings'
 import type { BudgetMonth } from '../storage/budget'
+import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import {
   bulkAllocation,
@@ -13,16 +14,24 @@ import {
 import { monthlyAverages } from '../lib/budget'
 import { effectiveValue, provenanceLabel, type ValueSource } from '../lib/cashflow'
 import { formatMoney } from '../lib/format'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
+import { HoverTile } from '../components/decor/HoverTile'
+import { Sparkline } from '../components/decor/Sparkline'
+import { FEATURE_HISTORY } from '../featureFlags'
+
+// Purely decorative — lazy so a slow chunk load never delays the real figures.
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
 
 type LoaderData = {
   holdings: CanonicalHolding[]
   assets: ManualAsset[]
   settings: Settings
   budgetMonths: BudgetMonth[]
+  history: HistoryRecord[]
 }
 
 export function PlanningRoute() {
-  const { holdings, assets, settings, budgetMonths } = useLoaderData() as LoaderData
+  const { holdings, assets, settings, budgetMonths, history } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   // W2: the emergency monthly need falls back to average monthly spend from the
@@ -39,6 +48,17 @@ export function PlanningRoute() {
     [holdings, assets, settings.allocationTargets],
   )
 
+  // Coverage-% trend — same per-snapshot fold as Overview's hero sparklines
+  // (history is oldest→newest already; today's settings/need applied
+  // retroactively to each day's asset snapshot, same approximation Overview
+  // makes for net worth).
+  const fundedTrend =
+    FEATURE_HISTORY && history.length > 1
+      ? history
+          .map((h) => emergencyFundStatus(h.assets ?? [], emergencyNeed.value, settings.emergencyMonths).fundedPct)
+          .filter((v): v is number => v !== undefined)
+      : []
+
   return (
     <div className="space-y-10">
       <PageHead
@@ -52,6 +72,7 @@ export function PlanningRoute() {
         source={emergencyNeed.source}
         avgMonths={avg?.months}
         settings={settings}
+        fundedTrend={fundedTrend}
       />
       <RiskMixCard
         slices={risk}
@@ -70,12 +91,14 @@ function EmergencyFundCard({
   source,
   avgMonths,
   settings,
+  fundedTrend,
 }: {
   status: ReturnType<typeof emergencyFundStatus>
   base: Settings['baseCurrency']
   source: ValueSource
   avgMonths: number | undefined
   settings: Settings
+  fundedTrend: number[]
 }) {
   const funded = status.fundedPct
   const tone = funded === undefined ? 'mute' : funded >= 1 ? 'jade' : funded >= 0.5 ? 'tick' : 'ember'
@@ -92,20 +115,31 @@ function EmergencyFundCard({
           </span>
         )}
       </div>
-      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+      <div className="relative isolate overflow-hidden rounded-2xl border border-bone-100/10 bg-ink-900">
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <CardSpotlight className="space-y-4 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(status.current, base)}
             {status.target !== undefined && <> of {formatMoney(status.target, base)}</>}
           </span>
-          <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
-            {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
+          <span className="flex items-center gap-3">
+            {fundedTrend.length > 1 && (
+              <span className="h-6 w-16 opacity-70">
+                <Sparkline values={fundedTrend} tone={tone === 'ember' ? 'loss' : 'gain'} />
+              </span>
+            )}
+            <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
+              {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
+            </span>
           </span>
         </div>
         {status.target !== undefined && (
-          <div className="h-2 w-full overflow-hidden bg-bone-100/10">
+          <div className="bar">
             <div
-              className={`h-full ${railBar[tone]}`}
+              className={`bar-fill ${railBar[tone]}`}
               style={{ width: `${Math.min(100, (funded ?? 0) * 100)}%` }}
             />
           </div>
@@ -152,6 +186,7 @@ function EmergencyFundCard({
             },
           ]}
         />
+        </CardSpotlight>
       </div>
     </section>
   )
@@ -174,12 +209,13 @@ function RiskMixCard({
         Risk allocation
       </h3>
       {slices.length === 0 ? (
-        <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-10 text-center font-sans text-sm text-bone-300">
+        <div className="rounded-2xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-10 text-center font-sans text-sm text-bone-300">
           Tag assets with a risk band (Safe / Moderate / High) on the Holdings page to see
           your risk mix here.
         </div>
       ) : (
-        <ul className="space-y-3 border border-bone-100/10 bg-ink-900 p-5">
+        <HoverTile className="rounded-2xl border border-bone-100/10 bg-ink-900">
+        <ul className="space-y-3 p-5">
           {slices.map((s) => (
             <li key={s.band} className="space-y-1">
               <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
@@ -191,8 +227,8 @@ function RiskMixCard({
                   )}
                 </span>
               </div>
-              <div className="relative h-2 w-full overflow-hidden bg-bone-100/10">
-                <div className="h-full bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
+              <div className="bar relative">
+                <div className="bar-fill bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
                 {s.targetPct !== undefined && (
                   <span
                     aria-hidden="true"
@@ -204,6 +240,7 @@ function RiskMixCard({
             </li>
           ))}
         </ul>
+        </HoverTile>
       )}
       <div className="space-y-1.5">
         {!hasTargets && slices.length > 0 && (
@@ -244,7 +281,7 @@ function BulkInvestCard({
       <h3 className="font-sans text-sm font-medium text-bone-300">
         Bulk invest — what-if
       </h3>
-      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+      <HoverTile className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
         {targets.length === 0 ? (
           <p className="font-sans text-sm text-bone-300">
             Set allocation target weights in the <span className="text-bone-100">Risk allocation</span>{' '}
@@ -262,11 +299,11 @@ function BulkInvestCard({
                 value={lump}
                 onChange={(e) => setLump(e.target.value)}
                 placeholder="e.g. 1000000"
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+                className="field"
               />
             </label>
             {rows.length > 0 && (
-              <ul className="divide-y divide-bone-100/5 border border-bone-100/10">
+              <ul className="divide-y divide-bone-100/5 overflow-hidden rounded-xl border border-bone-100/10">
                 {rows.map((r) => (
                   <li
                     key={r.band}
@@ -285,7 +322,7 @@ function BulkInvestCard({
             </p>
           </>
         )}
-      </div>
+      </HoverTile>
     </section>
   )
 }
@@ -336,7 +373,7 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
       action="/settings"
       aria-label={ariaLabel}
       onSubmit={() => setDirty(false)}
-      className="flex flex-wrap items-end gap-3 border border-bone-100/10 bg-ink-900 p-4"
+      className="flex flex-wrap items-end gap-3 rounded-2xl border border-bone-100/10 bg-ink-900 p-4"
     >
       <input type="hidden" name="intent" value="save" />
       {fields.map((f) => (
@@ -351,15 +388,11 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
             defaultValue={f.defaultValue ?? ''}
             placeholder={f.placeholder}
             onChange={() => setDirty(true)}
-            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field w-28 py-1.5"
           />
         </label>
       ))}
-      <button
-        type="submit"
-        disabled={saving}
-        className="border border-act-400 bg-act-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950 disabled:opacity-50"
-      >
+      <button type="submit" disabled={saving} className="btn-secondary py-1.5 text-[11px]">
         {saving ? 'Saving…' : 'Save'}
       </button>
       {saved && (

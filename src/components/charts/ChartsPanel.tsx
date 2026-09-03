@@ -90,8 +90,16 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
     }
   }, [series, benchmarkData, mixedCurrency])
 
+  // An odd tile count leaves a dangling empty grid cell in the last row —
+  // the grid's own `bg-bone-100/10` (the gap-as-hairline trick) then shows
+  // through that whole cell instead of just the 1px gap, reading as a
+  // broken gray box. Span the trailing tile across both columns instead.
+  const tileCount =
+    (FEATURE_HISTORY ? 2 : 0) + 1 /* AllocationDonut */ + (FEATURE_SECTOR_DONUT ? 1 : 0) + 1 /* TopMovers */
+  const lastTileSpansFull = tileCount % 2 === 1
+
   return (
-    <div className="grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       {FEATURE_HISTORY && (
         <>
           <ValueOverTime
@@ -106,7 +114,7 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
       {FEATURE_SECTOR_DONUT && (
         <SectorDonut rows={rows} baseCurrency={baseCurrency} sectors={sectors} />
       )}
-      <TopMovers rows={rows} />
+      <TopMovers rows={rows} className={lastTileSpansFull ? 'lg:col-span-2' : undefined} />
     </div>
   )
 }

@@ -19,7 +19,7 @@ type Props = {
  */
 export default function BudgetCharts({ month, summary, baseCurrency }: Props) {
   return (
-    <div className="grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <BudgetAllocationDonut summary={summary} baseCurrency={baseCurrency} />
       <BudgetExpenseDonut month={month} baseCurrency={baseCurrency} />
     </div>

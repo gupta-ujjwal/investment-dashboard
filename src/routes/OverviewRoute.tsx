@@ -25,6 +25,11 @@ import {
 } from '../lib/cashflow'
 import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
+import { AnimatedMoney } from '../components/decor/AnimatedNumber'
+import type { FeatureSlide } from '../components/decor/FeatureCarousel'
+import { Sparkline } from '../components/decor/Sparkline'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
+import { categoricalColor } from '../components/charts/chartTheme'
 import {
   FEATURE_BASE_CURRENCY,
   FEATURE_BUDGET,
@@ -36,6 +41,17 @@ import {
 /** Recharts is heavy (~100KB+); keep the Overview's cross-asset charts out of
  *  the initial bundle so the net-worth KPIs paint first. */
 const OverviewCharts = lazy(() => import('../components/charts/OverviewCharts'))
+
+/** Purely decorative — lazy so a slow framer-motion/ogl-free chunk load never
+ *  delays the real net-worth numbers above. */
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
+const FeatureCarousel = lazy(() => import('../components/decor/FeatureCarousel'))
+
+const FIRST_RUN_SLIDES: FeatureSlide[] = [
+  { title: 'Two markets, one view', body: 'India and US equity, side by side in one portfolio.' },
+  { title: 'Everything stays on this device', body: 'No account, no server — your holdings never leave the browser.' },
+  { title: 'Net worth, budget, and goals', body: 'One Overview for where you stand and where you’re headed.' },
+]
 
 type LoaderData = {
   holdings: CanonicalHolding[]
@@ -66,6 +82,15 @@ export function OverviewRoute() {
   // Net-worth-level "refresh needed" hint: any position lacking a base value.
   const totals = portfolioTotals(holdings)
 
+  // Hero sparklines — oldest→newest, same fold as the KPIs above so the line
+  // and the number are always telling the same story. `getHistory()` (the
+  // loader) already returns ascending-date order. Below 2 points a line has
+  // nothing to draw, so the KPI grid just omits the trend.
+  const trend =
+    FEATURE_HISTORY && history.length >= 2
+      ? history.map((h) => netWorthTotals(buildPositions(h.holdings, h.assets ?? [])))
+      : []
+
   // W2 — budget-fed figures. `avg` is undefined under 2 logged months (no
   // unstable single-point average); the derived feeds then fall back to unset.
   const avg = FEATURE_BUDGET ? monthlyAverages(budgetMonths) : undefined
@@ -90,7 +115,7 @@ export function OverviewRoute() {
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
-      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
+      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} trend={trend} />
 
       {avg && (
         <CashFlowCard avg={avg} runway={runwayMonths(liquidAssets(assetList), avg.avgExpenses)} base={base} />
@@ -128,35 +153,52 @@ function NetWorthSection({
   netWorth,
   allocation,
   base,
+  trend,
 }: {
   netWorth: NetWorthTotals
   allocation: NetWorthSlice[]
   base: BaseCurrency
+  trend: NetWorthTotals[]
 }) {
   const partial = netWorth.excludedCount > 0
   return (
-    <section aria-label="Net worth" className="space-y-4">
+    <section aria-label="Net worth" className="relative isolate space-y-4">
+      <Suspense fallback={null}>
+        <AmbientBackground />
+      </Suspense>
       <SectionHeading to="/portfolio">Net worth</SectionHeading>
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+      {/* 3 tiles: grid-cols-1 below sm, not -2 — an odd count in a 2-col grid
+          leaves a dangling empty cell (the ChartsPanel bug, same root cause). */}
+      <CardSpotlight className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label={`Net worth · ${base}`}
-          value={formatMoney(netWorth.knownCurrentValue, base)}
+          value={<AnimatedMoney value={netWorth.knownCurrentValue} currency={base} />}
           sub={
             partial
               ? `partial · ${netWorth.excludedCount} not valued`
               : `${netWorth.totalPositions} position${netWorth.totalPositions === 1 ? '' : 's'}`
           }
           tone={partial ? 'loss' : 'tick'}
+          sparkline={trend.length > 1 && <Sparkline values={trend.map((t) => t.knownCurrentValue)} tone="accent" />}
         />
         <Kpi
           label={`Invested · ${base}`}
-          value={formatMoney(netWorth.knownInvested, base)}
+          value={<AnimatedMoney value={netWorth.knownInvested} currency={base} />}
           sub="cost basis (where known)"
           tone="mute"
+          sparkline={trend.length > 1 && <Sparkline values={trend.map((t) => t.knownInvested)} tone="accent" />}
         />
         <Kpi
           label={`P&L · ${base}`}
-          value={formatMoney(netWorth.profitKnown, base)}
+          value={<AnimatedMoney value={netWorth.profitKnown} currency={base} />}
+          sparkline={
+            trend.length > 1 && (
+              <Sparkline
+                values={trend.map((t) => t.profitKnown)}
+                tone={netWorth.profitKnown >= 0 ? 'gain' : 'loss'}
+              />
+            )
+          }
           sub={
             netWorth.profitPctKnown === undefined
               ? 'no comparable basis'
@@ -164,12 +206,12 @@ function NetWorthSection({
           }
           tone={netWorth.profitKnown >= 0 ? 'gain' : 'loss'}
         />
-      </div>
+      </CardSpotlight>
 
       {partial && (
         <p
           role="status"
-          className="border-l-2 border-ember-400/60 bg-ember-900/15 px-4 py-2 font-sans text-xs text-ember-300"
+          className="rounded-r-lg border-l-2 border-ember-400/60 bg-ember-900/15 px-4 py-2 font-sans text-xs text-ember-300"
         >
           {netWorth.excludedCount} of {netWorth.totalPositions} positions have no
           base-currency value yet (unpriced holding or stale FX) and are excluded
@@ -182,25 +224,27 @@ function NetWorthSection({
   )
 }
 
-/** Allocation-by-asset-class as a labelled bar list — the chart-free
- *  "overall portfolio composition" that reads at a glance with no Recharts. */
+/** Allocation-by-asset-class as ledger rows — a swatch (shared with the donut
+ *  charts via `categoricalColor`, so "Equity" is the same colour everywhere),
+ *  label, percent, and amount. The chart-free "overall portfolio composition"
+ *  that reads at a glance with no Recharts. */
 function AllocationBars({ slices, base }: { slices: NetWorthSlice[]; base: BaseCurrency }) {
   return (
-    <ul className="space-y-2 border border-bone-100/10 bg-ink-900 p-4">
+    <ul className="divide-y divide-ink-800 overflow-hidden rounded-2xl border border-bone-100/10 bg-ink-900 px-5">
       {slices.map((s) => (
-        <li key={s.key} className="space-y-1">
-          <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
-            <span className="uppercase tracking-[0.14em]">{s.label}</span>
-            <span className="tabular-nums whitespace-nowrap text-bone-400">
-              {formatMoney(s.valueBase, base)} · {(s.pct * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden bg-bone-100/10">
-            <div
-              className="h-full bg-bone-300/70"
-              style={{ width: `${Math.max(2, s.pct * 100)}%` }}
-            />
-          </div>
+        <li key={s.key} className="flex items-center gap-4 py-3.5">
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 rounded-sm"
+            style={{ background: categoricalColor(s.key) }}
+          />
+          <span className="min-w-0 flex-1 truncate font-sans text-sm text-bone-100">{s.label}</span>
+          <span className="shrink-0 font-mono text-[12px] tabular-nums text-bone-400">
+            {(s.pct * 100).toFixed(1)}%
+          </span>
+          <span className="shrink-0 whitespace-nowrap font-mono text-[13px] tabular-nums text-bone-300">
+            {formatMoney(s.valueBase, base)}
+          </span>
         </li>
       ))}
     </ul>
@@ -234,7 +278,7 @@ function EmergencyCard({
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi label={`Fund · ${base}`} value={formatMoney(status.current, base)} sub="tagged assets" tone="tick" />
         <Kpi
           label="Coverage"
@@ -275,7 +319,7 @@ function GoalCard({
   return (
     <section aria-label="Goal" className="space-y-3">
       <SectionHeading to="/planning">Goal</SectionHeading>
-      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+      <div className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
         <div className="flex items-baseline justify-between">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(goal.current, base)} of {formatMoney(goal.target, base)}
@@ -284,9 +328,9 @@ function GoalCard({
             {(goal.progressPct * 100).toFixed(1)}%
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden bg-bone-100/10">
+        <div className="bar">
           <div
-            className="h-full bg-bone-300"
+            className="bar-fill bg-act-400"
             style={{ width: `${Math.min(100, goal.progressPct * 100)}%` }}
           />
         </div>
@@ -326,7 +370,7 @@ function CashFlowCard({
           avg of {avg.months} month{avg.months === 1 ? '' : 's'}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label="Savings rate"
           value={avg.savingsRate === undefined ? '—' : formatPercent(avg.savingsRate)}
@@ -397,9 +441,22 @@ const kpiValueColor: Record<KpiTone, string> = {
   loss: 'text-ember-300',
 }
 
-function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: string; sub: string; tone?: KpiTone }) {
+function Kpi({
+  label,
+  value,
+  sub,
+  tone = 'tick',
+  sparkline,
+}: {
+  label: string
+  value: React.ReactNode
+  sub: string
+  tone?: KpiTone
+  sparkline?: React.ReactNode
+}) {
   return (
-    <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
+    <div className="relative bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
+      {sparkline && <div className="absolute right-5 top-5 h-6 w-16 opacity-70 sm:right-6">{sparkline}</div>}
       <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}
@@ -416,11 +473,11 @@ function Kpi({ label, value, sub, tone = 'tick' }: { label: string; value: strin
 
 function ChartsFallback() {
   return (
-    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+    <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-bone-100/10 bg-ink-900">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
+          className="h-4 w-4 spin-slow rounded-full border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
@@ -434,21 +491,21 @@ function EmptyState() {
   return (
     <div className="space-y-6">
       <PageHead title="Overview" caption="Nothing on file yet" />
-      <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
-        <p className="font-sans text-base text-bone-200">
+      <div className="relative isolate overflow-hidden rounded-3xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <Suspense fallback={<div className="h-20 sm:h-16" />}>
+          <FeatureCarousel slides={FIRST_RUN_SLIDES} />
+        </Suspense>
+        <p className="mt-6 font-sans text-base text-bone-200">
           Import your holdings or add an investment, and this page fills with your net worth and trends.
         </p>
         <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link
-            to="/import"
-            className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium  text-ink-950 transition hover:bg-act-300"
-          >
+          <Link to="/import" className="btn-primary">
             Go to Import →
           </Link>
-          <Link
-            to="/portfolio"
-            className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium  text-bone-200 transition hover:border-act-400 hover:text-act-400"
-          >
+          <Link to="/portfolio" className="btn-secondary">
             Add an investment →
           </Link>
         </div>

@@ -22,7 +22,7 @@ export default function OverviewCharts({ history, baseCurrency }: Props) {
   const changes = useMemo(() => assetClassChanges(series), [series])
 
   return (
-    <div className="grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <NetWorthHistoryArea series={series} baseCurrency={baseCurrency} />
       <AssetClassSparklines changes={changes} baseCurrency={baseCurrency} />
     </div>

@@ -16,6 +16,23 @@ export function formatMoney(amount: number, currency: Currency): string {
   return currency === 'INR' ? inrFormatter.format(amount) : usdFormatter.format(amount)
 }
 
+/** Splits a formatted amount into its currency symbol and the rest (sign +
+ *  digits), for hero figures that de-emphasize the symbol (Mercury/Stripe
+ *  convention: the symbol reads smaller/lighter, the number carries the
+ *  weight). Uses `formatToParts` rather than assuming the symbol leads —
+ *  a negative sign stays attached to `number`, not `symbol`. */
+export function formatMoneyParts(amount: number, currency: Currency): { symbol: string; number: string } {
+  if (!Number.isFinite(amount)) return { symbol: '', number: '—' }
+  const formatter = currency === 'INR' ? inrFormatter : usdFormatter
+  let symbol = ''
+  let number = ''
+  for (const part of formatter.formatToParts(amount)) {
+    if (part.type === 'currency') symbol += part.value
+    else number += part.value
+  }
+  return { symbol, number }
+}
+
 const qtyFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
 
 export function formatQuantity(quantity: number): string {

@@ -110,13 +110,16 @@ const planningLoader = async () => {
   // derived from asset class, overridable) AND manual assets — so fetch both.
   // W2: also read budget months so the emergency need can fall back to the
   // average monthly spend when it isn't set explicitly in Settings.
-  const [holdings, assets, settings, budgetMonths] = await Promise.all([
+  // History powers the emergency-fund-coverage sparkline (same per-snapshot
+  // fold pattern as Overview's hero KPIs).
+  const [holdings, assets, settings, budgetMonths, history] = await Promise.all([
     getAll(),
     getAllAssets(),
     getSettings(),
     FEATURE_BUDGET ? getAllBudgetMonths() : Promise.resolve([] as BudgetMonth[]),
+    FEATURE_HISTORY ? getHistory() : Promise.resolve([]),
   ])
-  return { holdings, assets, settings, budgetMonths }
+  return { holdings, assets, settings, budgetMonths, history }
 }
 
 const settingsLoader = async () => {

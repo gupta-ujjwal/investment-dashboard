@@ -48,7 +48,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
   const sourceLabel = source === 'vested' ? 'Vested' : 'Groww'
 
   return (
-    <section className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+    <section className="rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
       <div className="flex items-baseline justify-between">
         <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
           Upload your {sourceLabel} file
@@ -63,7 +63,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
         Parsing happens here, in your browser.
       </p>
 
-      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-bone-100/20 bg-ink-850 px-6 py-16 text-center transition hover:border-act-400/60 hover:bg-ink-800">
+      <label className="mt-6 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-bone-100/20 bg-ink-850 px-6 py-16 text-center transition hover:border-act-400/60 hover:bg-ink-800">
         <span
           aria-hidden="true"
           className={`font-mono text-2xl text-act-400 ${busy ? 'spin-slow' : ''}`}
@@ -86,7 +86,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       </label>
 
       {parseError && (
-        <div className="mt-6 border border-ember-400/40 bg-ember-900/30 p-4">
+        <div className="mt-6 rounded-xl border border-ember-400/40 bg-ember-900/30 p-4">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ember-300">
             Parse failed
           </p>
@@ -100,11 +100,7 @@ export function UploadStep({ source, parseError, dispatch }: Props) {
       )}
 
       <div className="mt-6 flex justify-between">
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'back-to-source' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
-        >
+        <button type="button" onClick={() => dispatch({ type: 'back-to-source' })} className="btn-secondary">
           ← Back
         </button>
       </div>

@@ -33,7 +33,7 @@ export default function TagTrends({ months, baseCurrency }: Props) {
       <h3 className="font-sans text-sm font-medium  text-bone-300">
         By tag · across months
       </h3>
-      <div className="grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <TagTrendChart months={months} kind="income" baseCurrency={baseCurrency} />
         <TagTrendChart months={months} kind="expense" baseCurrency={baseCurrency} />
       </div>

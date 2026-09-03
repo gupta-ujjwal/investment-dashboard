@@ -5,8 +5,8 @@ type Props =
 export function CommitStep(props: Props) {
   if (props.state === 'committing') {
     return (
-      <section className="border border-bone-100/10 bg-ink-900 p-16 text-center">
-        <div className="mx-auto h-10 w-10 spin-slow border border-bone-100/15 border-t-act-400" />
+      <section className="rounded-2xl border border-bone-100/10 bg-ink-900 p-16 text-center">
+        <div className="mx-auto h-10 w-10 spin-slow rounded-full border border-bone-100/15 border-t-act-400" />
         <p className="mt-6 font-sans text-sm text-bone-300">Committing to local storage…</p>
         <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           indexedDB · on-device
@@ -16,9 +16,9 @@ export function CommitStep(props: Props) {
   }
 
   return (
-    <section className="border border-jade-400/40 bg-jade-900/20 p-16 text-center">
+    <section className="rounded-2xl border border-jade-400/40 bg-jade-900/20 p-16 text-center">
       <div
-        className="mx-auto flex h-12 w-12 items-center justify-center border border-jade-400 text-jade-400"
+        className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-jade-400 text-jade-400"
         aria-hidden="true"
       >
         <svg
@@ -41,11 +41,7 @@ export function CommitStep(props: Props) {
       <p className="mt-2 font-sans text-sm text-bone-300">
         Your positions are saved on this device.
       </p>
-      <button
-        type="button"
-        onClick={props.onContinue}
-        className="mt-8 border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300"
-      >
+      <button type="button" onClick={props.onContinue} className="btn-primary mt-8">
         View analytics →
       </button>
     </section>

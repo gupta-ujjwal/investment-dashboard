@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ChartErrorBoundary } from './ChartErrorBoundary'
+import { HoverTile } from '../decor/HoverTile'
 
 type Props = {
   title: string
@@ -10,18 +11,21 @@ type Props = {
   /** Optional right-aligned controls (e.g. the allocation mode toggle). */
   action?: ReactNode
   children: ReactNode
+  /** Extra classes on the card root — e.g. `lg:col-span-2` for a grid's
+   *  trailing odd-one-out tile. */
+  className?: string
 }
 
 /** The bordered card every homepage chart sits in — matches the dashboard's
  *  KPI tiles and the prior placeholder `ChartFrame`. Wraps the body in an
  *  error boundary so one bad chart can't take the page down. */
-export function ChartCard({ title, chip, figure, action, children }: Props) {
+export function ChartCard({ title, chip, figure, action, children, className }: Props) {
   return (
     // `min-w-0` is load-bearing: as a grid/flex child this card defaults to
     // `min-width: auto` and would refuse to shrink below the chart's content
     // width, overflowing the viewport on mobile. Recharts' ResponsiveContainer
     // only sizes down correctly once the card itself can.
-    <div className="flex min-h-[320px] min-w-0 flex-col bg-ink-900 p-6">
+    <HoverTile className={`flex min-h-[320px] min-w-0 flex-col rounded-2xl bg-ink-900 p-6 ${className ?? ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-sans text-base font-semibold tracking-tight text-bone-100">
@@ -35,7 +39,7 @@ export function ChartCard({ title, chip, figure, action, children }: Props) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {action}
-          <span className="border border-bone-100/15 bg-ink-800 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+          <span className="rounded border border-bone-100/15 bg-ink-800 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
             {chip}
           </span>
         </div>
@@ -43,7 +47,7 @@ export function ChartCard({ title, chip, figure, action, children }: Props) {
       <div className="mt-5 min-w-0 flex-1">
         <ChartErrorBoundary title={title}>{children}</ChartErrorBoundary>
       </div>
-    </div>
+    </HoverTile>
   )
 }
 

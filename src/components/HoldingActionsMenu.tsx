@@ -89,14 +89,14 @@ export function HoldingActionsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-7 w-7 items-center justify-center border border-transparent font-mono text-bone-300 transition hover:border-bone-100/20 hover:text-bone-50"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent font-mono text-bone-300 transition hover:border-bone-100/20 hover:text-bone-50"
       >
         ⋯
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-1 w-60 border border-bone-100/15 bg-ink-850 shadow-lg shadow-ink-950/60"
+          className="absolute right-0 z-30 mt-1 w-60 rounded-xl border border-bone-100/15 bg-ink-850 shadow-lg shadow-ink-950/60"
         >
           {!confirming && (
             <ul className="py-1">
@@ -194,7 +194,7 @@ export function HoldingActionsMenu({
                 <button
                   type="button"
                   onClick={() => setConfirming(false)}
-                  className="border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+                  className="rounded-full border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
                 >
                   Cancel
                 </button>
@@ -204,7 +204,7 @@ export function HoldingActionsMenu({
                     close()
                     onDelete()
                   }}
-                  className="border border-ember-400 bg-ember-400/10 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ember-400 transition hover:bg-ember-400 hover:text-ink-950"
+                  className="rounded-full border border-ember-400 bg-ember-400/10 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ember-400 transition hover:bg-ember-400 hover:text-ink-950"
                 >
                   Yes, delete
                 </button>

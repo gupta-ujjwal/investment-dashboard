@@ -65,7 +65,7 @@ function StepIndicator({ current }: { current: WizardStep }) {
   const currentIdx = stepOrder.indexOf(displayed)
 
   return (
-    <ol className="grid grid-cols-5 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10">
+    <ol className="grid grid-cols-5 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10">
       {stepOrder.map((step, i) => {
         const active = i === currentIdx
         const done = i < currentIdx
@@ -78,7 +78,7 @@ function StepIndicator({ current }: { current: WizardStep }) {
           >
             <div className="flex items-center gap-2">
               <span
-                className={`inline-flex h-5 w-5 items-center justify-center font-mono text-[10px] ${
+                className={`inline-flex h-5 w-5 items-center justify-center rounded-full font-mono text-[10px] ${
                   active
                     ? 'bg-act-400 text-ink-950'
                     : done

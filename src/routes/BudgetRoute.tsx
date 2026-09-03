@@ -16,6 +16,9 @@ import { investedDeltaForMonth } from '../lib/analytics'
 import { formatMoney } from '../lib/format'
 import { formatMonthKey } from '../components/charts/chartTheme'
 import { MonthStrip } from '../components/charts/MonthStrip'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
+import { HoverTile } from '../components/decor/HoverTile'
+import { Sparkline } from '../components/decor/Sparkline'
 import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 
 // The two donuts pull in Recharts (~100KB+); keep them out of the initial bundle
@@ -24,6 +27,8 @@ import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 const BudgetCharts = lazy(() => import('../components/charts/BudgetCharts'))
 // Per-tag line charts across months — also Recharts, same lazy bulkhead.
 const TagTrends = lazy(() => import('../components/charts/TagTrends'))
+// Purely decorative — lazy so a slow chunk load never delays the real figures.
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
 
 /** A per-tag trend needs at least this many logged months to read as a line
  *  rather than a lone dot. Below it the section is hidden entirely. */
@@ -136,6 +141,7 @@ export function BudgetRoute() {
       ) : (
         <FocusedMonthView
           month={focusedMonth}
+          months={months}
           prevSummary={prevSummary}
           base={base}
           onEdit={() => setEditing(true)}
@@ -188,11 +194,13 @@ function AggregateSummary({
 
 function FocusedMonthView({
   month,
+  months,
   prevSummary,
   base,
   onEdit,
 }: {
   month: BudgetMonth
+  months: BudgetMonth[]
   prevSummary: BudgetSummary | undefined
   base: Settings['baseCurrency']
   onEdit: () => void
@@ -200,6 +208,12 @@ function FocusedMonthView({
   const fetcher = useFetcher()
   const s = summarizeMonth(month)
   const delta = monthOverMonth(s, prevSummary)
+
+  // Oldest→newest, matching Overview's hero sparklines — `months` is
+  // newest-first (loader sort). Each KPI sparklines against its own unit
+  // (Income is absolute, the other three are % of income), independently
+  // scaled, so mixing units across the 4 tiles is fine.
+  const series = [...months].reverse().map((m) => summarizeMonth(m))
 
   return (
     <section aria-label={`${formatMonthKey(month.month)} detail`} className="space-y-6">
@@ -218,7 +232,7 @@ function FocusedMonthView({
           <button
             type="button"
             onClick={onEdit}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Edit
           </button>
@@ -231,7 +245,7 @@ function FocusedMonthView({
                 if (!window.confirm(`Delete budget for ${formatMonthKey(month.month)}?`))
                   e.preventDefault()
               }}
-              className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+              className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
             >
               Delete
             </button>
@@ -241,32 +255,43 @@ function FocusedMonthView({
 
       <section
         aria-label="This month"
-        className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
+        className="relative isolate overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10"
       >
-        <Stat
-          label={`Income · ${base}`}
-          value={formatMoney(s.totalIncome, base)}
-          sub={deltaText(delta?.income, base)}
-          tone="tick"
-        />
-        <Stat
-          label="Spent"
-          value={pct(s.spentPct)}
-          sub={deltaText(delta?.expenses, base)}
-          tone="ember"
-        />
-        <Stat
-          label="Invested"
-          value={pct(s.investedPct)}
-          sub={deltaText(delta?.invested, base)}
-          tone="jade"
-        />
-        <Stat
-          label="Remaining"
-          value={pct(s.remainingPct)}
-          sub={deltaText(delta?.remaining, base)}
-          tone={s.remaining >= 0 ? 'mute' : 'ember'}
-        />
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <CardSpotlight className="grid grid-cols-2 gap-px sm:grid-cols-4">
+          <Stat
+            label={`Income · ${base}`}
+            value={formatMoney(s.totalIncome, base)}
+            sub={deltaText(delta?.income, base)}
+            tone="tick"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.totalIncome)} tone="accent" />}
+          />
+          <Stat
+            label="Spent"
+            value={pct(s.spentPct)}
+            sub={deltaText(delta?.expenses, base)}
+            tone="ember"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.spentPct ?? 0)} tone="loss" />}
+          />
+          <Stat
+            label="Invested"
+            value={pct(s.investedPct)}
+            sub={deltaText(delta?.invested, base)}
+            tone="jade"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.investedPct ?? 0)} tone="gain" />}
+          />
+          <Stat
+            label="Remaining"
+            value={pct(s.remainingPct)}
+            sub={deltaText(delta?.remaining, base)}
+            tone={s.remaining >= 0 ? 'mute' : 'ember'}
+            sparkline={
+              series.length > 1 && <Sparkline values={series.map((r) => r.remainingPct ?? 0)} tone="accent" />
+            }
+          />
+        </CardSpotlight>
       </section>
 
       <Suspense fallback={<ChartsFallback />}>
@@ -302,7 +327,7 @@ function LineDetails({
 }) {
   const total = lines.reduce((s, l) => s + l.amount, 0)
   return (
-    <div className="border border-bone-100/10 bg-ink-900 p-4">
+    <HoverTile className="rounded-2xl border border-bone-100/10 bg-ink-900 p-4">
       <div className="flex items-baseline justify-between">
         <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
          <span className="font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-300">
@@ -326,7 +351,7 @@ function LineDetails({
           ))}
         </ul>
       )}
-    </div>
+    </HoverTile>
   )
 }
 
@@ -396,7 +421,7 @@ function BudgetEditor({
   return (
     <section
       aria-label={existing ? `Edit ${existing.month}` : 'Add month'}
-      className="space-y-5 border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
+      className="space-y-5 rounded-2xl border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
     >
       <div className="flex items-center justify-between">
         <h3 className="font-sans text-sm font-medium text-bone-300">
@@ -428,7 +453,7 @@ function BudgetEditor({
             required
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field"
           />
         </label>
 
@@ -464,7 +489,7 @@ function BudgetEditor({
             value={invested}
             onChange={(e) => setInvested(e.target.value)}
             placeholder="e.g. 50000"
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field"
           />
           {investedHint && (
             <span className="font-sans text-[11px] text-bone-500">
@@ -479,17 +504,13 @@ function BudgetEditor({
         </label>
 
         {fetcher.data && !fetcher.data.ok && (
-          <div role="alert" className="border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
+          <div role="alert" className="rounded-lg border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
             {fetcher.data.error}
           </div>
         )}
 
         <div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving} className="btn-primary">
             {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
           </button>
         </div>
@@ -557,7 +578,7 @@ function LineEditor({
              onChange={(e) => update(l.id, { category: e.target.value })}
              placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
              list={tagsOn ? listId : undefined}
-             className="min-w-0 flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+             className="field min-w-0 flex-1 py-1.5"
           />
           {tagsOn && isUntagged(l.category) && (
             <button
@@ -576,13 +597,13 @@ function LineEditor({
             value={l.amount}
             onChange={(e) => update(l.id, { amount: e.target.value })}
             placeholder="Amount"
-            className="w-24 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none sm:w-32"
+            className="field w-24 py-1.5 text-right font-mono tabular-nums sm:w-32"
           />
           <button
             type="button"
             aria-label="Remove line"
             onClick={() => remove(l.id)}
-            className="border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
+            className="rounded-full border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
           >
             ×
           </button>
@@ -638,11 +659,11 @@ function pct(value: number | undefined): string {
  *  mirrors the Overview/Equity chart fallbacks so the wait reads consistently. */
 function ChartsFallback() {
   return (
-    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+    <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-bone-100/10 bg-ink-900">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
+          className="h-4 w-4 spin-slow rounded-full border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
@@ -682,14 +703,17 @@ function Stat({
   value,
   sub,
   tone,
+  sparkline,
 }: {
   label: string
   value: string
   sub?: string
   tone: Tone
+  sparkline?: React.ReactNode
 }) {
   return (
-    <div className="bg-ink-900 px-5 py-5">
+    <div className="relative bg-ink-900 px-5 py-5">
+      {sparkline && <div className="absolute right-5 top-5 h-6 w-14 opacity-70">{sparkline}</div>}
       <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}

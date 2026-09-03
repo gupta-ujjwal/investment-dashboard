@@ -24,7 +24,7 @@ export function UndoToast({ toast, onUndo, onDismiss }: Props) {
       aria-live="polite"
       className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
     >
-      <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 border border-bone-100/15 bg-ink-850 px-4 py-3 shadow-lg shadow-ink-950/60">
+      <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border border-bone-100/15 bg-ink-850 px-4 py-3 shadow-lg shadow-ink-950/60">
         <div className="min-w-0 flex-1">
           <p className="truncate font-sans text-sm text-bone-50">{toast.message}</p>
           {toast.detail && (
@@ -34,7 +34,7 @@ export function UndoToast({ toast, onUndo, onDismiss }: Props) {
         <button
           type="button"
           onClick={onUndo}
-          className="border border-act-400 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
+          className="rounded-full border border-act-400 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-act-400 transition hover:bg-act-400 hover:text-ink-950"
         >
           Undo
         </button>
