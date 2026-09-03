@@ -447,11 +447,11 @@ function Kpi({
 
 function ChartsFallback() {
   return (
-    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+    <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-bone-100/10 bg-ink-900">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400"
+          className="h-4 w-4 spin-slow rounded-full border border-bone-100/15 border-t-act-400"
         />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts

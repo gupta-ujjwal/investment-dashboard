@@ -32,7 +32,7 @@ export function Instructions({ source, dispatch }: Props) {
   const info = instructions[source]
 
   return (
-    <section className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+    <section className="rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
       <div className="flex items-baseline justify-between">
         <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
           {info.title}
@@ -52,17 +52,13 @@ export function Instructions({ source, dispatch }: Props) {
         ))}
       </ol>
       <div className="mt-8 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'back-to-source' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
-        >
+        <button type="button" onClick={() => dispatch({ type: 'back-to-source' })} className="btn-secondary">
           ← Back
         </button>
         <button
           type="button"
           onClick={() => dispatch({ type: 'instructions-acknowledged' })}
-          className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300"
+          className="btn-primary"
         >
           I have the file →
         </button>

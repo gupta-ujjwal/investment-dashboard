@@ -99,7 +99,7 @@ export function PreviewStep({ state, dispatch }: Props) {
 
   return (
     <section className="space-y-6">
-      <div className="border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <div className="rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
@@ -112,13 +112,13 @@ export function PreviewStep({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={handleBackup}
-            className="hidden border border-bone-100/15 px-3 py-2 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 sm:block"
+            className="hidden rounded-full border border-bone-100/15 px-3 py-2 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 sm:block"
           >
             ↓ Backup .json
           </button>
         </div>
 
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
           <Stat label="New" value={insertCount} tone="jade" />
           <Stat label="Updates" value={updateCount} tone="tick" />
           <Stat label="Missing" value={missingCount} tone={missingCount > 0 ? 'ember' : 'mute'} />
@@ -126,7 +126,7 @@ export function PreviewStep({ state, dispatch }: Props) {
         </dl>
 
         {extremes && (
-          <div className="mt-6 border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+          <div className="mt-6 rounded-r-lg border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
             <span className="font-mono uppercase tracking-[0.16em] text-bone-200">
               sanity check ·{' '}
             </span>
@@ -139,7 +139,7 @@ export function PreviewStep({ state, dispatch }: Props) {
         )}
 
         {commitError && (
-          <div className="mt-6 border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
+          <div className="mt-6 rounded-lg border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
             <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
               commit failed ·{' '}
             </span>
@@ -151,18 +151,14 @@ export function PreviewStep({ state, dispatch }: Props) {
       {missingCount > 0 && <MissingRowsPanel state={state} dispatch={dispatch} />}
 
       <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'back-to-upload' })}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
-        >
+        <button type="button" onClick={() => dispatch({ type: 'back-to-upload' })} className="btn-secondary">
           ← Reject
         </button>
         <button
           type="button"
           onClick={handleCommit}
           disabled={insertCount === 0 && updateCount === 0 && missingCount === 0}
-          className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
+          className="btn-primary"
         >
           Commit changes →
         </button>
@@ -204,7 +200,7 @@ function MissingRowsPanel({ state, dispatch }: Props) {
   const { missing } = state.diff
 
   return (
-    <div className="border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
+    <div className="rounded-2xl border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-sans text-base font-semibold tracking-tight text-ember-300">
@@ -224,28 +220,28 @@ function MissingRowsPanel({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'keep' })}
-            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+            className="rounded-full border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
           >
             Keep all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'close' })}
-            className="border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="rounded-full border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Close all
           </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'set-all-decisions', decision: 'delete' })}
-            className="border border-ember-400/40 px-3 py-1.5 font-sans text-[10px] font-medium  text-ember-300 transition hover:border-ember-400 hover:text-ember-400"
+            className="rounded-full border border-ember-400/40 px-3 py-1.5 font-sans text-[10px] font-medium  text-ember-300 transition hover:border-ember-400 hover:text-ember-400"
           >
             Delete all
           </button>
         </div>
       </div>
 
-      <ul className="mt-6 divide-y divide-bone-100/10 border border-bone-100/10 bg-ink-900">
+      <ul className="mt-6 divide-y divide-bone-100/10 overflow-hidden rounded-xl border border-bone-100/10 bg-ink-900">
         {missing.map((row) => {
           const decision = state.decisions[row.sourceSymbol] ?? 'keep'
           return (
@@ -320,7 +316,7 @@ function DecisionButton({
   tone: 'default' | 'tick' | 'ember'
 }) {
   const base =
-    'border px-3 py-1.5 font-sans text-[10px] font-medium  transition'
+    'rounded-full border px-3 py-1.5 font-sans text-[10px] font-medium  transition'
   let classes: string
   if (active && tone === 'ember') classes = 'border-ember-400 bg-ember-400 text-ink-950'
   else if (active && tone === 'tick') classes = 'border-act-400 bg-act-400 text-ink-950'

@@ -69,7 +69,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort, actions }: Pro
   return (
     <>
       {/* Desktop / tablet — full ledger table */}
-      <section className="hidden overflow-x-auto border border-bone-100/10 bg-ink-900 md:block">
+      <section className="hidden overflow-x-auto rounded-2xl border border-bone-100/10 bg-ink-900 md:block">
         <table className="min-w-full font-sans text-sm">
           <thead>
             <tr className="border-b border-bone-100/10 text-[10px]">
@@ -124,7 +124,7 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort, actions }: Pro
       </section>
 
       {/* Mobile — stacked cards, totals first */}
-      <section className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 md:hidden">
+      <section className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 md:hidden">
         <article className="bg-ink-850 px-5 py-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-300">
             Total · {positionLabel}

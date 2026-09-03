@@ -312,7 +312,7 @@ export function PortfolioRoute() {
           <h3 className="font-sans text-sm font-medium text-bone-300">
             Other assets
           </h3>
-          <div className="overflow-hidden border border-bone-100/10">
+          <div className="overflow-hidden rounded-2xl border border-bone-100/10">
             <table className="hidden w-full border-collapse md:table">
               <thead>
                 <tr className="border-b border-bone-100/10 bg-ink-850 text-left">
@@ -599,14 +599,14 @@ function AssetRowView({
           <button
             type="button"
             onClick={onEdit}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Edit
           </button>
           <button
             type="button"
             onClick={onDelete}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+            className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
           >
             Delete
           </button>
@@ -640,7 +640,7 @@ function AssetCard({
       <button
         type="button"
         onClick={onDelete}
-        className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+        className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
       >
         Delete
       </button>
@@ -707,9 +707,9 @@ function Kpi({ label, value, sub, tone = 'mute' }: { label: string; value: strin
 
 function ChartsFallback() {
   return (
-    <div className="flex min-h-[320px] items-center justify-center border border-bone-100/10 bg-ink-900">
+    <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-bone-100/10 bg-ink-900">
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className="h-4 w-4 spin-slow border border-bone-100/15 border-t-act-400" />
+        <span aria-hidden="true" className="h-4 w-4 spin-slow rounded-full border border-bone-100/15 border-t-act-400" />
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
           Loading charts
         </span>

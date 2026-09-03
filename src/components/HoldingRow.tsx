@@ -39,7 +39,7 @@ export const marketLabels: Record<Currency, string> = {
 /** Market badges are intentionally neutral. Jade is reserved for gains and
  *  ember for losses; a market tag must not borrow either, or a green `IN`
  *  badge reads as a positive signal. */
-export const marketBadge = 'text-bone-300 border-bone-100/20 bg-bone-100/[0.06]'
+export const marketBadge = 'rounded text-bone-300 border-bone-100/20 bg-bone-100/[0.06]'
 export const assetClassLabels: Record<AssetClass, string> = {
   equity: 'Equity',
   mf: 'MF',
@@ -109,7 +109,7 @@ export function AsOfMarker({ importedAt }: { importedAt: number }) {
     <span
       title={detail}
       aria-label={detail}
-      className="border border-bone-100/15 px-1 font-mono text-[9px] uppercase tracking-[0.12em] text-bone-400"
+      className="rounded border border-bone-100/15 px-1 font-mono text-[9px] uppercase tracking-[0.12em] text-bone-400"
     >
       as of {formatDate(importedAt)}
     </span>
@@ -121,7 +121,7 @@ function EditedMarker() {
     <span
       title="You've edited fields on this row. Future broker imports will keep your edits for those fields."
       aria-label="Edited — future broker imports preserve your edits on the changed fields"
-      className="border border-act-400/35 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-act-400/80"
+      className="rounded border border-act-400/35 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-act-400/80"
     >
       ✎ edited
     </span>
@@ -132,7 +132,7 @@ function ClosedMarker() {
   return (
     <span
       aria-label="Closed position"
-      className="border border-bone-100/20 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-bone-300"
+      className="rounded border border-bone-100/20 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-bone-300"
     >
       closed
     </span>
@@ -193,7 +193,7 @@ export function HoldingRow({ row, baseCurrency, actions }: RowProps) {
         </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="font-mono text-[11px] text-bone-400">{h.sourceSymbol}</span>
-          <span className="border border-bone-100/10 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-bone-400">
+          <span className="rounded border border-bone-100/10 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-bone-400">
             {assetClassLabels[h.assetClass]}
           </span>
           {row.isStale && <AsOfMarker importedAt={h.importedAt} />}
@@ -327,21 +327,21 @@ function InlineEditRow({ holding, onExit, onSaved }: InlineEditProps) {
               type="button"
               onClick={onExit}
               disabled={submitting}
-              className="border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:opacity-50"
+              className="rounded-full border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="border border-act-400 bg-act-400 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
+              className="rounded-full border border-act-400 bg-act-400 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
             >
               {submitting ? 'Saving…' : 'Save'}
             </button>
           </div>
 
           {fetcher.data && !fetcher.data.ok && !fetcher.data.fieldErrors && (
-            <div role="alert" className="col-span-full border border-ember-400/40 bg-ember-900/30 p-2 font-sans text-xs text-ember-300">
+            <div role="alert" className="col-span-full rounded-lg border border-ember-400/40 bg-ember-900/30 p-2 font-sans text-xs text-ember-300">
               {fetcher.data.error}
             </div>
           )}
@@ -385,7 +385,7 @@ function NumberOrTextField({
         defaultValue={defaultValue}
         autoFocus={autoFocus}
         aria-invalid={Boolean(error)}
-        className={`w-full border bg-ink-950 px-2 py-1 font-mono text-sm tabular-nums text-bone-100 focus:outline-none ${
+        className={`w-full rounded border bg-ink-950 px-2 py-1 font-mono text-sm tabular-nums text-bone-100 focus:outline-none ${
           error ? 'border-ember-400/60 focus:border-ember-400' : 'border-bone-100/15 focus:border-act-400'
         } ${align === 'right' ? 'text-right' : 'text-left'}`}
       />
@@ -410,7 +410,7 @@ function AssetClassField({ defaultValue }: { defaultValue: AssetClass }) {
       <select
         name="assetClass"
         defaultValue={defaultValue}
-        className="w-full border border-bone-100/15 bg-ink-950 px-2 py-1 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+        className="w-full rounded border border-bone-100/15 bg-ink-950 px-2 py-1 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
       >
         {(Object.keys(assetClassLabels) as AssetClass[]).map((k) => (
           <option key={k} value={k}>
