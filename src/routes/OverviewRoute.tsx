@@ -27,6 +27,8 @@ import { formatMoney, formatPercent } from '../lib/format'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { AnimatedMoney } from '../components/decor/AnimatedNumber'
 import type { FeatureSlide } from '../components/decor/FeatureCarousel'
+import { Sparkline } from '../components/decor/Sparkline'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
 import { categoricalColor } from '../components/charts/chartTheme'
 import {
   FEATURE_BASE_CURRENCY,
@@ -80,6 +82,15 @@ export function OverviewRoute() {
   // Net-worth-level "refresh needed" hint: any position lacking a base value.
   const totals = portfolioTotals(holdings)
 
+  // Hero sparklines — oldest→newest, same fold as the KPIs above so the line
+  // and the number are always telling the same story. `getHistory()` (the
+  // loader) already returns ascending-date order. Below 2 points a line has
+  // nothing to draw, so the KPI grid just omits the trend.
+  const trend =
+    FEATURE_HISTORY && history.length >= 2
+      ? history.map((h) => netWorthTotals(buildPositions(h.holdings, h.assets ?? [])))
+      : []
+
   // W2 — budget-fed figures. `avg` is undefined under 2 logged months (no
   // unstable single-point average); the derived feeds then fall back to unset.
   const avg = FEATURE_BUDGET ? monthlyAverages(budgetMonths) : undefined
@@ -104,7 +115,7 @@ export function OverviewRoute() {
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
-      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} />
+      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} trend={trend} />
 
       {avg && (
         <CashFlowCard avg={avg} runway={runwayMonths(liquidAssets(assetList), avg.avgExpenses)} base={base} />
@@ -142,10 +153,12 @@ function NetWorthSection({
   netWorth,
   allocation,
   base,
+  trend,
 }: {
   netWorth: NetWorthTotals
   allocation: NetWorthSlice[]
   base: BaseCurrency
+  trend: NetWorthTotals[]
 }) {
   const partial = netWorth.excludedCount > 0
   return (
@@ -156,7 +169,7 @@ function NetWorthSection({
       <SectionHeading to="/portfolio">Net worth</SectionHeading>
       {/* 3 tiles: grid-cols-1 below sm, not -2 — an odd count in a 2-col grid
           leaves a dangling empty cell (the ChartsPanel bug, same root cause). */}
-      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
+      <CardSpotlight className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
         <Kpi
           label={`Net worth · ${base}`}
           value={<AnimatedMoney value={netWorth.knownCurrentValue} currency={base} />}
@@ -166,16 +179,26 @@ function NetWorthSection({
               : `${netWorth.totalPositions} position${netWorth.totalPositions === 1 ? '' : 's'}`
           }
           tone={partial ? 'loss' : 'tick'}
+          sparkline={trend.length > 1 && <Sparkline values={trend.map((t) => t.knownCurrentValue)} tone="accent" />}
         />
         <Kpi
           label={`Invested · ${base}`}
           value={<AnimatedMoney value={netWorth.knownInvested} currency={base} />}
           sub="cost basis (where known)"
           tone="mute"
+          sparkline={trend.length > 1 && <Sparkline values={trend.map((t) => t.knownInvested)} tone="accent" />}
         />
         <Kpi
           label={`P&L · ${base}`}
           value={<AnimatedMoney value={netWorth.profitKnown} currency={base} />}
+          sparkline={
+            trend.length > 1 && (
+              <Sparkline
+                values={trend.map((t) => t.profitKnown)}
+                tone={netWorth.profitKnown >= 0 ? 'gain' : 'loss'}
+              />
+            )
+          }
           sub={
             netWorth.profitPctKnown === undefined
               ? 'no comparable basis'
@@ -183,7 +206,7 @@ function NetWorthSection({
           }
           tone={netWorth.profitKnown >= 0 ? 'gain' : 'loss'}
         />
-      </div>
+      </CardSpotlight>
 
       {partial && (
         <p
@@ -423,14 +446,17 @@ function Kpi({
   value,
   sub,
   tone = 'tick',
+  sparkline,
 }: {
   label: string
   value: React.ReactNode
   sub: string
   tone?: KpiTone
+  sparkline?: React.ReactNode
 }) {
   return (
-    <div className="bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
+    <div className="relative bg-ink-900 px-5 py-5 sm:px-6 sm:py-6">
+      {sparkline && <div className="absolute right-5 top-5 h-6 w-16 opacity-70 sm:right-6">{sparkline}</div>}
       <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${kpiRail[tone]}`} />
         {label}

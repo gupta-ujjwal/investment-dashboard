@@ -99,7 +99,7 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
   const lastTileSpansFull = tileCount % 2 === 1
 
   return (
-    <div className="grid gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       {FEATURE_HISTORY && (
         <>
           <ValueOverTime

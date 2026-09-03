@@ -1,21 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { usePrefersReducedMotion } from '../../lib/usePrefersReducedMotion'
-
-/** True only for pointers that support real hover (mouse/trackpad) — avoids
- *  the well-known mobile quirk where a tap leaves an element "stuck" in
- *  :hover. Local to HoverTile: nothing else in the app needs this yet. */
-function useHasHover(): boolean {
-  const [hasHover, setHasHover] = useState(false)
-  useEffect(() => {
-    const mql = window.matchMedia('(hover: hover) and (pointer: fine)')
-    setHasHover(mql.matches)
-    const onChange = () => setHasHover(mql.matches)
-    mql.addEventListener('change', onChange)
-    return () => mql.removeEventListener('change', onChange)
-  }, [])
-  return hasHover
-}
+import { useHasHover } from '../../lib/useHasHover'
 
 const VARIANTS = {
   // Isolated cards/tiles — a small lift reads fine with room around them.

@@ -29,6 +29,7 @@ import {
 } from '../lib/analytics'
 import { formatDate, formatMoney, formatPercent } from '../lib/format'
 import { AnimatedMoney } from '../components/decor/AnimatedNumber'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
 import { AssetForm } from '../components/AssetForm'
@@ -43,6 +44,10 @@ import {
 } from '../featureFlags'
 
 const ChartsPanel = lazy(() => import('../components/charts/ChartsPanel'))
+
+/** Purely decorative — lazy so a slow chunk load never delays the real
+ *  summary figures above it. */
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
 
 const ASC_FIRST: ReadonlySet<SortKey> = new Set<SortKey>(['name', 'market', 'broker'])
 
@@ -234,29 +239,34 @@ export function PortfolioRoute() {
 
       <section
         aria-label="Summary"
-        className="flex flex-wrap gap-x-11 gap-y-3 rounded-2xl border border-bone-100/10 bg-ink-900 px-6 py-5"
+        className="relative isolate overflow-hidden rounded-2xl border border-bone-100/10 bg-ink-900"
       >
-        <SummaryFigure
-          label={`Value · ${base}`}
-          value={<AnimatedMoney value={netWorth.knownCurrentValue} currency={base} />}
-          tone="tick"
-        />
-        <SummaryFigure
-          label="Invested"
-          value={<AnimatedMoney value={netWorth.knownInvested} currency={base} />}
-          tone="mute"
-        />
-        <SummaryFigure
-          label="Profit"
-          value={<AnimatedMoney value={netWorth.profitKnown} currency={base} />}
-          sub={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
-          tone={pnlTone}
-        />
-        <SummaryFigure
-          label={`Return · ${base}`}
-          value={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
-          tone={pnlTone}
-        />
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <CardSpotlight className="flex flex-wrap gap-x-11 gap-y-3 px-6 py-5">
+          <SummaryFigure
+            label={`Value · ${base}`}
+            value={<AnimatedMoney value={netWorth.knownCurrentValue} currency={base} />}
+            tone="tick"
+          />
+          <SummaryFigure
+            label="Invested"
+            value={<AnimatedMoney value={netWorth.knownInvested} currency={base} />}
+            tone="mute"
+          />
+          <SummaryFigure
+            label="Profit"
+            value={<AnimatedMoney value={netWorth.profitKnown} currency={base} />}
+            sub={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
+            tone={pnlTone}
+          />
+          <SummaryFigure
+            label={`Return · ${base}`}
+            value={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
+            tone={pnlTone}
+          />
+        </CardSpotlight>
       </section>
 
       {conc && <RiskRow concentration={conc} />}
