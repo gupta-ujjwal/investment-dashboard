@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 · App shell — dashboard-ux-redesign</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+  .demo { border: 1px solid rgba(233,233,237,.1); border-radius: 10px; overflow: hidden; margin-top: 14px; }
+  .demo-cap { background: #0d0f18; padding: 7px 14px; font-family: var(--font-mono); font-size: 10px;
+              letter-spacing: .12em; text-transform: uppercase; color: var(--color-bone-500);
+              border-bottom: 1px solid rgba(233,233,237,.08); display: flex; justify-content: space-between; gap: 12px; }
+
+  /* ── the shell itself ─────────────────────────────────────────────────────
+     NOTE: the real component switches on Tailwind's `md:` breakpoint, which
+     keys off the VIEWPORT. These demo boxes instead switch on an explicit
+     `.is-desktop` / `.is-mobile` class, so both states can be shown side by
+     side in one window. The `data-tw` attributes carry the real responsive
+     class strings — read those, not this CSS. ──────────────────────────── */
+  .shell { display: flex; flex-direction: column; min-height: 460px; background: var(--color-ink-950); }
+  .shell.is-desktop { flex-direction: row; }
+
+  .sidebar { display: none; }
+  .is-desktop .sidebar {
+    display: flex; flex-direction: column; position: sticky; top: 0;
+    width: 224px; flex-shrink: 0; padding: 22px 12px;
+    box-shadow: inset -1px 0 0 0 rgba(233,233,237,.08);
+  }
+  .brand { display: flex; align-items: center; gap: 9px; padding: 0 10px 22px; font-size: 13px; font-weight: 600; letter-spacing: -.01em; color: var(--color-bone-50); }
+  .brand i { width: 9px; height: 9px; background: var(--color-tick-400); transform: rotate(45deg); display: block; }
+
+  .navlist { display: flex; flex-direction: column; gap: 2px; }
+  .navitem {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 7px;
+    font-size: 13.5px; color: var(--color-bone-300); text-decoration: none;
+    border-left: 2px solid transparent;
+  }
+  .navitem:hover { background: rgba(233,233,237,.06); }
+  .navitem[aria-current="page"] {
+    background: rgba(145,132,217,.14); color: var(--color-tick-200);
+    border-left-color: var(--color-tick-400);
+  }
+  .navitem svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .navcount {
+    margin-left: auto; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+    background: var(--color-sev-crit); color: #1a0f0e; border-radius: 20px; padding: 1px 6px; line-height: 1.5;
+  }
+
+  .utility { margin-top: auto; padding-top: 14px; box-shadow: inset 0 1px 0 0 rgba(233,233,237,.08); display: flex; flex-direction: column; gap: 2px; }
+  .sidefoot { padding: 14px 10px 0; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; color: var(--color-ink-400); }
+
+  /* mobile top bar */
+  .topbar { display: none; }
+  .is-mobile .topbar {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 16px; background: rgba(22,24,38,.88); backdrop-filter: blur(8px);
+    box-shadow: inset 0 -1px 0 0 rgba(233,233,237,.08);
+  }
+  .topbar .t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--color-bone-50); }
+  .topbar .t i { width: 8px; height: 8px; background: var(--color-tick-400); transform: rotate(45deg); display: block; }
+
+  /* mobile bottom tab bar */
+  .tabbar { display: none; }
+  .is-mobile .tabbar {
+    position: sticky; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr);
+    background: rgba(22,24,38,.94); backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 0 rgba(233,233,237,.08);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 4px 10px;
+    font-size: 10.5px; color: var(--color-bone-400); text-decoration: none; position: relative;
+  }
+  .tab svg { width: 19px; height: 19px; }
+  .tab[aria-current="page"] { color: var(--color-tick-200); }
+  .tab[aria-current="page"]::before {
+    content: ""; position: absolute; top: 0; left: 26%; right: 26%; height: 2px;
+    background: var(--color-tick-400); border-radius: 0 0 2px 2px;
+  }
+  .tab .dot {
+    position: absolute; top: 6px; left: 50%; margin-left: 6px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--color-sev-crit);
+    box-shadow: 0 0 0 2px var(--color-ink-950);
+  }
+
+  main.content { flex: 1; min-width: 0; width: 100%; max-width: 1600px; padding: 26px 20px 40px; }
+  .is-desktop main.content { padding: 34px 36px 52px; }
+  .is-mobile main.content { padding: 18px 16px 24px; }
+
+  .fill { display: grid; gap: 12px; }
+  .fillbar { height: 54px; border-radius: 8px; background: var(--color-ink-900); border: 1px solid rgba(233,233,237,.07); }
+
+  .bad { border-color: rgba(232,117,106,.45); background: rgba(232,117,106,.07); }
+  .diff { font-family: var(--font-mono); font-size: 12px; line-height: 1.75; padding: 14px 16px;
+          background: #0d0f18; border: 1px solid rgba(233,233,237,.08); border-radius: 8px;
+          overflow-x: auto; margin-top: 12px; white-space: pre; }
+  .diff .del { color: var(--color-ember-400); }
+  .diff .add { color: var(--color-jade-400); }
+  .diff .cmt { color: var(--color-bone-500); }
+</style>
+</head>
+<body>
+
+<div class="tpl-head">
+  <h1>01 · App shell</h1>
+  <p>PR-1 commits 1–2 (the fix) + commit 5 (the 4-tab IA) · <code>src/routes/AppShell.tsx</code></p>
+</div>
+
+<p class="tpl-note">
+  <b>THE BLOCKER ·</b> <code>AppShell.tsx:18</code> is <code>&lt;div className="flex min-h-screen"&gt;</code> —
+  a <em>row</em> flex container at every breakpoint. The mobile <code>&lt;header&gt;</code> is a sibling
+  flex item, so on a phone it becomes a 588px-wide left column and pushes <code>&lt;main&gt;</code> to
+  40px at x=588. Measured on every route at 390×844.
+</p>
+
+<div class="diff"><span class="cmt">src/routes/AppShell.tsx:18</span>
+<span class="del">- &lt;div className="flex min-h-screen"&gt;</span>
+<span class="add">+ &lt;div className="flex min-h-screen flex-col md:flex-row"&gt;</span>
+
+<span class="cmt">src/routes/AppShell.tsx:93 — stop wasting a third of the desktop viewport</span>
+<span class="del">- &lt;main className="w-full min-w-0 px-5 pb-24 pt-8 sm:px-8 sm:pt-10 md:max-w-5xl"&gt;</span>
+<span class="add">+ &lt;main className="w-full min-w-0 max-w-[1600px] flex-1 px-5 pb-24 pt-8 sm:px-7 sm:pt-10 xl:px-11"&gt;</span></div>
+
+<div class="tpl-section">
+  <div class="tpl-label">Desktop 1440 — 4 primary + demoted utility group</div>
+  <div class="demo">
+    <div class="demo-cap"><span>≥ 768px · sidebar row</span><span>data-tw on each node</span></div>
+    <div class="shell is-desktop">
+
+      <aside class="sidebar"
+             data-tw="sticky top-0 hidden h-screen w-56 shrink-0 flex-col px-3 py-5 hairline-r md:flex">
+        <div class="brand" data-tw="flex items-center gap-2.5 px-2.5 pb-5"><i aria-hidden="true"></i> Investment Dashboard</div>
+
+        <nav class="navlist" aria-label="Primary" data-tw="flex flex-col gap-0.5">
+          <a class="navitem" href="#" aria-current="page"
+             data-tw="flex items-center gap-2.5 rounded-lg border-l-2 border-tick-400 bg-tick-400/14 px-2.5 py-2 text-[13.5px] text-tick-200">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12l4-5 4 6 3-4 3 3 4-7"/><path d="M3 20h18"/></svg>
+            Today <span class="navcount">3</span>
+          </a>
+          <a class="navitem" href="#"
+             data-tw="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-[13.5px] text-bone-300 hover:bg-bone-100/6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
+            Portfolio
+          </a>
+          <a class="navitem" href="#" data-tw="…same as Portfolio…">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M3 12h12M3 18h7"/></svg>
+            Cash flow
+          </a>
+          <a class="navitem" href="#" data-tw="…same as Portfolio…">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            Plan
+          </a>
+        </nav>
+
+        <div class="utility" data-tw="mt-auto flex flex-col gap-0.5 pt-3 hairline-t">
+          <a class="navitem" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>
+            Import
+          </a>
+          <a class="navitem" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87M4.6 9a1.7 1.7 0 00-.34-1.87"/><circle cx="12" cy="12" r="9"/></svg>
+            Settings
+          </a>
+        </div>
+        <div class="sidefoot" data-tw="px-2.5 pt-3 font-mono text-[10px] text-ink-400">ON-DEVICE · NO SERVER</div>
+      </aside>
+
+      <main class="content" data-tw="w-full min-w-0 max-w-[1600px] flex-1 px-5 pb-24 pt-8 sm:px-7 sm:pt-10 xl:px-11">
+        <div class="fill">
+          <div class="fillbar" style="height:88px"></div>
+          <div class="fillbar" style="height:64px"></div>
+          <div class="fillbar" style="height:64px"></div>
+          <div class="fillbar"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">Mobile 390 — column shell, top bar + bottom tab bar</div>
+  <div class="demo" style="max-width:390px">
+    <div class="demo-cap"><span>&lt; 768px · column</span><span>scrollWidth === clientWidth</span></div>
+    <div class="shell is-mobile" style="min-height:420px">
+
+      <header class="topbar" data-tw="sticky top-0 z-10 flex items-center justify-between gap-3 bg-ink-950/85 px-4 py-3 backdrop-blur hairline-b md:hidden">
+        <span class="t"><i aria-hidden="true"></i> Today</span>
+        <a class="btn btn-ghost" href="#" style="padding:5px 10px;font-size:11.5px">Import</a>
+      </header>
+
+      <main class="content" style="padding:18px 16px 24px">
+        <div class="fill">
+          <div class="fillbar" style="height:76px"></div>
+          <div class="fillbar" style="height:56px"></div>
+          <div class="fillbar" style="height:56px"></div>
+        </div>
+      </main>
+
+      <nav class="tabbar" aria-label="Primary"
+           data-tw="sticky bottom-0 z-10 grid grid-cols-4 bg-ink-950/94 backdrop-blur hairline-t md:hidden">
+        <a class="tab" href="#" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12l4-5 4 6 3-4 3 3 4-7"/><path d="M3 20h18"/></svg>
+          Today<span class="dot" aria-hidden="true"></span>
+        </a>
+        <a class="tab" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
+          Portfolio
+        </a>
+        <a class="tab" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M3 12h12M3 18h7"/></svg>
+          Cash flow
+        </a>
+        <a class="tab" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          Plan
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <p style="max-width:72ch;color:var(--color-bone-400);font-size:12.5px;margin-top:18px">
+    Four primary tabs is exactly what a bottom tab bar holds without crowding — the reason the IA
+    collapse and the mobile nav land in the same PR. Import and Settings move to the top bar / a
+    sheet on mobile; they are setup, not daily work. The red dot on Today mirrors the sidebar count
+    and is the return-visit cue.
+  </p>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">Regression guard — add to the capture script, not to review-by-eye</div>
+  <div class="diff"><span class="cmt">notes/&lt;topic&gt;/capture.mjs — after every navigation, both viewports</span>
+const overflow = await page.evaluate(() =&gt; ({
+  scrollW: document.documentElement.scrollWidth,
+  clientW: document.documentElement.clientWidth,
+}))
+<span class="add">if (overflow.scrollW &gt; overflow.clientW + 1) {</span>
+<span class="add">  throw new Error(`${route} overflows: ${overflow.scrollW} &gt; ${overflow.clientW}`)</span>
+<span class="add">}</span>
+
+<span class="cmt">and seed IndexedDB BEFORE the mobile pass — the Nocturne evidence passed review</span>
+<span class="cmt">only because an empty store made a broken layout look like an empty state.</span></div>
+</div>
+
+</body>
+</html>

@@ -45,3 +45,10 @@ notes/
 
 # Playwright MCP scratch (browser-context dumps from ad-hoc verification runs).
 .playwright-mcp/
+
+# Personal/local files that don't belong in the repo (not project artifacts).
+/Finance 2026.xlsx
+
+# direnv local dev override (LD_LIBRARY_PATH fix for Playwright/glibc) — see
+# the file's own header comment: local convenience only, never tracked.
+/.envrc
