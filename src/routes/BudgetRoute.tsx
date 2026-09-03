@@ -16,6 +16,9 @@ import { investedDeltaForMonth } from '../lib/analytics'
 import { formatMoney } from '../lib/format'
 import { formatMonthKey } from '../components/charts/chartTheme'
 import { MonthStrip } from '../components/charts/MonthStrip'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
+import { HoverTile } from '../components/decor/HoverTile'
+import { Sparkline } from '../components/decor/Sparkline'
 import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 
 // The two donuts pull in Recharts (~100KB+); keep them out of the initial bundle
@@ -24,6 +27,8 @@ import { FEATURE_BUDGET_TAGS } from '../featureFlags'
 const BudgetCharts = lazy(() => import('../components/charts/BudgetCharts'))
 // Per-tag line charts across months — also Recharts, same lazy bulkhead.
 const TagTrends = lazy(() => import('../components/charts/TagTrends'))
+// Purely decorative — lazy so a slow chunk load never delays the real figures.
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
 
 /** A per-tag trend needs at least this many logged months to read as a line
  *  rather than a lone dot. Below it the section is hidden entirely. */
@@ -136,6 +141,7 @@ export function BudgetRoute() {
       ) : (
         <FocusedMonthView
           month={focusedMonth}
+          months={months}
           prevSummary={prevSummary}
           base={base}
           onEdit={() => setEditing(true)}
@@ -188,11 +194,13 @@ function AggregateSummary({
 
 function FocusedMonthView({
   month,
+  months,
   prevSummary,
   base,
   onEdit,
 }: {
   month: BudgetMonth
+  months: BudgetMonth[]
   prevSummary: BudgetSummary | undefined
   base: Settings['baseCurrency']
   onEdit: () => void
@@ -200,6 +208,12 @@ function FocusedMonthView({
   const fetcher = useFetcher()
   const s = summarizeMonth(month)
   const delta = monthOverMonth(s, prevSummary)
+
+  // Oldest→newest, matching Overview's hero sparklines — `months` is
+  // newest-first (loader sort). Each KPI sparklines against its own unit
+  // (Income is absolute, the other three are % of income), independently
+  // scaled, so mixing units across the 4 tiles is fine.
+  const series = [...months].reverse().map((m) => summarizeMonth(m))
 
   return (
     <section aria-label={`${formatMonthKey(month.month)} detail`} className="space-y-6">
@@ -241,32 +255,43 @@ function FocusedMonthView({
 
       <section
         aria-label="This month"
-        className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
+        className="relative isolate overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10"
       >
-        <Stat
-          label={`Income · ${base}`}
-          value={formatMoney(s.totalIncome, base)}
-          sub={deltaText(delta?.income, base)}
-          tone="tick"
-        />
-        <Stat
-          label="Spent"
-          value={pct(s.spentPct)}
-          sub={deltaText(delta?.expenses, base)}
-          tone="ember"
-        />
-        <Stat
-          label="Invested"
-          value={pct(s.investedPct)}
-          sub={deltaText(delta?.invested, base)}
-          tone="jade"
-        />
-        <Stat
-          label="Remaining"
-          value={pct(s.remainingPct)}
-          sub={deltaText(delta?.remaining, base)}
-          tone={s.remaining >= 0 ? 'mute' : 'ember'}
-        />
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <CardSpotlight className="grid grid-cols-2 gap-px sm:grid-cols-4">
+          <Stat
+            label={`Income · ${base}`}
+            value={formatMoney(s.totalIncome, base)}
+            sub={deltaText(delta?.income, base)}
+            tone="tick"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.totalIncome)} tone="accent" />}
+          />
+          <Stat
+            label="Spent"
+            value={pct(s.spentPct)}
+            sub={deltaText(delta?.expenses, base)}
+            tone="ember"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.spentPct ?? 0)} tone="loss" />}
+          />
+          <Stat
+            label="Invested"
+            value={pct(s.investedPct)}
+            sub={deltaText(delta?.invested, base)}
+            tone="jade"
+            sparkline={series.length > 1 && <Sparkline values={series.map((r) => r.investedPct ?? 0)} tone="gain" />}
+          />
+          <Stat
+            label="Remaining"
+            value={pct(s.remainingPct)}
+            sub={deltaText(delta?.remaining, base)}
+            tone={s.remaining >= 0 ? 'mute' : 'ember'}
+            sparkline={
+              series.length > 1 && <Sparkline values={series.map((r) => r.remainingPct ?? 0)} tone="accent" />
+            }
+          />
+        </CardSpotlight>
       </section>
 
       <Suspense fallback={<ChartsFallback />}>
@@ -302,7 +327,7 @@ function LineDetails({
 }) {
   const total = lines.reduce((s, l) => s + l.amount, 0)
   return (
-    <div className="rounded-2xl border border-bone-100/10 bg-ink-900 p-4">
+    <HoverTile className="rounded-2xl border border-bone-100/10 bg-ink-900 p-4">
       <div className="flex items-baseline justify-between">
         <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
          <span className="font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-300">
@@ -326,7 +351,7 @@ function LineDetails({
           ))}
         </ul>
       )}
-    </div>
+    </HoverTile>
   )
 }
 
@@ -678,14 +703,17 @@ function Stat({
   value,
   sub,
   tone,
+  sparkline,
 }: {
   label: string
   value: string
   sub?: string
   tone: Tone
+  sparkline?: React.ReactNode
 }) {
   return (
-    <div className="bg-ink-900 px-5 py-5">
+    <div className="relative bg-ink-900 px-5 py-5">
+      {sparkline && <div className="absolute right-5 top-5 h-6 w-14 opacity-70">{sparkline}</div>}
       <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-400">
         <span className={`h-px w-3 ${toneRail[tone]}`} />
         {label}

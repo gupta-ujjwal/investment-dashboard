@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useFetcher, useLoaderData } from 'react-router-dom'
 import type { ManualAsset, RiskBand } from '../storage/assets'
 import type { CanonicalHolding } from '../storage/holdings'
 import type { BudgetMonth } from '../storage/budget'
+import type { HistoryRecord } from '../storage/history'
 import type { Settings } from '../storage/settings'
 import {
   bulkAllocation,
@@ -13,16 +14,24 @@ import {
 import { monthlyAverages } from '../lib/budget'
 import { effectiveValue, provenanceLabel, type ValueSource } from '../lib/cashflow'
 import { formatMoney } from '../lib/format'
+import { CardSpotlight } from '../components/decor/CardSpotlight'
+import { HoverTile } from '../components/decor/HoverTile'
+import { Sparkline } from '../components/decor/Sparkline'
+import { FEATURE_HISTORY } from '../featureFlags'
+
+// Purely decorative — lazy so a slow chunk load never delays the real figures.
+const AmbientBackground = lazy(() => import('../components/decor/AmbientBackground'))
 
 type LoaderData = {
   holdings: CanonicalHolding[]
   assets: ManualAsset[]
   settings: Settings
   budgetMonths: BudgetMonth[]
+  history: HistoryRecord[]
 }
 
 export function PlanningRoute() {
-  const { holdings, assets, settings, budgetMonths } = useLoaderData() as LoaderData
+  const { holdings, assets, settings, budgetMonths, history } = useLoaderData() as LoaderData
   const base = settings.baseCurrency
 
   // W2: the emergency monthly need falls back to average monthly spend from the
@@ -39,6 +48,17 @@ export function PlanningRoute() {
     [holdings, assets, settings.allocationTargets],
   )
 
+  // Coverage-% trend — same per-snapshot fold as Overview's hero sparklines
+  // (history is oldest→newest already; today's settings/need applied
+  // retroactively to each day's asset snapshot, same approximation Overview
+  // makes for net worth).
+  const fundedTrend =
+    FEATURE_HISTORY && history.length > 1
+      ? history
+          .map((h) => emergencyFundStatus(h.assets ?? [], emergencyNeed.value, settings.emergencyMonths).fundedPct)
+          .filter((v): v is number => v !== undefined)
+      : []
+
   return (
     <div className="space-y-10">
       <PageHead
@@ -52,6 +72,7 @@ export function PlanningRoute() {
         source={emergencyNeed.source}
         avgMonths={avg?.months}
         settings={settings}
+        fundedTrend={fundedTrend}
       />
       <RiskMixCard
         slices={risk}
@@ -70,12 +91,14 @@ function EmergencyFundCard({
   source,
   avgMonths,
   settings,
+  fundedTrend,
 }: {
   status: ReturnType<typeof emergencyFundStatus>
   base: Settings['baseCurrency']
   source: ValueSource
   avgMonths: number | undefined
   settings: Settings
+  fundedTrend: number[]
 }) {
   const funded = status.fundedPct
   const tone = funded === undefined ? 'mute' : funded >= 1 ? 'jade' : funded >= 0.5 ? 'tick' : 'ember'
@@ -92,14 +115,25 @@ function EmergencyFundCard({
           </span>
         )}
       </div>
-      <div className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
+      <div className="relative isolate overflow-hidden rounded-2xl border border-bone-100/10 bg-ink-900">
+        <Suspense fallback={null}>
+          <AmbientBackground />
+        </Suspense>
+        <CardSpotlight className="space-y-4 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(status.current, base)}
             {status.target !== undefined && <> of {formatMoney(status.target, base)}</>}
           </span>
-          <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
-            {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
+          <span className="flex items-center gap-3">
+            {fundedTrend.length > 1 && (
+              <span className="h-6 w-16 opacity-70">
+                <Sparkline values={fundedTrend} tone={tone === 'ember' ? 'loss' : 'gain'} />
+              </span>
+            )}
+            <span className={`font-display text-2xl tabular-nums whitespace-nowrap ${railText[tone]}`}>
+              {funded === undefined ? '—' : `${Math.round(funded * 100)}%`}
+            </span>
           </span>
         </div>
         {status.target !== undefined && (
@@ -152,6 +186,7 @@ function EmergencyFundCard({
             },
           ]}
         />
+        </CardSpotlight>
       </div>
     </section>
   )
@@ -179,7 +214,8 @@ function RiskMixCard({
           your risk mix here.
         </div>
       ) : (
-        <ul className="space-y-3 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
+        <HoverTile className="rounded-2xl border border-bone-100/10 bg-ink-900">
+        <ul className="space-y-3 p-5">
           {slices.map((s) => (
             <li key={s.band} className="space-y-1">
               <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
@@ -204,6 +240,7 @@ function RiskMixCard({
             </li>
           ))}
         </ul>
+        </HoverTile>
       )}
       <div className="space-y-1.5">
         {!hasTargets && slices.length > 0 && (
@@ -244,7 +281,7 @@ function BulkInvestCard({
       <h3 className="font-sans text-sm font-medium text-bone-300">
         Bulk invest — what-if
       </h3>
-      <div className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
+      <HoverTile className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
         {targets.length === 0 ? (
           <p className="font-sans text-sm text-bone-300">
             Set allocation target weights in the <span className="text-bone-100">Risk allocation</span>{' '}
@@ -285,7 +322,7 @@ function BulkInvestCard({
             </p>
           </>
         )}
-      </div>
+      </HoverTile>
     </section>
   )
 }
