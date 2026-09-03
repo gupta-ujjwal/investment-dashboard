@@ -218,7 +218,7 @@ function FocusedMonthView({
           <button
             type="button"
             onClick={onEdit}
-            className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             Edit
           </button>
@@ -231,7 +231,7 @@ function FocusedMonthView({
                 if (!window.confirm(`Delete budget for ${formatMonthKey(month.month)}?`))
                   e.preventDefault()
               }}
-              className="border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
+              className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-ember-400 hover:text-ember-400"
             >
               Delete
             </button>
@@ -241,7 +241,7 @@ function FocusedMonthView({
 
       <section
         aria-label="This month"
-        className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
+        className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4"
       >
         <Stat
           label={`Income · ${base}`}
@@ -302,7 +302,7 @@ function LineDetails({
 }) {
   const total = lines.reduce((s, l) => s + l.amount, 0)
   return (
-    <div className="border border-bone-100/10 bg-ink-900 p-4">
+    <div className="rounded-2xl border border-bone-100/10 bg-ink-900 p-4">
       <div className="flex items-baseline justify-between">
         <h4 className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">{title}</h4>
          <span className="font-mono text-[11px] tabular-nums whitespace-nowrap text-bone-300">
@@ -396,7 +396,7 @@ function BudgetEditor({
   return (
     <section
       aria-label={existing ? `Edit ${existing.month}` : 'Add month'}
-      className="space-y-5 border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
+      className="space-y-5 rounded-2xl border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
     >
       <div className="flex items-center justify-between">
         <h3 className="font-sans text-sm font-medium text-bone-300">
@@ -428,7 +428,7 @@ function BudgetEditor({
             required
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field"
           />
         </label>
 
@@ -464,7 +464,7 @@ function BudgetEditor({
             value={invested}
             onChange={(e) => setInvested(e.target.value)}
             placeholder="e.g. 50000"
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field"
           />
           {investedHint && (
             <span className="font-sans text-[11px] text-bone-500">
@@ -479,17 +479,13 @@ function BudgetEditor({
         </label>
 
         {fetcher.data && !fetcher.data.ok && (
-          <div role="alert" className="border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
+          <div role="alert" className="rounded-lg border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
             {fetcher.data.error}
           </div>
         )}
 
         <div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
-          >
+          <button type="submit" disabled={saving} className="btn-primary">
             {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
           </button>
         </div>
@@ -557,7 +553,7 @@ function LineEditor({
              onChange={(e) => update(l.id, { category: e.target.value })}
              placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
              list={tagsOn ? listId : undefined}
-             className="min-w-0 flex-1 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+             className="field min-w-0 flex-1 py-1.5"
           />
           {tagsOn && isUntagged(l.category) && (
             <button
@@ -576,13 +572,13 @@ function LineEditor({
             value={l.amount}
             onChange={(e) => update(l.id, { amount: e.target.value })}
             placeholder="Amount"
-            className="w-24 border border-bone-100/15 bg-ink-950 px-3 py-1.5 text-right font-mono text-sm tabular-nums text-bone-100 focus:border-act-400 focus:outline-none sm:w-32"
+            className="field w-24 py-1.5 text-right font-mono tabular-nums sm:w-32"
           />
           <button
             type="button"
             aria-label="Remove line"
             onClick={() => remove(l.id)}
-            className="border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
+            className="rounded-full border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
           >
             ×
           </button>

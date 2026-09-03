@@ -32,7 +32,7 @@ export function ModalShell({
         onClick={onClose}
         className="absolute inset-0 cursor-default"
       />
-      <div className="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden border border-bone-100/15 bg-ink-900 shadow-2xl shadow-ink-950/80">
+      <div className="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-bone-100/15 bg-ink-900 shadow-2xl shadow-ink-950/80">
         <header className="flex items-center justify-between border-b border-bone-100/10 bg-ink-850 px-5 py-3">
           <h2
             id={titleId}
@@ -80,9 +80,5 @@ export function Field({
 }
 
 export function inputClass(hasError: boolean): string {
-  const base =
-    'w-full border bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 placeholder:text-bone-500 focus:outline-none'
-  return hasError
-    ? `${base} border-ember-400/60 focus:border-ember-400`
-    : `${base} border-bone-100/15 focus:border-act-400`
+  return hasError ? 'field border-ember-400/60 focus:border-ember-400' : 'field'
 }

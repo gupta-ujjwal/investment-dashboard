@@ -92,7 +92,7 @@ function EmergencyFundCard({
           </span>
         )}
       </div>
-      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+      <div className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bone-400">
             {formatMoney(status.current, base)}
@@ -103,9 +103,9 @@ function EmergencyFundCard({
           </span>
         </div>
         {status.target !== undefined && (
-          <div className="h-2 w-full overflow-hidden bg-bone-100/10">
+          <div className="bar">
             <div
-              className={`h-full ${railBar[tone]}`}
+              className={`bar-fill ${railBar[tone]}`}
               style={{ width: `${Math.min(100, (funded ?? 0) * 100)}%` }}
             />
           </div>
@@ -174,12 +174,12 @@ function RiskMixCard({
         Risk allocation
       </h3>
       {slices.length === 0 ? (
-        <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-10 text-center font-sans text-sm text-bone-300">
+        <div className="rounded-2xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-10 text-center font-sans text-sm text-bone-300">
           Tag assets with a risk band (Safe / Moderate / High) on the Holdings page to see
           your risk mix here.
         </div>
       ) : (
-        <ul className="space-y-3 border border-bone-100/10 bg-ink-900 p-5">
+        <ul className="space-y-3 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
           {slices.map((s) => (
             <li key={s.band} className="space-y-1">
               <div className="flex items-baseline justify-between font-mono text-[11px] text-bone-300">
@@ -191,8 +191,8 @@ function RiskMixCard({
                   )}
                 </span>
               </div>
-              <div className="relative h-2 w-full overflow-hidden bg-bone-100/10">
-                <div className="h-full bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
+              <div className="bar relative">
+                <div className="bar-fill bg-bone-300/70" style={{ width: `${Math.max(1, s.pct * 100)}%` }} />
                 {s.targetPct !== undefined && (
                   <span
                     aria-hidden="true"
@@ -244,7 +244,7 @@ function BulkInvestCard({
       <h3 className="font-sans text-sm font-medium text-bone-300">
         Bulk invest — what-if
       </h3>
-      <div className="space-y-4 border border-bone-100/10 bg-ink-900 p-5">
+      <div className="space-y-4 rounded-2xl border border-bone-100/10 bg-ink-900 p-5">
         {targets.length === 0 ? (
           <p className="font-sans text-sm text-bone-300">
             Set allocation target weights in the <span className="text-bone-100">Risk allocation</span>{' '}
@@ -262,11 +262,11 @@ function BulkInvestCard({
                 value={lump}
                 onChange={(e) => setLump(e.target.value)}
                 placeholder="e.g. 1000000"
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+                className="field"
               />
             </label>
             {rows.length > 0 && (
-              <ul className="divide-y divide-bone-100/5 border border-bone-100/10">
+              <ul className="divide-y divide-bone-100/5 overflow-hidden rounded-xl border border-bone-100/10">
                 {rows.map((r) => (
                   <li
                     key={r.band}
@@ -336,7 +336,7 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
       action="/settings"
       aria-label={ariaLabel}
       onSubmit={() => setDirty(false)}
-      className="flex flex-wrap items-end gap-3 border border-bone-100/10 bg-ink-900 p-4"
+      className="flex flex-wrap items-end gap-3 rounded-2xl border border-bone-100/10 bg-ink-900 p-4"
     >
       <input type="hidden" name="intent" value="save" />
       {fields.map((f) => (
@@ -351,15 +351,11 @@ function InlineTargetsForm({ ariaLabel, fields }: { ariaLabel: string; fields: I
             defaultValue={f.defaultValue ?? ''}
             placeholder={f.placeholder}
             onChange={() => setDirty(true)}
-            className="w-28 border border-bone-100/15 bg-ink-950 px-3 py-1.5 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field w-28 py-1.5"
           />
         </label>
       ))}
-      <button
-        type="submit"
-        disabled={saving}
-        className="border border-act-400 bg-act-400/10 px-4 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-act-400 transition hover:bg-act-400 hover:text-ink-950 disabled:opacity-50"
-      >
+      <button type="submit" disabled={saving} className="btn-secondary py-1.5 text-[11px]">
         {saving ? 'Saving…' : 'Save'}
       </button>
       {saved && (

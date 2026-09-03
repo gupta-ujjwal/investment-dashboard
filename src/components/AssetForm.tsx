@@ -126,7 +126,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
           <select
             name="assetClass"
             defaultValue={initial.assetClass}
-            className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+            className="field"
           >
             {classOptions.map((a) => (
               <option key={a.value} value={a.value}>
@@ -140,7 +140,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
           <div
             role="radiogroup"
             aria-label="Currency"
-            className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/15 bg-bone-100/10"
+            className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/15 bg-bone-100/10"
           >
             {currencies.map((c) => (
               <label
@@ -198,7 +198,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
               <select
                 name="riskBand"
                 defaultValue={initial.riskBand}
-                className="w-full border border-bone-100/15 bg-ink-950 px-3 py-2 font-sans text-sm text-bone-100 focus:border-act-400 focus:outline-none"
+                className="field"
               >
                 {riskBands.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -207,7 +207,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
                 ))}
               </select>
             </Field>
-            <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
+            <label className="flex cursor-pointer items-center gap-2 rounded-full border border-bone-100/15 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
               <input
                 type="checkbox"
                 name="emergencyFund"
@@ -221,28 +221,16 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
         )}
 
         {fetcher.data && !fetcher.data.ok && !fetcher.data.fieldErrors && (
-          <div
-            role="alert"
-            className="border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300"
-          >
+          <div role="alert" className="rounded-lg border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
             {fetcher.data.error}
           </div>
         )}
 
         <div className="mt-2 flex flex-col-reverse items-stretch justify-end gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:opacity-50"
-          >
+          <button type="button" onClick={onClose} disabled={submitting} className="btn-secondary">
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="border border-act-400 bg-act-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:opacity-50"
-          >
+          <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? 'Saving…' : mode === 'add' ? 'Add asset' : 'Save changes'}
           </button>
         </div>

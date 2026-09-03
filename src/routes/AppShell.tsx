@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { HoverTile } from '../components/decor/HoverTile'
 import { FEATURE_BUDGET, FEATURE_PLANNING } from '../featureFlags'
 
 type Tab = {
@@ -48,39 +49,41 @@ export function AppShell() {
 
         <nav aria-label="Primary" className="flex flex-col gap-0.5">
           {primaryTabs.map((t) => (
-            <NavLink
-              key={t.to}
-              to={t.to}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left text-[13.5px] transition ${
-                  isActive
-                    ? 'border-tick-400 bg-tick-400/14 text-tick-200'
-                    : 'border-transparent text-bone-300 hover:bg-bone-100/6'
-                }`
-              }
-            >
-              <t.icon className="h-4 w-4 shrink-0" />
-              {t.label}
-            </NavLink>
+            <HoverTile key={t.to} variant="nudge">
+              <NavLink
+                to={t.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 rounded-full px-3 py-2 text-left text-[13.5px] font-medium transition ${
+                    isActive
+                      ? 'bg-act-400 text-ink-950'
+                      : 'text-bone-300 hover:bg-ink-900 hover:text-bone-50'
+                  }`
+                }
+              >
+                <t.icon className="h-4 w-4 shrink-0" />
+                {t.label}
+              </NavLink>
+            </HoverTile>
           ))}
         </nav>
 
         <div className="hairline-t mt-auto flex flex-col gap-0.5 pt-3">
           {utilityTabs.map((t) => (
-            <NavLink
-              key={t.to}
-              to={t.to}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg border-l-2 px-2.5 py-2 text-left text-[13.5px] transition ${
-                  isActive
-                    ? 'border-tick-400 bg-tick-400/14 text-tick-200'
-                    : 'border-transparent text-bone-300 hover:bg-bone-100/6'
-                }`
-              }
-            >
-              <t.icon className="h-4 w-4 shrink-0" />
-              {t.label}
-            </NavLink>
+            <HoverTile key={t.to} variant="nudge">
+              <NavLink
+                to={t.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 rounded-full px-3 py-2 text-left text-[13.5px] font-medium transition ${
+                    isActive
+                      ? 'bg-act-400 text-ink-950'
+                      : 'text-bone-300 hover:bg-ink-900 hover:text-bone-50'
+                  }`
+                }
+              >
+                <t.icon className="h-4 w-4 shrink-0" />
+                {t.label}
+              </NavLink>
+            </HoverTile>
           ))}
         </div>
         <div className="px-2.5 pt-3 font-mono text-[10px] tracking-wide text-ink-400">

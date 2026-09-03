@@ -15,7 +15,7 @@ import { formatPercent } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
 import { axisTick, chartColor } from './chartTheme'
 
-type Props = { rows: DerivedRow[] }
+type Props = { rows: DerivedRow[]; className?: string }
 
 /** Up to five best and five worst — more than that and the bars get too thin
  *  to read on mobile. */
@@ -33,7 +33,7 @@ function truncate(name: string): string {
  * reads like a thermometer. P&L % is currency-neutral, so this chart needs no
  * FX and works on the very first import.
  */
-export function TopMovers({ rows }: Props) {
+export function TopMovers({ rows, className }: Props) {
   const movers = topMovers(rows)
   const shown =
     movers.length <= SIDE * 2
@@ -58,7 +58,7 @@ export function TopMovers({ rows }: Props) {
         `worst ${data[data.length - 1].full} ${formatPercent(data[data.length - 1].pct)}.`
 
   return (
-    <ChartCard title="Top movers" chip="bars">
+    <ChartCard title="Top movers" chip="bars" className={className}>
       {data.length === 0 ? (
         <ChartEmpty message="Movers appear once your holdings carry a current price — P&L % is computed from buy vs. current price." />
       ) : (

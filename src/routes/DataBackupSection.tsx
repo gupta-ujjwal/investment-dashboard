@@ -83,7 +83,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
   const currentCount = currentHoldings.length
 
   return (
-    <fieldset className="space-y-6 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+    <fieldset className="space-y-6 rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
       <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
         Data backup
       </legend>
@@ -103,7 +103,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           type="button"
           onClick={handleDownload}
           disabled={currentCount === 0}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-secondary"
         >
           ↓ Download .json
         </button>
@@ -118,7 +118,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
           Replaces all holdings, assets, and budget months on this device with
           the contents of a backup file, atomically. Cannot be undone.
         </p>
-        <label className="inline-flex cursor-pointer items-center border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2">
+        <label className="btn-secondary cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -133,7 +133,7 @@ export function DataBackupSection({ currentHoldings }: Props) {
       {state.kind === 'invalid' && (
         <div
           role="alert"
-          className="border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300"
+          className="rounded-xl border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300"
         >
           <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
             restore failed ·{' '}
@@ -153,13 +153,13 @@ export function DataBackupSection({ currentHoldings }: Props) {
       )}
 
       {state.kind === 'restoring' && (
-        <div className="border border-bone-100/10 bg-ink-850 p-4 font-mono text-[11px] uppercase tracking-[0.18em] text-bone-300">
+        <div className="rounded-xl border border-bone-100/10 bg-ink-850 p-4 font-mono text-[11px] uppercase tracking-[0.18em] text-bone-300">
           Replacing…
         </div>
       )}
 
       {state.kind === 'done' && (
-        <div className="border border-jade-400/40 bg-jade-900/20 p-4 font-sans text-sm text-jade-300">
+        <div className="rounded-xl border border-jade-400/40 bg-jade-900/20 p-4 font-sans text-sm text-jade-300">
           <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
             restored ·{' '}
           </span>
@@ -198,7 +198,7 @@ function RestoreConfirmPanel({
   const isLegacy = backup.schemaVersion < 4
 
   return (
-    <div className="space-y-5 border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
+    <div className="space-y-5 rounded-2xl border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
       <div>
         <h3 className="font-sans text-base font-semibold tracking-tight text-ember-300">
           Replace all data
@@ -208,14 +208,14 @@ function RestoreConfirmPanel({
         </p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
         <Stat label="Holdings" value={manifest.holdings} tone="tick" />
         <Stat label="Assets" value={manifest.assets} tone="tick" />
         <Stat label="Budget months" value={manifest.budgetMonths} tone="tick" />
         <Stat label="Budget tags" value={manifest.budgetTags} tone="tick" />
       </dl>
 
-      <div className="border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+      <div className="rounded-r-lg border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
         <span className="font-mono uppercase tracking-[0.16em] text-bone-400">
           manifest ·{' '}
         </span>
@@ -229,14 +229,14 @@ function RestoreConfirmPanel({
       </div>
 
       {largest ? (
-        <div className="border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+        <div className="rounded-r-lg border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
           <span className="font-mono uppercase tracking-[0.16em] text-bone-200">
             sanity check ·{' '}
           </span>
           largest holding {formatQuantity(largest.quantity)} {largest.name}
         </div>
       ) : (
-        <div className="border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+        <div className="rounded-r-lg border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
           <span className="font-mono uppercase tracking-[0.16em] text-bone-200">
             sanity check ·{' '}
           </span>
@@ -245,17 +245,13 @@ function RestoreConfirmPanel({
       )}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
-        >
+        <button type="button" onClick={onCancel} className="btn-secondary">
           Cancel
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="border border-ember-400 bg-ember-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-ember-300"
+          className="inline-flex items-center gap-2 rounded-full border border-ember-400 bg-ember-400 px-6 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-ember-300"
         >
           Replace all data
         </button>

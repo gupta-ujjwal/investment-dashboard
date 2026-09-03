@@ -1,80 +1,85 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Nocturne design system tokens ──────────────────────────────────────
-     Dark surfaces (ink) → Nocturne's bg / surface / neutral-dark ramp.
-     Light text (bone)   → Nocturne's text / neutral-light ramp.
-     Accent (tick)       → Nocturne blurple (#9184d9) + tonal ramp.
-     Jade / Ember        → kept as green / red, tuned for the new palette. */
+  /* ── Cobalt/graphite design system tokens ────────────────────────────────
+     Researched from Mercury + Ramp's real dark-fintech systems (not
+     invented from scratch) — see the `design-direction-cobalt-graphite`
+     memory for the full rationale. Token *names* are unchanged from the
+     prior "Nocturne" system so every existing call site (Tailwind classes,
+     chartTheme.ts, the decor/ components) inherits the new palette with no
+     find-replace: only the hex *values* moved.
+     Dark surfaces (ink) → canvas / surface / surface-2 ramp, cooler and more
+     separated than before so cards visibly lift off the page.
+     Light text (bone)   → text / text-dim / text-faint ramp.
+     Accent (tick + act) → consolidated into one cobalt hue. Two scales, one
+     colour: every existing `act-*`/`tick-*` call site converges automatically.
+     Jade / Ember        → gain / loss, retuned emerald / coral, kept a
+     distinct hue from the accent so it never reads as "click me". */
 
-  --color-ink-950: #161826;
-  --color-ink-900: #1c1e2c;
-  --color-ink-850: #20222f;
-  --color-ink-800: #232532;
-  --color-ink-700: #292b31;
-  --color-ink-600: #3f424d;
-  --color-ink-500: #595d6c;
-  --color-ink-400: #75798c;
+  --color-ink-950: #131319;
+  --color-ink-900: #1b1b24;
+  --color-ink-850: #20202b;
+  --color-ink-800: #23232f;
+  --color-ink-700: #2d2d3b;
+  --color-ink-600: #3a3a4d;
+  --color-ink-500: #55556b;
+  --color-ink-400: #71718c;
 
-  --color-bone-50: #f3f5fe;
-  --color-bone-100: #e9e9ed;
-  --color-bone-200: #e4e7f5;
-  --color-bone-300: #cfd3e5;
-  --color-bone-400: #9397ab;
-  --color-bone-500: #75798c;
+  --color-bone-50: #f7f7fb;
+  --color-bone-100: #eeeef4;
+  --color-bone-200: #d3d3de;
+  --color-bone-300: #b3b3c4;
+  --color-bone-400: #9797ab;
+  --color-bone-500: #74748c;
 
-  --color-act-300: #e7e5fe;
-  --color-tick-300: #d2cefd;
-  --color-tick-400: #9184d9;
-  --color-tick-500: #796cbf;
-  --color-tick-700: #5d5294;
-  --color-tick-900: #2b2741;
+  --color-act-300: #b9c2fb;
+  --color-tick-300: #b9c2fb;
+  --color-act-400: #5b6ef5;
+  --color-tick-400: #5b6ef5;
+  --color-act-500: #4457e0;
+  --color-tick-500: #4457e0;
+  --color-tick-700: #333f9e;
+  --color-act-900: #1c2166;
+  --color-tick-900: #1c2166;
 
-  --color-jade-300: #9EDCB6;
-  --color-jade-400: #6BCB8F;
-  --color-jade-500: #3FB573;
-  --color-jade-800: #1F4030;
-  --color-jade-900: #14241B;
+  --color-jade-300: #a3e8cc;
+  --color-jade-400: #35c98d;
+  --color-jade-500: #22a874;
+  --color-jade-800: #1a4636;
+  --color-jade-900: #102b21;
 
-  --color-ember-300: #e08a7a;
-  --color-ember-400: #d97766;
-  --color-ember-500: #c96554;
-  --color-ember-800: #4a2e26;
-  --color-ember-900: #2e1b16;
-
-  /* ── Action accent (reserved) ───────────────────────────────────────────
-     The single "act here" hue. Primary buttons and action-rail CTAs only.
-     tick-* is demoted to nav-active + focus rings; it must stop appearing on
-     CTAs, progress fills, and chart series. */
-  --color-act-300: #f7c98a;
-  --color-act-400: #f0a13c;
-  --color-act-500: #d9862a;
-  --color-act-900: #3a2610;
+  --color-ember-300: #f7b0a6;
+  --color-ember-400: #f2685c;
+  --color-ember-500: #d84f43;
+  --color-ember-800: #5c2620;
+  --color-ember-900: #351613;
 
   /* ── Severity ───────────────────────────────────────────────────────────
      Severity ≠ money direction. jade/ember mean value up/down; these mean
-     "needs attention / is fine". A red card is an unmet target, not a loss. */
-  --color-sev-crit: #e8756a;
-  --color-sev-warn: #e0a63c;
-  --color-sev-info: #5b7fa8;
-  --color-sev-ok: #4bbfa8;
+     "needs attention / is fine". A red card is an unmet target, not a loss.
+     (Grepped: unused in .tsx today — retuned for consistency, not load-bearing.) */
+  --color-sev-crit: #f2685c;
+  --color-sev-warn: #e2a13c;
+  --color-sev-info: #6f8fd8;
+  --color-sev-ok: #35c98d;
 
   /* ── Categorical chart ramp (8 steps + neutral tail) ─────────────────────
      Hue-separated AND luminance-separated for colour-blind safety. Assign by
-     stable key, never by array index. */
-  --cat-1: #5b8ff9;
-  --cat-2: #4bbfa8;
-  --cat-3: #f0a13c;
-  --cat-4: #9270ca;
-  --cat-5: #e8756a;
-  --cat-6: #5ad8a6;
-  --cat-7: #d4a0d8;
-  --cat-8: #9aa3b0;
-  --cat-other: #4a505c;
+     stable key, never by array index. cat-1/cat-2/cat-3 deliberately echo
+     the accent/gain/loss hues so charts read as one instrument panel. */
+  --cat-1: #5b6ef5;
+  --cat-2: #35c98d;
+  --cat-3: #f2685c;
+  --cat-4: #b98af0;
+  --cat-5: #f5b942;
+  --cat-6: #4dd9d9;
+  --cat-7: #e893c4;
+  --cat-8: #9797ab;
+  --cat-other: #4a4a5c;
 
-  --font-display: "Inter", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Instrument Sans", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
@@ -116,6 +121,88 @@
     outline: 2px solid var(--color-tick-400);
     outline-offset: 2px;
     border-radius: 2px;
+  }
+}
+
+@layer components {
+  /* Radius language: sharp/hairline stays on structural cards and tables
+     (untouched here); anything a user *presses* gets a deliberate,
+     generous radius so it reads as touchable — not a uniform rounded-lg
+     applied everywhere. Replaces the ~15 near-identical hand-rolled
+     button/input strings that had accumulated across the routes. */
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: none;
+    background: var(--color-act-400);
+    color: var(--color-ink-950);
+    padding: 0.6rem 1.2rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+  }
+  .btn-primary:hover { background: var(--color-act-300); }
+  .btn-primary:focus-visible { outline: 2px solid var(--color-bone-50); outline-offset: 2px; }
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    background: color-mix(in srgb, var(--color-bone-100) 10%, transparent);
+    color: var(--color-bone-400);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--color-bone-100) 15%, transparent);
+    background: transparent;
+    color: var(--color-bone-300);
+    padding: 0.6rem 1.2rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .btn-secondary:hover { border-color: var(--color-act-400); color: var(--color-act-400); }
+  .btn-secondary:focus-visible { outline: 2px solid var(--color-tick-400); outline-offset: 2px; }
+  .btn-secondary:disabled {
+    cursor: not-allowed;
+    border-color: color-mix(in srgb, var(--color-bone-100) 8%, transparent);
+    color: var(--color-bone-500);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--color-bone-100) 15%, transparent);
+    background: var(--color-ink-850);
+    color: var(--color-bone-50);
+    padding: 0.6rem 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+  }
+  .field::placeholder { color: var(--color-bone-400); }
+  .field:focus { border-color: var(--color-act-400); outline: none; }
+  .field:disabled { cursor: not-allowed; opacity: 0.6; }
+
+  .bar {
+    height: 0.5rem;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--color-bone-100) 10%, transparent);
+  }
+  .bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 9999px;
   }
 }
 
@@ -176,6 +263,42 @@
       animation: none;
       opacity: 1;
       transform: none;
+    }
+  }
+
+  /* AmbientBackground blobs — soft, blurred, low-opacity; drift is disabled
+     in the component itself under prefers-reduced-motion (JS-gated, since
+     the whole layer is decorative and best skipped rather than frozen). */
+  .ambient-blob {
+    position: absolute;
+    height: 75%;
+    width: 65%;
+    border-radius: 9999px;
+    opacity: 0.32;
+    filter: blur(72px);
+  }
+  .animate-ambient-drift-1 {
+    animation: ambient-drift-1 26s ease-in-out infinite alternate;
+  }
+  .animate-ambient-drift-2 {
+    animation: ambient-drift-2 32s ease-in-out infinite alternate;
+  }
+  .animate-ambient-drift-3 {
+    animation: ambient-drift-3 22s ease-in-out infinite alternate;
+  }
+  @keyframes ambient-drift-1 {
+    to {
+      transform: translate(6%, 8%) scale(1.1);
+    }
+  }
+  @keyframes ambient-drift-2 {
+    to {
+      transform: translate(-8%, 4%) scale(0.95);
+    }
+  }
+  @keyframes ambient-drift-3 {
+    to {
+      transform: translate(4%, -10%) scale(1.05);
     }
   }
 }

@@ -28,6 +28,7 @@ import {
   type HhiBand,
 } from '../lib/analytics'
 import { formatDate, formatMoney, formatPercent } from '../lib/format'
+import { AnimatedMoney } from '../components/decor/AnimatedNumber'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
 import { AssetForm } from '../components/AssetForm'
@@ -161,22 +162,15 @@ export function PortfolioRoute() {
     return (
       <div className="space-y-6">
         <PageHead title="Portfolio" caption="No positions yet" />
-        <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
+        <div className="rounded-3xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
           <p className="font-sans text-base text-bone-200">
             Import a broker file to see your positions — or add one manually.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to="/import"
-              className="inline-flex items-center gap-2 border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[12px] font-medium  text-ink-950 transition hover:bg-act-300"
-            >
+            <Link to="/import" className="btn-primary">
               Go to Import →
             </Link>
-            <button
-              type="button"
-              onClick={() => setAddAssetOpen(true)}
-              className="inline-flex items-center gap-2 border border-bone-100/15 px-5 py-2.5 font-sans text-[12px] font-medium  text-bone-200 transition hover:border-act-400 hover:text-act-400"
-            >
+            <button type="button" onClick={() => setAddAssetOpen(true)} className="btn-secondary">
               + Add manually
             </button>
           </div>
@@ -220,14 +214,14 @@ export function PortfolioRoute() {
           <button
             type="button"
             onClick={() => setAddHoldingOpen(true)}
-            className="inline-flex w-fit items-center gap-2 border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium  text-act-400 transition hover:bg-act-400 hover:text-ink-950"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-act-400 bg-act-400/10 px-3 py-1.5 font-sans text-[11px] font-medium  text-act-400 transition hover:bg-act-400 hover:text-ink-950"
           >
             + Add holding
           </button>
           <button
             type="button"
             onClick={() => setAddAssetOpen(true)}
-            className="inline-flex w-fit items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-bone-100/15 px-3 py-1.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
           >
             + Add asset
           </button>
@@ -238,20 +232,23 @@ export function PortfolioRoute() {
         <RefreshBanner unstamped={unstamped} baseCurrency={base} />
       )}
 
-      <section aria-label="Summary" className="hairline-t hairline-b flex flex-wrap gap-x-11 gap-y-3 py-4">
+      <section
+        aria-label="Summary"
+        className="flex flex-wrap gap-x-11 gap-y-3 rounded-2xl border border-bone-100/10 bg-ink-900 px-6 py-5"
+      >
         <SummaryFigure
           label={`Value · ${base}`}
-          value={formatMoney(netWorth.knownCurrentValue, base)}
+          value={<AnimatedMoney value={netWorth.knownCurrentValue} currency={base} />}
           tone="tick"
         />
         <SummaryFigure
           label="Invested"
-          value={money(netWorth.knownInvested, base)}
+          value={<AnimatedMoney value={netWorth.knownInvested} currency={base} />}
           tone="mute"
         />
         <SummaryFigure
           label="Profit"
-          value={money(netWorth.profitKnown, base)}
+          value={<AnimatedMoney value={netWorth.profitKnown} currency={base} />}
           sub={netWorth.profitPctKnown === undefined ? '—' : formatPercent(netWorth.profitPctKnown)}
           tone={pnlTone}
         />
@@ -392,8 +389,12 @@ function HoldingsControls({
   onToggleDir: () => void
 }) {
   return (
-    <section className="flex flex-col gap-3 border border-bone-100/10 bg-ink-900 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <div role="group" aria-label="Filter by market" className="inline-flex border border-bone-100/15">
+    <section className="flex flex-col gap-3 rounded-2xl border border-bone-100/10 bg-ink-900 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div
+        role="group"
+        aria-label="Filter by market"
+        className="inline-flex overflow-hidden rounded-full border border-bone-100/15"
+      >
         {marketOptions.map((opt) => {
           const active = filters.market === opt.value
           return (
@@ -412,7 +413,7 @@ function HoldingsControls({
         })}
       </div>
 
-      <label className="flex items-center gap-2 border border-bone-100/15 bg-ink-950 px-3 py-1.5 sm:w-72">
+      <label className="flex items-center gap-2 rounded-full border border-bone-100/15 bg-ink-950 px-3 py-1.5 sm:w-72">
         <span aria-hidden="true" className="font-mono text-xs text-bone-400">
           ⌕
         </span>
@@ -427,7 +428,7 @@ function HoldingsControls({
       </label>
 
       {closedCount > 0 && (
-        <label className="flex cursor-pointer items-center gap-2 border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
+        <label className="flex cursor-pointer items-center gap-2 rounded-full border border-bone-100/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition has-[:checked]:border-act-400 has-[:checked]:text-act-400">
           <input
             type="checkbox"
             checked={filters.showClosed === true}
@@ -484,12 +485,12 @@ const sortOptions: { key: SortKey; label: string }[] = [
 
 function FilteredEmpty({ onClear }: { onClear: () => void }) {
   return (
-    <div className="border border-dashed border-bone-100/15 bg-ink-900 px-8 py-14 text-center">
+    <div className="rounded-2xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-14 text-center">
       <p className="font-sans text-sm text-bone-300">No holdings match these filters.</p>
       <button
         type="button"
         onClick={onClear}
-        className="mt-4 inline-flex items-center gap-2 border border-bone-100/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+        className="mt-4 inline-flex items-center gap-2 rounded-full border border-bone-100/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
       >
         Clear filters
       </button>
@@ -550,7 +551,7 @@ function RiskRow({ concentration: c }: { concentration: Concentration }) {
   return (
     <section
       aria-label="Risk"
-      className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
+      className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3"
     >
       {verdicts.map((v) => (
         <Kpi
@@ -661,7 +662,17 @@ const kpiValueColor: Record<KpiTone, string> = {
   loss: 'text-ember-300',
 }
 
-function SummaryFigure({ label, value, sub, tone = 'mute' }: { label: string; value: string; sub?: string; tone?: KpiTone }) {
+function SummaryFigure({
+  label,
+  value,
+  sub,
+  tone = 'mute',
+}: {
+  label: string
+  value: React.ReactNode
+  sub?: string
+  tone?: KpiTone
+}) {
   return (
     <div>
       <div className="flex items-center gap-2 font-sans text-[10px]  text-bone-500">

@@ -10,18 +10,21 @@ type Props = {
   /** Optional right-aligned controls (e.g. the allocation mode toggle). */
   action?: ReactNode
   children: ReactNode
+  /** Extra classes on the card root — e.g. `lg:col-span-2` for a grid's
+   *  trailing odd-one-out tile. */
+  className?: string
 }
 
 /** The bordered card every homepage chart sits in — matches the dashboard's
  *  KPI tiles and the prior placeholder `ChartFrame`. Wraps the body in an
  *  error boundary so one bad chart can't take the page down. */
-export function ChartCard({ title, chip, figure, action, children }: Props) {
+export function ChartCard({ title, chip, figure, action, children, className }: Props) {
   return (
     // `min-w-0` is load-bearing: as a grid/flex child this card defaults to
     // `min-width: auto` and would refuse to shrink below the chart's content
     // width, overflowing the viewport on mobile. Recharts' ResponsiveContainer
     // only sizes down correctly once the card itself can.
-    <div className="flex min-h-[320px] min-w-0 flex-col bg-ink-900 p-6">
+    <div className={`flex min-h-[320px] min-w-0 flex-col bg-ink-900 p-6 ${className ?? ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-sans text-base font-semibold tracking-tight text-bone-100">

@@ -32,7 +32,7 @@ export function SettingsForm() {
 
   return (
     <fetcher.Form method="post" className="space-y-8">
-      <fieldset className="space-y-6 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <fieldset className="space-y-6 rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
         <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
           Profile
         </legend>
@@ -47,7 +47,7 @@ export function SettingsForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-sans text-sm text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
+            className="field"
           />
         </label>
 
@@ -100,12 +100,12 @@ export function SettingsForm() {
         </fieldset>
       </fieldset>
 
-      <fieldset className="space-y-5 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+      <fieldset className="space-y-5 rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
         <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
           FX
         </legend>
 
-        <dl className="grid grid-cols-1 gap-px overflow-hidden border border-bone-100/10 bg-bone-100/10 sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-2">
           <Meta
             label="Last rate"
             value={
@@ -126,13 +126,7 @@ export function SettingsForm() {
           />
         </dl>
 
-        <button
-          type="submit"
-          name="intent"
-          value="refresh"
-          disabled={submitting}
-          className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:border-bone-100/15 disabled:bg-bone-100/5 disabled:text-bone-400"
-        >
+        <button type="submit" name="intent" value="refresh" disabled={submitting} className="btn-primary">
           {submitting && fetcher.formData?.get('intent') === 'refresh'
             ? 'Refreshing…'
             : buttonLabel}
@@ -144,7 +138,7 @@ export function SettingsForm() {
             name="intent"
             value="save"
             disabled={submitting}
-            className="ml-3 border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50 disabled:cursor-not-allowed"
+            className="btn-secondary ml-3"
           >
             Save profile
           </button>
@@ -168,7 +162,7 @@ export function SettingsForm() {
                 value={manualRate}
                 onChange={(e) => setManualRate(e.target.value)}
                 placeholder="e.g. 95.77"
-                className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
+                className="field font-mono tabular-nums"
               />
             </label>
             <button
@@ -176,7 +170,7 @@ export function SettingsForm() {
               name="intent"
               value="manual"
               disabled={submitting || manualRate === ''}
-              className="border border-bone-100/15 px-4 py-2.5 font-sans text-[11px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary"
             >
               Apply manual rate
             </button>
@@ -187,7 +181,7 @@ export function SettingsForm() {
         </details>
 
         {result && !result.ok && (
-          <div className="border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
+          <div className="rounded-xl border border-ember-400/40 bg-ember-900/30 p-4 font-sans text-sm text-ember-300">
             <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
               fx failed ·{' '}
             </span>
@@ -195,7 +189,7 @@ export function SettingsForm() {
           </div>
         )}
         {result && result.ok && (
-          <div className="border border-jade-400/40 bg-jade-900/20 p-4 font-sans text-sm text-jade-300">
+          <div className="rounded-xl border border-jade-400/40 bg-jade-900/20 p-4 font-sans text-sm text-jade-300">
             <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
               {result.mode === 'saved' ? 'saved' : 'refreshed'} ·{' '}
             </span>
@@ -230,7 +224,7 @@ function PlanningTargets({
     return t ? String(t.pct) : ''
   }
   return (
-    <fieldset className="space-y-6 border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
+    <fieldset className="space-y-6 rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
       <legend className="px-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone-400">
         Planning &amp; goals
       </legend>
@@ -282,13 +276,7 @@ function PlanningTargets({
         </>
       )}
 
-      <button
-        type="submit"
-        name="intent"
-        value="save"
-        disabled={submitting}
-        className="border border-act-400 bg-act-400 px-5 py-2.5 font-sans text-[11px] font-medium  text-ink-950 transition hover:bg-act-300 disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <button type="submit" name="intent" value="save" disabled={submitting} className="btn-primary">
         Save targets
       </button>
       <p className="font-sans text-[11px] text-bone-400">
@@ -321,7 +309,7 @@ function TargetInput({
         name={name}
         defaultValue={defaultValue !== undefined ? String(defaultValue) : ''}
         placeholder={placeholder}
-        className="w-full border border-bone-100/15 bg-ink-850 px-3 py-2.5 font-mono text-sm tabular-nums text-bone-50 placeholder:text-bone-400 focus:border-act-400 focus:outline-none"
+        className="field font-mono tabular-nums"
       />
     </label>
   )
@@ -347,7 +335,7 @@ function RadioPill({
     // the solid amber fill — the same active treatment as every other
     // segmented control in the app — rather than a faint 10% wash.
     <label
-      className={`flex cursor-pointer items-center gap-2 border px-3 py-2 font-sans text-[12px] tracking-tight transition has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2 ${
+      className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 font-sans text-[12px] tracking-tight transition has-[:focus-visible]:outline has-[:focus-visible]:outline-1 has-[:focus-visible]:outline-act-400 has-[:focus-visible]:outline-offset-2 ${
         checked
           ? 'border-act-400 bg-act-400 text-ink-950'
           : 'border-bone-100/15 bg-ink-850 text-bone-300 hover:border-bone-100/40 hover:text-bone-50'
