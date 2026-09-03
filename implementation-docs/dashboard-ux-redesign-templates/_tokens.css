@@ -1,0 +1,205 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Reference stylesheet for the dashboard-ux-redesign templates.
+
+   This file exists ONLY so the sibling .html templates render standalone in a
+   browser. It is NOT shipped and NOT imported by the app. The app's real
+   tokens live in `src/index.css` under Tailwind v4's `@theme`.
+
+   Every custom property below mirrors a `--color-*` / `--font-*` token that
+   `src/index.css` either already defines or (marked NEW) should gain in PR-2.
+   Every template element carries a `data-tw="..."` attribute holding the
+   literal Tailwind class string to write in the React component — read that
+   attribute, not this CSS, when porting.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Existing Nocturne tokens (src/index.css) — unchanged ──────────────── */
+  --color-ink-950: #161826;
+  --color-ink-900: #1c1e2c;
+  --color-ink-850: #20222f;
+  --color-ink-800: #232532;
+  --color-ink-700: #292b31;
+  --color-ink-600: #3f424d;
+  --color-ink-500: #595d6c;
+  --color-ink-400: #75798c;
+
+  --color-bone-50:  #f3f5fe;
+  --color-bone-100: #e9e9ed;
+  --color-bone-200: #e4e7f5;
+  --color-bone-300: #cfd3e5;
+  --color-bone-400: #9397ab;
+  --color-bone-500: #75798c;
+
+  --color-tick-200: #e7e5fe;
+  --color-tick-300: #d2cefd;
+  --color-tick-400: #9184d9;
+  --color-tick-500: #796cbf;
+  --color-tick-700: #5d5294;
+  --color-tick-900: #2b2741;
+
+  --color-jade-300: #9edcb6;
+  --color-jade-400: #6bcb8f;
+  --color-jade-500: #3fb573;
+  --color-jade-800: #1f4030;
+  --color-jade-900: #14241b;
+
+  --color-ember-300: #e08a7a;
+  --color-ember-400: #d97766;
+  --color-ember-500: #c96554;
+  --color-ember-800: #4a2e26;
+  --color-ember-900: #2e1b16;
+
+  /* ── NEW · action accent ────────────────────────────────────────────────
+     The single reserved "act here" hue. Used by primary buttons and the
+     action-rail affordances and NOWHERE else. tick-* is demoted to nav +
+     focus rings; it must stop appearing on CTAs, progress fills, and chart
+     series, otherwise nothing on the page reads as clickable. */
+  --color-act-300: #f7c98a;
+  --color-act-400: #f0a13c;
+  --color-act-500: #d9862a;
+  --color-act-900: #3a2610;
+
+  /* ── NEW · severity ─────────────────────────────────────────────────────
+     Severity is NOT the same axis as money-direction. jade/ember mean "value
+     went up / value went down". These mean "this needs you / this is fine".
+     A red action card is not a loss; it is an unmet target. */
+  --color-sev-crit: #e8756a;
+  --color-sev-warn: #e0a63c;
+  --color-sev-info: #5b7fa8;
+  --color-sev-ok:   #4bbfa8;
+
+  /* ── NEW · categorical chart ramp (8 steps) ─────────────────────────────
+     Replaces `donutPalette` in src/components/charts/chartTheme.ts, which is
+     currently 6 steps of one blurple hue plus two bones — indistinguishable
+     at an 8px legend swatch. These are hue-separated AND luminance-separated,
+     so they survive greyscale and the common forms of colour-blindness.
+     ASSIGN BY STABLE KEY, NEVER BY ARRAY INDEX (see plan § Chart palette). */
+  --cat-1: #5b8ff9;  /* blue    */
+  --cat-2: #4bbfa8;  /* teal    */
+  --cat-3: #f0a13c;  /* amber   */
+  --cat-4: #9270ca;  /* violet  */
+  --cat-5: #e8756a;  /* coral   */
+  --cat-6: #5ad8a6;  /* mint    */
+  --cat-7: #d4a0d8;  /* orchid  */
+  --cat-8: #9aa3b0;  /* slate   */
+  --cat-other: #4a505c;  /* the grouped "Other"/"Unknown" tail — always last,
+                            always this neutral, never a live ramp colour */
+
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ══ template chrome — not part of the design system ══════════════════════ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-ink-950);
+  color: var(--color-bone-100);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tpl-head {
+  border-bottom: 1px solid rgba(233, 233, 237, 0.08);
+  padding: 20px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  align-items: baseline;
+}
+.tpl-head h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.tpl-head p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--color-bone-400);
+}
+.tpl-note {
+  margin: 0;
+  padding: 14px 24px;
+  background: var(--color-ink-900);
+  border-bottom: 1px solid rgba(233, 233, 237, 0.08);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--color-bone-400);
+}
+.tpl-note b { color: var(--color-act-400); font-weight: 600; }
+.tpl-note code { color: var(--color-bone-200); }
+.tpl-section { padding: 28px 24px; }
+.tpl-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-bone-500);
+  margin-bottom: 12px;
+}
+
+/* ══ shared primitives used across templates ══════════════════════════════ */
+
+.panel {
+  background: var(--color-ink-900);
+  border: 1px solid rgba(233, 233, 237, 0.08);
+  border-radius: 8px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-bone-500);
+}
+
+/* Every figure that lines up in a column or sits in a hero.
+   THIS IS THE FIX for the Equity KPIs wrapping mid-number. */
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.up   { color: var(--color-jade-400); }
+.down { color: var(--color-ember-400); }
+
+/* Primary action. The ONLY place --color-act-400 may be used as a fill. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-act-400);
+  background: var(--color-act-400);
+  color: #221503;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn:hover { background: var(--color-act-300); border-color: var(--color-act-300); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-bone-200);
+  border-color: rgba(233, 233, 237, 0.16);
+}
+.btn-ghost:hover { background: rgba(233, 233, 237, 0.06); border-color: rgba(233, 233, 237, 0.28); }
+
+:focus-visible {
+  outline: 2px solid var(--color-act-400);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

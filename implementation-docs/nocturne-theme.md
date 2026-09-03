@@ -1,6 +1,6 @@
 # Nocturne theme revamp
 
-> Implemented via `/develop` on 2026-08-03; design source of truth: `Investment Dashboard Revamp (standalone).html` (bundled mockup at repo root).
+> Implemented via `/develop` on 2026-08-03; design source of truth was `Investment Dashboard Revamp (standalone).html`, a bundled mockup formerly at repo root (removed in repo cleanup; Nocturne itself was superseded by the cobalt/graphite system — see `dashboard-ux-redesign.md`).
 
 ## What
 

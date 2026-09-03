@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · Portfolio (Investments + Equity merged) — dashboard-ux-redesign</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+  .page { max-width: 1600px; padding: 30px 28px 48px; display: flex; flex-direction: column; gap: 22px; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .head h1 { font-size: 26px; font-weight: 600; margin: 0; letter-spacing: -.02em; }
+  .head .sub { font-size: 12.5px; color: var(--color-bone-400); margin-top: 3px; }
+  .head .acts { display: flex; gap: 8px; }
+
+  /* summary strip — 4 figures, NOT 4 boxed cards */
+  .strip { display: flex; flex-wrap: wrap; gap: 12px 44px; padding: 16px 0;
+           box-shadow: inset 0 1px 0 0 rgba(233,233,237,.08), inset 0 -1px 0 0 rgba(233,233,237,.08); }
+  .strip .f .k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .12em;
+                 text-transform: uppercase; color: var(--color-bone-500); }
+  .strip .f .v { font-family: var(--font-display); font-size: 21px; font-weight: 600;
+                 letter-spacing: -.015em; margin-top: 4px; }
+
+  /* filters */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { font-size: 12.5px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+          border: 1px solid rgba(233,233,237,.14); background: transparent; color: var(--color-bone-300); }
+  .chip[aria-pressed="true"] { background: rgba(145,132,217,.16); border-color: rgba(145,132,217,.5); color: var(--color-tick-200); }
+  .chip .c { font-family: var(--font-mono); font-size: 10px; color: var(--color-bone-500); margin-left: 5px; }
+  .sep { width: 1px; height: 20px; background: rgba(233,233,237,.12); margin: 0 4px; }
+  .search { margin-left: auto; }
+  .search input { background: var(--color-ink-900); border: 1px solid rgba(233,233,237,.12);
+                  border-radius: 7px; padding: 7px 12px; color: var(--color-bone-100);
+                  font-family: var(--font-sans); font-size: 12.5px; min-width: 210px; }
+  .search input::placeholder { color: var(--color-ink-400); }
+
+  /* table */
+  .tblwrap { overflow-x: auto; border: 1px solid rgba(233,233,237,.08); border-radius: 9px; }
+  table { border-collapse: collapse; width: 100%; min-width: 940px; font-size: 12.5px; }
+  thead th { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .11em; text-transform: uppercase;
+             color: var(--color-bone-500); font-weight: 500; text-align: right; padding: 11px 14px;
+             background: var(--color-ink-850); white-space: nowrap; position: sticky; top: 0; }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 12px 14px; text-align: right; border-top: 1px solid rgba(233,233,237,.06);
+             font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--color-bone-200); }
+  tbody td:first-child { text-align: left; white-space: normal; }
+  tbody tr:hover { background: rgba(233,233,237,.03); }
+
+  .inst { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .inst .nm { font-size: 13px; font-weight: 600; color: var(--color-bone-100); }
+  .inst .mt { display: flex; align-items: center; gap: 7px; font-family: var(--font-mono);
+              font-size: 9.5px; letter-spacing: .04em; color: var(--color-bone-500); flex-wrap: wrap; }
+  .tag { border: 1px solid rgba(233,233,237,.16); border-radius: 3px; padding: 1px 5px; }
+  .tag.us { color: var(--cat-1); border-color: rgba(91,143,249,.4); }
+  .tag.in { color: var(--cat-3); border-color: rgba(240,161,60,.4); }
+
+  .pl { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .pl .p { font-size: 11px; opacity: .82; }
+
+  tfoot td { padding: 13px 14px; text-align: right; font-variant-numeric: tabular-nums;
+             border-top: 1px solid rgba(233,233,237,.14); background: var(--color-ink-850);
+             font-weight: 600; white-space: nowrap; }
+  tfoot td:first-child { text-align: left; font-family: var(--font-mono); font-size: 10px;
+                         letter-spacing: .12em; text-transform: uppercase; color: var(--color-bone-500); font-weight: 500; }
+
+  /* mobile card fallback */
+  .cards { display: none; flex-direction: column; gap: 9px; }
+  .mcard { background: var(--color-ink-900); border: 1px solid rgba(233,233,237,.08); border-radius: 9px; padding: 13px 14px; }
+  .mcard .top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .mcard .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px;
+                 padding-top: 11px; box-shadow: inset 0 1px 0 0 rgba(233,233,237,.07); }
+  .mcard .grid .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em;
+                    text-transform: uppercase; color: var(--color-bone-500); }
+  .mcard .grid .v { font-size: 12.5px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  @media (max-width: 860px) {
+    .page { padding: 18px 16px 32px; }
+    .tblwrap { display: none; }
+    .cards { display: flex; }
+    .search { margin-left: 0; width: 100%; }
+    .search input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tpl-head">
+  <h1>04 · Portfolio</h1>
+  <p>PR-1 commit 6 · merges <code>InvestmentsRoute.tsx</code> + <code>EquityRoute.tsx</code></p>
+</div>
+
+<p class="tpl-note">
+  <b>ONE SURFACE, NOT TWO TABS ·</b> Investments and Equity answer the same question at different
+  grain — Investments is Overview's allocation bars as a table, Equity is Investments filtered to
+  listed instruments. Asset class becomes a <em>filter chip</em>. That also deletes the awkward
+  double-counting footnote currently printed under the Investments table ("1 manually-added equity
+  asset … is counted separately from the holdings-derived equity rows above").<br><br>
+  <b>ALSO FIXED HERE ·</b> the KPI figures that wrap mid-number on Equity today
+  (<code>₹53,44,36</code> / <code>0.48</code>) — every figure gets <code>tabular-nums</code> +
+  <code>whitespace-nowrap</code>, and the strip is four inline figures rather than four boxed cards
+  fighting for a 1024px cap.
+</p>
+
+<div class="page">
+
+  <div class="head">
+    <div>
+      <h1>Portfolio</h1>
+      <p class="sub">26 positions · 20 imported, 6 manual · priced 3 Aug 2026</p>
+    </div>
+    <div class="acts">
+      <a class="btn" href="#">Import</a>
+      <a class="btn btn-ghost" href="#">Add manually</a>
+    </div>
+  </div>
+
+  <div class="strip" data-tw="flex flex-wrap gap-x-11 gap-y-3 py-4 hairline-t hairline-b">
+    <div class="f"><div class="k">Value · INR</div><div class="v num">₹86,32,360</div></div>
+    <div class="f"><div class="k">Invested</div><div class="v num">₹58,53,719</div></div>
+    <div class="f"><div class="k">Profit</div><div class="v num up">₹24,93,641</div></div>
+    <div class="f"><div class="k">Return</div><div class="v num up">+42.6%</div></div>
+  </div>
+
+  <div class="filters" data-tw="flex flex-wrap items-center gap-2">
+    <button class="chip" aria-pressed="true">All <span class="c">26</span></button>
+    <button class="chip" aria-pressed="false">Equity <span class="c">14</span></button>
+    <button class="chip" aria-pressed="false">ETF <span class="c">4</span></button>
+    <button class="chip" aria-pressed="false">Mutual funds <span class="c">1</span></button>
+    <button class="chip" aria-pressed="false">Other <span class="c">7</span></button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="chip" aria-pressed="false">India <span class="c">17</span></button>
+    <button class="chip" aria-pressed="false">US <span class="c">9</span></button>
+    <div class="search"><input type="search" placeholder="Search name, symbol, or ISIN"></div>
+  </div>
+
+  <div class="tblwrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Instrument</th>
+          <th scope="col">Qty</th>
+          <th scope="col">Avg buy</th>
+          <th scope="col">Price</th>
+          <th scope="col">Invested</th>
+          <th scope="col">Value ▾</th>
+          <th scope="col">Profit</th>
+          <th scope="col">Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="inst"><span class="nm">Vanguard S&amp;P 500 ETF</span>
+            <span class="mt"><span class="tag us">US</span> VOO <span class="tag">ETF</span> Vested</span></div></td>
+          <td>11</td><td>$402.10</td><td>$528.40</td><td>₹3,82,598</td><td>₹5,02,772</td>
+          <td><div class="pl"><span class="up">₹1,20,174</span><span class="p up">+31.4%</span></div></td>
+          <td>5.8%</td>
+        </tr>
+        <tr>
+          <td><div class="inst"><span class="nm">NVIDIA Corporation</span>
+            <span class="mt"><span class="tag us">US</span> NVDA <span class="tag">Equity</span> Vested</span></div></td>
+          <td>30</td><td>$61.40</td><td>$172.80</td><td>₹1,59,333</td><td>₹4,48,416</td>
+          <td><div class="pl"><span class="up">₹2,89,083</span><span class="p up">+181.4%</span></div></td>
+          <td>5.2%</td>
+        </tr>
+        <tr>
+          <td><div class="inst"><span class="nm">Reliance Industries</span>
+            <span class="mt"><span class="tag in">IN</span> INE002A01018 <span class="tag">Equity</span> Groww</span></div></td>
+          <td>120</td><td>₹2,400.00</td><td>₹2,905.00</td><td>₹2,88,000</td><td>₹3,48,600</td>
+          <td><div class="pl"><span class="up">₹60,600</span><span class="p up">+21.0%</span></div></td>
+          <td>4.0%</td>
+        </tr>
+        <tr>
+          <td><div class="inst"><span class="nm">Infosys</span>
+            <span class="mt"><span class="tag in">IN</span> INE009A01021 <span class="tag">Equity</span> Groww</span></div></td>
+          <td>150</td><td>₹1,400.00</td><td>₹1,268.00</td><td>₹2,10,000</td><td>₹1,90,200</td>
+          <td><div class="pl"><span class="down">−₹19,800</span><span class="p down">−9.4%</span></div></td>
+          <td>2.2%</td>
+        </tr>
+        <tr>
+          <td><div class="inst"><span class="nm">Sterling &amp; Wilson</span>
+            <span class="mt"><span class="tag in">IN</span> INE00M201021 <span class="tag">Equity</span> Groww</span></div></td>
+          <td>300</td><td>₹480.00</td><td>₹167.00</td><td>₹1,44,000</td><td>₹50,100</td>
+          <td><div class="pl"><span class="down">−₹93,900</span><span class="p down">−65.2%</span></div></td>
+          <td>0.6%</td>
+        </tr>
+        <tr>
+          <td><div class="inst"><span class="nm">Sovereign Gold Bond 2031</span>
+            <span class="mt"><span class="tag in">IN</span> <span class="tag">Gold</span> Manual</span></div></td>
+          <td>—</td><td>—</td><td>—</td><td>₹4,00,000</td><td>₹6,41,000</td>
+          <td><div class="pl"><span class="up">₹2,41,000</span><span class="p up">+60.3%</span></div></td>
+          <td>7.4%</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4">Total · 26 positions</td>
+          <td>₹58,53,719</td><td>₹86,32,360</td>
+          <td><div class="pl"><span class="up">₹24,93,641</span><span class="p up">+42.6%</span></div></td>
+          <td>100%</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- < 860px: the table becomes cards. Never a horizontally-scrolling 8-column
+       table on a phone — the current Equity table forces exactly that. -->
+  <div class="cards">
+    <div class="mcard">
+      <div class="top">
+        <div class="inst"><span class="nm">Vanguard S&amp;P 500 ETF</span>
+          <span class="mt"><span class="tag us">US</span> VOO <span class="tag">ETF</span></span></div>
+        <div class="pl"><span class="num" style="font-size:14px;font-weight:650">₹5,02,772</span>
+          <span class="p up num">+31.4%</span></div>
+      </div>
+      <div class="grid">
+        <div><div class="k">Qty</div><div class="v">11</div></div>
+        <div><div class="k">Avg buy</div><div class="v">$402.10</div></div>
+        <div><div class="k">Profit</div><div class="v up">₹1,20,174</div></div>
+      </div>
+    </div>
+    <div class="mcard">
+      <div class="top">
+        <div class="inst"><span class="nm">Sterling &amp; Wilson</span>
+          <span class="mt"><span class="tag in">IN</span> INE00M201021 <span class="tag">Equity</span></span></div>
+        <div class="pl"><span class="num" style="font-size:14px;font-weight:650">₹50,100</span>
+          <span class="p down num">−65.2%</span></div>
+      </div>
+      <div class="grid">
+        <div><div class="k">Qty</div><div class="v">300</div></div>
+        <div><div class="k">Avg buy</div><div class="v">₹480.00</div></div>
+        <div><div class="k">Profit</div><div class="v down">−₹93,900</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="tpl-note" style="border-top:1px solid rgba(233,233,237,.08);border-bottom:0">
+  <b>PLAIN LANGUAGE ·</b> The concentration sub-row moves off this page and into the action rail.
+  Where a verdict is still shown inline, write the sentence, not the statistic:
+  "No single position is more than 10% of your portfolio" &mdash; with <code>HHI 0.06</code> as a
+  <code>title</code> tooltip if it is worth keeping at all. Never render a bare em-dash as a value
+  (today: <code>SINGLE-STOCK RISK —</code>), which reads ambiguously as zero, unknown, or
+  not-applicable.
+</p>
+
+</body>
+</html>

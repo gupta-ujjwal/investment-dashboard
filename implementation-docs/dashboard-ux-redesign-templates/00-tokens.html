@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>00 · Tokens — dashboard-ux-redesign</title>
+<link rel="stylesheet" href="_tokens.css">
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+  .swatch { border: 1px solid rgba(233,233,237,.08); border-radius: 8px; overflow: hidden; background: var(--color-ink-900); }
+  .swatch .chip { height: 56px; }
+  .swatch .meta { padding: 9px 11px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.6; }
+  .swatch .meta b { display: block; color: var(--color-bone-100); font-weight: 600; }
+  .swatch .meta span { color: var(--color-bone-500); }
+
+  .ramp { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid rgba(233,233,237,.08); }
+  .ramp > div { flex: 1; height: 60px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;
+                font-family: var(--font-mono); font-size: 9.5px; color: rgba(0,0,0,.62); font-weight: 700; }
+
+  .legend-test { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 14px; }
+  .legend-test span { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--color-bone-300); }
+  .legend-test i { width: 8px; height: 8px; border-radius: 2px; display: block; }
+
+  .type-row { display: grid; grid-template-columns: 172px 1fr; gap: 10px 20px; align-items: baseline;
+              padding: 14px 0; border-top: 1px solid rgba(233,233,237,.07); }
+  .type-row .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-bone-500); }
+  .type-row .k em { display: block; font-style: normal; color: var(--color-bone-400); text-transform: none; letter-spacing: 0; margin-top: 3px; }
+
+  .rules { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  .rules th, .rules td { text-align: left; padding: 10px 14px; border-bottom: 1px solid rgba(233,233,237,.07); vertical-align: top; }
+  .rules th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--color-bone-500); font-weight: 500; }
+  .rules td:first-child { white-space: nowrap; }
+  .rules code { font-family: var(--font-mono); font-size: 11px; color: var(--color-bone-200); }
+  .no { color: var(--color-ember-400); }
+  .yes { color: var(--color-jade-400); }
+</style>
+</head>
+<body>
+
+<div class="tpl-head">
+  <h1>00 · Token system</h1>
+  <p>PR-1 commits 3–4 · edit <code>src/index.css</code> @theme + <code>src/components/charts/chartTheme.ts</code></p>
+</div>
+
+<p class="tpl-note">
+  <b>WHAT CHANGES ·</b> Nothing in the ink/bone/jade/ember ramps. Three additions: an <code>act-*</code>
+  action accent, a <code>sev-*</code> severity set, and an 8-step categorical chart ramp.
+  One demotion: <code>tick-*</code> stops being used for CTAs, progress fills, and chart series —
+  it keeps only nav-active and focus rings. That demotion is the point of commit 4; adding
+  colours without removing the overload leaves the page with no free signal for "act here".
+</p>
+
+<div class="tpl-section">
+  <div class="tpl-label">New · action accent (reserved)</div>
+  <div class="grid">
+    <div class="swatch"><div class="chip" style="background:var(--color-act-300)"></div>
+      <div class="meta"><b>act-300</b><span>#F7C98A · hover fill</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-act-400)"></div>
+      <div class="meta"><b>act-400</b><span>#F0A13C · primary button</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-act-500)"></div>
+      <div class="meta"><b>act-500</b><span>#D9862A · pressed</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-act-900)"></div>
+      <div class="meta"><b>act-900</b><span>#3A2610 · tinted ground</span></div></div>
+  </div>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">New · severity (a different axis from money direction)</div>
+  <div class="grid">
+    <div class="swatch"><div class="chip" style="background:var(--color-sev-crit)"></div>
+      <div class="meta"><b>sev-crit</b><span>#E8756A · target breached</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-sev-warn)"></div>
+      <div class="meta"><b>sev-warn</b><span>#E0A63C · gap to close</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-sev-info)"></div>
+      <div class="meta"><b>sev-info</b><span>#5B7FA8 · routine upkeep</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--color-sev-ok)"></div>
+      <div class="meta"><b>sev-ok</b><span>#4BBFA8 · all clear</span></div></div>
+  </div>
+  <p style="max-width:70ch;color:var(--color-bone-400);font-size:12.5px">
+    A critical action card is <em>not</em> a loss. Sterling &amp; Wilson at &minus;65% is
+    <code>ember-400</code> because the money fell; "high-risk is 62% against a 25% target" is
+    <code>sev-crit</code> because a target is breached. Keeping the two axes separate is what lets a
+    green portfolio still show a red card.
+  </p>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">New · categorical ramp ×8 + neutral tail</div>
+  <div class="ramp">
+    <div style="background:var(--cat-1)">1</div>
+    <div style="background:var(--cat-2)">2</div>
+    <div style="background:var(--cat-3)">3</div>
+    <div style="background:var(--cat-4)">4</div>
+    <div style="background:var(--cat-5)">5</div>
+    <div style="background:var(--cat-6)">6</div>
+    <div style="background:var(--cat-7)">7</div>
+    <div style="background:var(--cat-8)">8</div>
+    <div style="background:var(--cat-other);color:rgba(255,255,255,.55)">tail</div>
+  </div>
+
+  <div class="tpl-label" style="margin-top:22px">8px legend swatch test — the size they actually render at</div>
+  <div class="legend-test">
+    <span><i style="background:var(--cat-1)"></i>Information Technology</span>
+    <span><i style="background:var(--cat-2)"></i>Financial Services</span>
+    <span><i style="background:var(--cat-3)"></i>Communication Services</span>
+    <span><i style="background:var(--cat-4)"></i>Consumer Discretionary</span>
+    <span><i style="background:var(--cat-5)"></i>Oil Gas &amp; Consumable Fuels</span>
+    <span><i style="background:var(--cat-6)"></i>Healthcare</span>
+    <span><i style="background:var(--cat-other)"></i>Unknown</span>
+  </div>
+  <p style="max-width:70ch;color:var(--color-bone-400);font-size:12.5px;margin-top:16px">
+    Compare against today's <code>donutPalette</code>: <code>tick-400 / bone-300 / tick-500 /
+    bone-400 / tick-700 / bone-500</code>. At 8px, slices 1/3/5 and 2/4/6 are the same two colours
+    at slightly different lightness. Six-slice sector donuts and the five-line "Expenses by tag"
+    chart are currently undecodable for that reason.
+  </p>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">Typography — reallocation, not replacement</div>
+
+  <div class="type-row">
+    <div class="k">Hero figure<em>one per screen</em></div>
+    <div class="num" style="font-family:var(--font-display);font-size:44px;line-height:1;letter-spacing:-.02em;font-weight:600">₹86,32,360</div>
+  </div>
+  <div class="type-row">
+    <div class="k">Section heading<em>sentence case, not caps</em></div>
+    <div style="font-size:16px;font-weight:600;letter-spacing:-.01em">Needs your attention</div>
+  </div>
+  <div class="type-row">
+    <div class="k">Body / card headline</div>
+    <div style="font-size:13.5px;font-weight:600">Emergency fund is ₹2,27,000 short of 6 months' cover</div>
+  </div>
+  <div class="type-row">
+    <div class="k">Secondary</div>
+    <div style="font-size:12px;color:var(--color-bone-400)">₹8,23,000 saved · covers 4.7 months at ₹1,75,000/mo</div>
+  </div>
+  <div class="type-row">
+    <div class="k">Machine readout<em>mono is allowed here only</em></div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--color-bone-400)">INE002A01018 · GROWW · FX 86.50 @ 09 AUG 2026</div>
+  </div>
+
+  <p style="max-width:70ch;color:var(--color-bone-400);font-size:12.5px;margin-top:18px">
+    Today every section header and every KPI label is uppercase mono at <code>0.16em</code>
+    tracking — roughly 40 of them per screen. Used everywhere it stops being an accent and becomes
+    the body voice, and all-caps measurably slows scanning. Keep mono for tickers, ISINs,
+    timestamps, FX stamps, and broker names. Everything else goes sentence case.
+  </p>
+</div>
+
+<div class="tpl-section">
+  <div class="tpl-label">Colour rules the agent must enforce</div>
+  <table class="rules">
+    <thead><tr><th>Token</th><th>May be used for</th><th>Must never be used for</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>act-400</code></td>
+        <td class="yes">Primary buttons, action-rail CTAs, "→" affordances</td>
+        <td class="no">Chart series, progress fills, nav state, decoration</td>
+      </tr>
+      <tr>
+        <td><code>tick-400</code></td>
+        <td class="yes">Nav active state, focus rings, brand mark</td>
+        <td class="no">CTAs, progress fills, donut slices, line series</td>
+      </tr>
+      <tr>
+        <td><code>jade-400</code></td>
+        <td class="yes">Money up: gains, positive deltas, savings rate</td>
+        <td class="no">"Success" chrome, generic positive framing, chart categories</td>
+      </tr>
+      <tr>
+        <td><code>ember-400</code></td>
+        <td class="yes">Money down: losses, negative deltas, overspend</td>
+        <td class="no">Severity (use <code>sev-crit</code>), destructive buttons</td>
+      </tr>
+      <tr>
+        <td><code>sev-*</code></td>
+        <td class="yes">Action-card stripes, badges, drift indicators</td>
+        <td class="no">Any figure that represents money</td>
+      </tr>
+      <tr>
+        <td><code>cat-1..8</code></td>
+        <td class="yes">Chart categories, keyed by a stable identifier</td>
+        <td class="no">UI chrome, and never assigned by array index</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
