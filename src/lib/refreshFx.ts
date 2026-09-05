@@ -3,6 +3,7 @@ import { commitImport, getAll } from '../storage/holdings'
 import { getAllAssets, upsertAsset, type ManualAsset } from '../storage/assets'
 import { effectiveRate, fetchUsdInrRate, FxFetchError } from './fx'
 import { saveSettings, type Settings } from '../storage/settings'
+import { formatDate } from './format'
 
 export type StampedHolding = CanonicalHolding & {
   fxRate: number
@@ -85,6 +86,26 @@ async function restampAllAssets(
     await upsertAsset(stampAsset(a, base, usdInrRate, fetchedAt))
   }
   return assets.length
+}
+
+/**
+ * Decide the user-visible warning (if any) for an import commit's FX
+ * outcome. Pure and directly unit-testable — the commit flow it replaces
+ * only `console.warn`'d, and only when there was no fallback rate at all,
+ * so a stale-but-present rate produced zero signal. Returns `null` when the
+ * live fetch succeeded (`liveFxFailure` is `null`); the fallback values are
+ * irrelevant in that case since the live rate was what got used.
+ */
+export function deriveFxWarning(
+  liveFxFailure: string | null,
+  fallbackRate: number | null,
+  fallbackFetchedAt: number | null,
+): string | null {
+  if (liveFxFailure === null) return null
+  if (fallbackRate !== null && fallbackFetchedAt !== null) {
+    return `Imported using your last saved FX rate (${fallbackRate}, ${formatDate(fallbackFetchedAt)}) — live refresh failed: ${liveFxFailure}`
+  }
+  return `Imported without a currency conversion — live FX refresh failed: ${liveFxFailure}. Refresh FX in Settings.`
 }
 
 export type RefreshResult = {

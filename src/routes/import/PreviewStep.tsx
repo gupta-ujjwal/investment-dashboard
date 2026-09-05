@@ -4,7 +4,7 @@ import { commitImport, exportSnapshot, type CanonicalHolding } from '../../stora
 import { recordSnapshot } from '../../storage/history'
 import { formatMoney, formatQuantity } from '../../lib/format'
 import { fetchUsdInrRate, FxFetchError } from '../../lib/fx'
-import { stampMany } from '../../lib/refreshFx'
+import { deriveFxWarning, stampMany } from '../../lib/refreshFx'
 import { getSettings, updateFxMeta } from '../../storage/settings'
 import { FEATURE_HISTORY } from '../../featureFlags'
 import type { WizardAction, WizardState } from './wizardState'
@@ -30,8 +30,10 @@ export function PreviewStep({ state, dispatch }: Props) {
     dispatch({ type: 'commit-started' })
     try {
       const settings = await getSettings()
-      let rate: number | null = settings.lastFxRate
-      let fetchedAt: number | null = settings.lastFxAsOf
+      const fallbackRate = settings.lastFxRate
+      const fallbackFetchedAt = settings.lastFxAsOf
+      let rate: number | null = fallbackRate
+      let fetchedAt: number | null = fallbackFetchedAt
       let liveFxFailure: string | null = null
       try {
         const live = await fetchUsdInrRate()
@@ -41,6 +43,10 @@ export function PreviewStep({ state, dispatch }: Props) {
       } catch (fxErr) {
         liveFxFailure = fxErr instanceof FxFetchError ? fxErr.message : String(fxErr)
       }
+      // Covers both cases the old console.warn-only signal missed: a stale
+      // fallback rate being used silently, and no rate at all — see
+      // deriveFxWarning's own doc comment.
+      const fxWarning = deriveFxWarning(liveFxFailure, fallbackRate, fallbackFetchedAt)
 
       const stamp = (rows: CanonicalHolding[]) =>
         rate !== null && fetchedAt !== null
@@ -64,9 +70,6 @@ export function PreviewStep({ state, dispatch }: Props) {
         updates: [...stamp(state.diff.updates), ...stamp(toClose)],
         deletes: toDeleteKeys(toDelete),
       })
-      if (liveFxFailure && rate === null) {
-        console.warn(`[import] committed without FX: ${liveFxFailure}`)
-      }
       // History snapshot is best-effort — holdings are the source of truth,
       // a missed snapshot is a cosmetic one-day gap in the charts, never a
       // reason to fail the import. Written here (not inside `commitImport`)
@@ -79,7 +82,7 @@ export function PreviewStep({ state, dispatch }: Props) {
           console.warn(`[import] history snapshot failed: ${reason}`)
         }
       }
-      dispatch({ type: 'commit-ok' })
+      dispatch({ type: 'commit-ok', fxWarning })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       dispatch({ type: 'commit-failed', message })
