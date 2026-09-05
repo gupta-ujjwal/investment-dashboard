@@ -10,23 +10,12 @@ export function cellString(cell: ExcelJS.Cell): string {
   return String(v).trim()
 }
 
-export function cellNumber(cell: ExcelJS.Cell): number {
-  const v = cell.value
-  if (v == null) return 0
-  if (typeof v === 'number') return v
-  if (typeof v === 'string') {
-    const n = Number(v.replace(/,/g, ''))
-    return Number.isFinite(n) ? n : 0
-  }
-  if (typeof v === 'object' && 'result' in v && typeof v.result === 'number') return v.result
-  return 0
-}
-
 /**
- * Like `cellNumber`, but returns `undefined` for an empty / unparseable cell
- * instead of the sentinel `0`. Use for optional numeric columns where `0` and
- * "absent" must not collide — e.g. a broker's current-price column, where a
- * sentinel `0` would render a false total loss.
+ * Read a numeric cell, returning `undefined` for an empty/unparseable cell
+ * instead of a sentinel `0` — `0` and "absent" must never collide, whether
+ * the column is optional (a broker's current-price column, where a sentinel
+ * `0` would render a false total loss) or required (a garbage quantity/price
+ * cell must be rejected by the caller, not silently imported as `0`).
  */
 export function cellNumberOrUndefined(cell: ExcelJS.Cell): number | undefined {
   const v = cell.value
