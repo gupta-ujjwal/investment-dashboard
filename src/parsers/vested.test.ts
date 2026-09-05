@@ -76,6 +76,30 @@ describe('parseVested — optional current-price column', () => {
   })
 })
 
+describe('parseVested — required-column garbage cells', () => {
+  it('skips a row with an unparseable Average Cost cell instead of importing avgBuyPrice: 0', async () => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Holdings')
+    ws.addRow(['Name', 'Ticker', 'Total Shares Held', 'Average Cost (USD)'])
+    ws.addRow(['Apple, Inc.', 'AAPL', 2.7, 'N/A'])
+    const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer
+    const result = await parseVested(buf)
+    expect(result.rows).toHaveLength(0)
+    expect(result.skipped).toBe(1)
+  })
+
+  it('skips a row with an unparseable Total Shares Held cell', async () => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Holdings')
+    ws.addRow(['Name', 'Ticker', 'Total Shares Held', 'Average Cost (USD)'])
+    ws.addRow(['Apple, Inc.', 'AAPL', 'garbled', 215.72])
+    const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer
+    const result = await parseVested(buf)
+    expect(result.rows).toHaveLength(0)
+    expect(result.skipped).toBe(1)
+  })
+})
+
 describe('parseVested — failure modes', () => {
   it('throws ParseError when fed a Groww file', async () => {
     // Groww's row 1 is "Name | Ujjwal Gupta" — coincidentally starts with "Name",
