@@ -1,6 +1,8 @@
+import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
 import type { BrokerSource, CanonicalHolding, OverridableField } from '../storage/holdings'
 import { diffHoldings, toDeleteKeys } from './diff'
+import { parseGroww } from './groww'
 
 function holding(
   source: BrokerSource,
@@ -84,6 +86,56 @@ describe('diffHoldings', () => {
     expect(result.updates).toHaveLength(0)
     expect(result.missing).toHaveLength(2)
   })
+
+  it('returns an empty duplicates array when incoming has no repeated keys', () => {
+    const incoming = [holding('vested', 'AAPL', 1, 100), holding('vested', 'MSFT', 2, 200)]
+    const result = diffHoldings([], incoming, 'vested')
+    expect(result.duplicates).toEqual([])
+  })
+})
+
+describe('diffHoldings — within-import duplicate keys', () => {
+  it('fresh import: a repeated sourceSymbol collapses to one insert (last wins), reporting the discarded row', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 1, 100),
+      holding('vested', 'AAPL', 5, 150),
+    ]
+    const result = diffHoldings([], incoming, 'vested')
+    // Exactly one insert survives — the crash this fix exists to prevent was
+    // two `store.add()` calls racing on the same [source, sourceSymbol] key.
+    expect(result.inserts).toHaveLength(1)
+    expect(result.inserts[0].quantity).toBe(5) // last-in-file wins
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].sourceSymbol).toBe('AAPL')
+    // The discarded row's full data survives on the return value — not
+    // silently thrown away, so a future picker can consume it directly.
+    expect(result.duplicates[0].discarded.quantity).toBe(1)
+  })
+
+  it('re-import: a repeated sourceSymbol collapses to one update (last wins), reporting the discarded row', () => {
+    const existing = [holding('vested', 'AAPL', 1, 100)]
+    const incoming = [
+      holding('vested', 'AAPL', 5, 150),
+      holding('vested', 'AAPL', 9, 175),
+    ]
+    const result = diffHoldings(existing, incoming, 'vested')
+    // Previously two `store.put()` calls silently raced with no signal at
+    // all — now exactly one update survives and the collision is visible.
+    expect(result.updates).toHaveLength(1)
+    expect(result.updates[0].quantity).toBe(9) // last-in-file wins
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].sourceSymbol).toBe('AAPL')
+    expect(result.duplicates[0].discarded.quantity).toBe(5)
+  })
+
+  it('duplicates within one import do not also appear in missing', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 1, 100),
+      holding('vested', 'AAPL', 5, 150),
+    ]
+    const result = diffHoldings([], incoming, 'vested')
+    expect(result.missing).toHaveLength(0)
+  })
 })
 
 describe('toDeleteKeys', () => {
@@ -161,6 +213,37 @@ describe('diffHoldings — manual-overrides + closed-row semantics', () => {
     expect(result.updates[0].status).toBe('open')
     expect(result.updates[0].currentPrice).toBe(175) // override held
     expect(result.updates[0].quantity).toBe(5) // broker won
+  })
+})
+
+describe('diffHoldings — combined with the parser (duplicate row + invalid-price row together)', () => {
+  it('a within-file duplicate ISIN and a row with an unparseable price both resolve correctly in the same import', async () => {
+    // Reliability-tenets review finding: items 2 and 3 both land in the
+    // import pipeline in the same PR — this exercises them together, not
+    // just in isolation, so a regression in their interaction (e.g. the
+    // duplicate-collapse counting a row the price-guard already dropped)
+    // fails here instead of only in production.
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Sheet1')
+    ws.addRow(['Stock Name', 'ISIN', 'Quantity', 'Average buy price'])
+    ws.addRow(['ASIAN PAINTS LIMITED', 'INE021A01026', 22, 2410.04]) // valid, unique
+    ws.addRow(['HDFC BANK LIMITED', 'INE040A01034', 10, 1500]) // valid, duplicated below
+    ws.addRow(['HDFC BANK LIMITED', 'INE040A01034', 12, 1550]) // duplicate of the row above
+    ws.addRow(['TATA MOTORS LIMITED', 'INE155A01022', 5, '#N/A']) // unparseable price → skipped
+    const buf = (await wb.xlsx.writeBuffer()) as ArrayBuffer
+
+    const parseResult = await parseGroww(buf)
+    // The price-guard (item 3) drops the TATA MOTORS row before diff ever sees it.
+    expect(parseResult.rows).toHaveLength(3)
+    expect(parseResult.skipped).toBe(1)
+
+    const result = diffHoldings([], parseResult.rows, 'groww')
+    // The dedup pass (item 2) collapses the two HDFC rows into one insert.
+    expect(result.inserts).toHaveLength(2)
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].sourceSymbol).toBe('INE040A01034')
+    const hdfc = result.inserts.find((r) => r.sourceSymbol === 'INE040A01034')
+    expect(hdfc?.quantity).toBe(12) // last-in-file wins, independent of the price-guard skip
   })
 })
 

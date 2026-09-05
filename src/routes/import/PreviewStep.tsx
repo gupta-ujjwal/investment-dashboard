@@ -21,6 +21,7 @@ export function PreviewStep({ state, dispatch }: Props) {
   const insertCount = diff.inserts.length
   const updateCount = diff.updates.length
   const missingCount = diff.missing.length
+  const duplicateCount = diff.duplicates.length
   const skipped = parseResult.skipped
   const extremes = computeExtremes([...diff.inserts, ...diff.updates])
 
@@ -118,11 +119,16 @@ export function PreviewStep({ state, dispatch }: Props) {
           </button>
         </div>
 
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-5">
           <Stat label="New" value={insertCount} tone="jade" />
           <Stat label="Updates" value={updateCount} tone="tick" />
           <Stat label="Missing" value={missingCount} tone={missingCount > 0 ? 'ember' : 'mute'} />
           <Stat label="Skipped" value={skipped} tone="mute" />
+          <Stat
+            label="Duplicates"
+            value={duplicateCount}
+            tone={duplicateCount > 0 ? 'ember' : 'mute'}
+          />
         </dl>
 
         {extremes && (
