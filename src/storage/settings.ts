@@ -28,6 +28,14 @@ export type Settings = {
   /** Planned monthly contribution toward the goal, base currency. Drives the
    *  flat-contribution time-to-goal projection. */
   monthlyContribution?: number
+  // ── Reopen-value (Today page) ──────────────────────────────────────────
+  /** Millisecond timestamp of the last time the Today page recorded the
+   *  user as having looked. Feeds `sinceLastVisit.ts`'s `importsSinceLastSeen`
+   *  count ONLY — never the delta itself, which always compares the two most
+   *  recent `historySnapshots` records regardless of this field. Optional
+   *  scalar on the settings singleton → no `DB_VERSION` bump, same precedent
+   *  as every other Phase-3/4 field above. */
+  lastSeenAt?: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
