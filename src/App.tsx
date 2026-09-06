@@ -348,6 +348,7 @@ const holdingsAction = async ({
         importedAt: now,
       })
       await upsertHolding(maybeStampFx(row, settings, now))
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'added' }
     }
 
@@ -395,13 +396,16 @@ const holdingsAction = async ({
       }
       const stamped = maybeStampFx(merged, settings, now)
       await upsertHolding(stamped, { addOverrides })
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'updated' }
     }
 
     if (intent === 'delete') {
       const key = readKey(form)
       if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
+      const settings = await getSettings()
       await deleteHolding(key)
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'deleted' }
     }
 
@@ -410,7 +414,9 @@ const holdingsAction = async ({
       const status = form.get('status')
       if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
       if (!isHoldingStatus(status)) return { ok: false, error: `Invalid status: ${String(status)}` }
+      const settings = await getSettings()
       await setHoldingStatus(key, status)
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'status-set' }
     }
 
