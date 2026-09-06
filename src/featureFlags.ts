@@ -91,3 +91,17 @@ export const FEATURE_GOALS = true
  *  tag UI be disabled without a schema revert (the rollback shape the plan
  *  review converged on). */
 export const FEATURE_BUDGET_TAGS = true
+
+/** Homepage action rail (`implementation-docs/dashboard-ux-redesign.md` PR-2,
+ *  commit-2): up to 4 pure-fold guidance cards — risk drift, emergency gap,
+ *  stale prices, unstamped FX, an unlogged month, single-position
+ *  concentration — surfaced right under the net-worth hero on `/` (`Today`).
+ *  Reads existing derived data only; no new store, no new egress. Defaults
+ *  `false` so the introducing commit can stage: (1) merge with the flag off
+ *  (no user-visible change), (2) capture Playwright + unit-test evidence per
+ *  `.claude/rules/frontend-design.md`, (3) flip to `true` in a one-line
+ *  follow-up commit — the same canary-gate precedent as
+ *  `FEATURE_ANALYTICS_DEPTH`/`FEATURE_SECTOR_DONUT`/`FEATURE_BENCHMARK_OVERLAY`.
+ *  Pre-merge dark-shipping switch, not a post-deploy kill switch — once
+ *  deployed, rollback is `git revert` → redeploy via `deploy.yml`. */
+export const FEATURE_ACTION_RAIL = false
