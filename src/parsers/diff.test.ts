@@ -325,12 +325,28 @@ describe('combineDuplicateGroup', () => {
       holding('vested', 'AAPL', 10, -5),
       holding('vested', 'AAPL', 20, 110),
     ]
+    const nanQty = [holding('vested', 'AAPL', NaN, 100), holding('vested', 'AAPL', 20, 110)]
     expect(
       combineDuplicateGroup(groupDuplicates(diffHoldings([], zeroQty, 'vested'))[0]),
     ).toBeUndefined()
     expect(
       combineDuplicateGroup(groupDuplicates(diffHoldings([], negativePrice, 'vested'))[0]),
     ).toBeUndefined()
+    expect(
+      combineDuplicateGroup(groupDuplicates(diffHoldings([], nanQty, 'vested'))[0]),
+    ).toBeUndefined()
+  })
+
+  it('refuses when the survivor carries a sticky manualOverrides entry for quantity or avgBuyPrice', () => {
+    // The survivor here is an UPDATE — it went through mergeWithOverrides
+    // against an existing row with a sticky avgBuyPrice correction (999,
+    // not the broker's own value) and so carries manualOverrides:
+    // ['avgBuyPrice']. Combining must not blend that corrected value with a
+    // discarded lot's raw broker price while still claiming the override.
+    const existing = holding('vested', 'AAPL', 5, 999, { manualOverrides: ['avgBuyPrice'] })
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([existing], incoming, 'vested')
+    expect(combineDuplicateGroup(groupDuplicates(diff)[0])).toBeUndefined()
   })
 })
 

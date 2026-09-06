@@ -158,11 +158,16 @@ export function groupDuplicates(diff: DiffResult): DuplicateGroup[] {
  *
  * Refuses (`undefined`) if any lot has a non-finite or non-positive
  * `quantity`/`avgBuyPrice` — R1: never fabricate a weighted average from a
- * broken input row. Every field except `quantity`/`avgBuyPrice` carries
- * through from `survivor` unchanged (name, currentPrice, currency,
- * assetClass, source, sourceSymbol) — the survivor is already the freshest
- * row (`diffHoldings`'s own last-occurrence-wins semantics), so there is no
- * separate "which lot's price wins" decision to make.
+ * broken input row. Also refuses if the survivor carries a sticky
+ * `manualOverrides` entry for `'quantity'` or `'avgBuyPrice'` (`dsl.md`
+ * § R13) — combining would blend the user's manually-corrected value with a
+ * discarded lot's raw broker price into a number that still claims the
+ * override marker, silently corrupting a correction the user made on
+ * purpose. Every field except `quantity`/`avgBuyPrice` carries through from
+ * `survivor` unchanged (name, currentPrice, currency, assetClass, source,
+ * sourceSymbol) — the survivor is already the freshest row (`diffHoldings`'s
+ * own last-occurrence-wins semantics), so there is no separate "which lot's
+ * price wins" decision to make.
  *
  * Operates only on pre-stamp fields (`quantity`, `avgBuyPrice`) — never
  * reads or writes `avgBuyPriceBase`/`currentPriceBase`. Must run before FX
@@ -172,6 +177,8 @@ export function groupDuplicates(diff: DiffResult): DuplicateGroup[] {
  * function's output feeds the same pre-stamp pipeline it read from.
  */
 export function combineDuplicateGroup(group: DuplicateGroup): CanonicalHolding | undefined {
+  const overrides = group.survivor.manualOverrides
+  if (overrides?.includes('quantity') || overrides?.includes('avgBuyPrice')) return undefined
   for (const lot of group.lots) {
     if (!Number.isFinite(lot.quantity) || lot.quantity <= 0) return undefined
     if (!Number.isFinite(lot.avgBuyPrice) || lot.avgBuyPrice <= 0) return undefined

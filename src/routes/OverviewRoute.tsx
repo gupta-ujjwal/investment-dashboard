@@ -82,7 +82,9 @@ export function OverviewRoute() {
   // nothing imported yet has no "since you last looked" story to track.
   useEffect(() => {
     if (empty) return
-    saveSettings({ ...settings, lastSeenAt: Date.now() }).catch(() => {})
+    saveSettings({ ...settings, lastSeenAt: Date.now() }).catch((err: unknown) => {
+      console.warn('[overview] lastSeenAt stamp failed:', err)
+    })
     // Deliberately depends on `[empty]` only, not `settings`/`history` — this
     // stamps once per mount (re-fires only on the empty/non-empty
     // transition), never on every settings write.
