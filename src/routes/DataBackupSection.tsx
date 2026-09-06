@@ -208,11 +208,12 @@ function RestoreConfirmPanel({
         </p>
       </div>
 
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-5">
         <Stat label="Holdings" value={manifest.holdings} tone="tick" />
         <Stat label="Assets" value={manifest.assets} tone="tick" />
         <Stat label="Budget months" value={manifest.budgetMonths} tone="tick" />
         <Stat label="Budget tags" value={manifest.budgetTags} tone="tick" />
+        <Stat label="History snapshots" value={manifest.history} tone="tick" />
       </dl>
 
       <div className="rounded-r-lg border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">

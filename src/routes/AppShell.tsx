@@ -100,12 +100,17 @@ export function AppShell() {
           />
           {activeLabel ?? title}
         </span>
-        <NavLink
-          to="/import"
-          className="rounded-lg px-2.5 py-1 text-[11.5px] font-medium text-bone-300 hover:bg-bone-100/6"
-        >
-          Import
-        </NavLink>
+        <div className="flex items-center gap-1">
+          {utilityTabs.map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              className="rounded-lg px-2.5 py-1 text-[11.5px] font-medium text-bone-300 hover:bg-bone-100/6"
+            >
+              {t.label}
+            </NavLink>
+          ))}
+        </div>
       </header>
 
       <main className="w-full min-w-0 max-w-[1600px] flex-1 px-5 pb-24 pt-8 sm:px-7 sm:pt-10 xl:px-11">

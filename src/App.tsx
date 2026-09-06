@@ -210,11 +210,13 @@ const settingsAction = async ({ request }: ActionFunctionArgs): Promise<Settings
       const parsed = typeof raw === 'string' ? Number(raw) : Number.NaN
       await saveSettings(desired)
       const res = await applyManualRate(desired, parsed)
+      await snapshotAfterNetWorthChange(desired.baseCurrency)
       return { ok: true, mode: 'manual', rate: res.rate, fetchedAt: res.fetchedAt }
     }
     if (intent === 'refresh') {
       await saveSettings(desired)
       const res = await refreshFx(desired)
+      await snapshotAfterNetWorthChange(desired.baseCurrency)
       return { ok: true, mode: 'refreshed', rate: res.rate, fetchedAt: res.fetchedAt }
     }
     return { ok: false, error: `Unknown intent: ${String(intent)}` }
@@ -348,6 +350,7 @@ const holdingsAction = async ({
         importedAt: now,
       })
       await upsertHolding(maybeStampFx(row, settings, now))
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'added' }
     }
 
@@ -395,13 +398,16 @@ const holdingsAction = async ({
       }
       const stamped = maybeStampFx(merged, settings, now)
       await upsertHolding(stamped, { addOverrides })
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'updated' }
     }
 
     if (intent === 'delete') {
       const key = readKey(form)
       if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
+      const settings = await getSettings()
       await deleteHolding(key)
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'deleted' }
     }
 
@@ -410,7 +416,9 @@ const holdingsAction = async ({
       const status = form.get('status')
       if (!key) return { ok: false, error: 'Missing or invalid holding identity' }
       if (!isHoldingStatus(status)) return { ok: false, error: `Invalid status: ${String(status)}` }
+      const settings = await getSettings()
       await setHoldingStatus(key, status)
+      await snapshotAfterNetWorthChange(settings.baseCurrency)
       return { ok: true, mode: 'status-set' }
     }
 

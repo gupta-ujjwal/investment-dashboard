@@ -44,6 +44,11 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
         `${formatDateKey(series[series.length - 1].date)}. Latest ` +
         `${latest?.profit === undefined ? 'unavailable' : formatMoney(latest.profit, baseCurrency)}.`
 
+  // Colored by the latest point's sign — same rule as the KPI headline above
+  // and the `Tip` tooltip below: undefined (last point unpriced) reads as
+  // gain-toned, matching Tip's own `profit < 0 ? ember : jade` fallback.
+  const areaColor = latest?.profit !== undefined && latest.profit < 0 ? chartColor.loss : chartColor.gain
+
   function Tip({ active, payload, label }: TipProps) {
     if (!active || !payload || payload.length === 0) return null
     const profit = typeof payload[0]?.value === 'number' ? payload[0].value : undefined
@@ -74,8 +79,8 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
             <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id="pnl-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={chartColor.gain} stopOpacity={0.32} />
-                  <stop offset="100%" stopColor={chartColor.gain} stopOpacity={0} />
+                  <stop offset="0%" stopColor={areaColor} stopOpacity={0.32} />
+                  <stop offset="100%" stopColor={areaColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={chartColor.grid} vertical={false} />
@@ -101,10 +106,10 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
               <Area
                 type="monotone"
                 dataKey="profit"
-                stroke={chartColor.gain}
+                stroke={areaColor}
                 strokeWidth={1.6}
                 fill="url(#pnl-fill)"
-                dot={{ r: 2, fill: chartColor.gain, strokeWidth: 0 }}
+                dot={{ r: 2, fill: areaColor, strokeWidth: 0 }}
                 activeDot={{ r: 3.5 }}
                 connectNulls={false}
                 isAnimationActive={false}

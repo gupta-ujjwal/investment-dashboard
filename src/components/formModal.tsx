@@ -1,4 +1,7 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /**
  * Shared modal-form primitives — the dialog shell, a labelled field wrapper,
@@ -17,6 +20,39 @@ export function ModalShell({
   children: React.ReactNode
 }) {
   const titleId = useId()
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  // Focus trap: Tab/Shift+Tab cycles within the panel instead of escaping to
+  // the page behind the backdrop, and focus returns to whatever triggered the
+  // dialog (the "Add"/"Edit" button) once it unmounts. ModalShell is only ever
+  // mounted while its dialog is open (both callers `if (!open) return null`
+  // before rendering it), so mount/unmount here lines up exactly with the
+  // dialog's own open/close lifecycle.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      if (previouslyFocused?.isConnected) previouslyFocused.focus()
+    }
+  }, [])
+
   return (
     <div
       role="dialog"
@@ -32,7 +68,10 @@ export function ModalShell({
         onClick={onClose}
         className="absolute inset-0 cursor-default"
       />
-      <div className="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-bone-100/15 bg-ink-900 shadow-2xl shadow-ink-950/80">
+      <div
+        ref={panelRef}
+        className="relative z-10 flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-bone-100/15 bg-ink-900 shadow-2xl shadow-ink-950/80"
+      >
         <header className="flex items-center justify-between border-b border-bone-100/10 bg-ink-850 px-5 py-3">
           <h2
             id={titleId}
