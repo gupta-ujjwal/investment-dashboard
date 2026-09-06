@@ -96,12 +96,13 @@ export const FEATURE_BUDGET_TAGS = true
  *  commit-2): up to 4 pure-fold guidance cards — risk drift, emergency gap,
  *  stale prices, unstamped FX, an unlogged month, single-position
  *  concentration — surfaced right under the net-worth hero on `/` (`Today`).
- *  Reads existing derived data only; no new store, no new egress. Defaults
- *  `false` so the introducing commit can stage: (1) merge with the flag off
- *  (no user-visible change), (2) capture Playwright + unit-test evidence per
- *  `.claude/rules/frontend-design.md`, (3) flip to `true` in a one-line
- *  follow-up commit — the same canary-gate precedent as
- *  `FEATURE_ANALYTICS_DEPTH`/`FEATURE_SECTOR_DONUT`/`FEATURE_BENCHMARK_OVERLAY`.
- *  Pre-merge dark-shipping switch, not a post-deploy kill switch — once
- *  deployed, rollback is `git revert` → redeploy via `deploy.yml`. */
-export const FEATURE_ACTION_RAIL = false
+ *  Reads existing derived data only; no new store, no new egress.
+ *
+ *  Shipped `false` in the introducing PR (#61) as a dark-shipping canary
+ *  gate; flipped `true` here after a full Playwright evidence pass covering
+ *  all 3 render states (cold-start, all-clear, populated) plus a spread of
+ *  the 6 rules — same precedent as `FEATURE_ANALYTICS_DEPTH`/
+ *  `FEATURE_SECTOR_DONUT`/`FEATURE_BENCHMARK_OVERLAY`. Rollback is
+ *  `git revert` → redeploy via `deploy.yml`, same as any other flag flip
+ *  (R9 — flags are compile-time, not a runtime toggle). */
+export const FEATURE_ACTION_RAIL = true
