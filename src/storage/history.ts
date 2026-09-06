@@ -57,10 +57,12 @@ export function buildRecord(
  * Capture the current portfolio (holdings + assets) as today's history record.
  * Idempotent per day: a second call on the same calendar day overwrites that
  * day's record (`put` on a `date`-keyed store). Reads BOTH stores itself, so
- * whichever net-worth-moving event triggers it (import commit, FX refresh, or
- * an asset add/edit/delete) produces a complete record — a same-day asset edit
- * after an FX refresh no longer overwrites the holdings snapshot with a
- * holdings-only one. Budget edits deliberately do NOT trigger a snapshot: a
+ * whichever net-worth-moving event triggers it produces a complete record — a
+ * same-day asset edit after an FX refresh no longer overwrites the holdings
+ * snapshot with a holdings-only one. Every net-worth-moving action calls this
+ * (via `App.tsx`'s `snapshotAfterNetWorthChange`): import commit, FX refresh,
+ * manual-rate apply, holding add/update/delete/setStatus, and asset
+ * add/edit/delete. Budget edits deliberately do NOT trigger a snapshot: a
  * budget moves spending, not net worth.
  */
 export async function recordSnapshot(baseCurrency: BaseCurrency): Promise<void> {

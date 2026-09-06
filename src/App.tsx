@@ -210,11 +210,13 @@ const settingsAction = async ({ request }: ActionFunctionArgs): Promise<Settings
       const parsed = typeof raw === 'string' ? Number(raw) : Number.NaN
       await saveSettings(desired)
       const res = await applyManualRate(desired, parsed)
+      await snapshotAfterNetWorthChange(desired.baseCurrency)
       return { ok: true, mode: 'manual', rate: res.rate, fetchedAt: res.fetchedAt }
     }
     if (intent === 'refresh') {
       await saveSettings(desired)
       const res = await refreshFx(desired)
+      await snapshotAfterNetWorthChange(desired.baseCurrency)
       return { ok: true, mode: 'refreshed', rate: res.rate, fetchedAt: res.fetchedAt }
     }
     return { ok: false, error: `Unknown intent: ${String(intent)}` }
