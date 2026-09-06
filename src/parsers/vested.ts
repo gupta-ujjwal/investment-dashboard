@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs'
 import type { AssetClass, CanonicalHolding } from '../storage/holdings'
 import type { ParseResult } from './types'
 import { ParseError } from './types'
@@ -14,6 +13,9 @@ const HEADER_SIGNATURE = ['Name', 'Ticker'] as const
 const REQUIRED_COLUMNS = ['Name', 'Ticker', 'Total Shares Held', 'Average Cost (USD)'] as const
 
 export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
+  // Dynamic import: exceljs is a heavy dependency needed only inside the
+  // import wizard, so it must not sit in the app's main JS chunk.
+  const { default: ExcelJS } = await import('exceljs')
   const wb = new ExcelJS.Workbook()
   try {
     await wb.xlsx.load(file)
