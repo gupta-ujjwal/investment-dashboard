@@ -624,12 +624,15 @@ const router = createBrowserRouter(
             throw redirect(holdings.length === 0 ? '/import' : '/overview')
           },
         },
-        // Net-worth-centric IA: Overview (generic, cross-asset) → Investments
-        // (all asset classes; equity backfilled read-only from holdings) →
-        // Equity (the per-ticker table + equity analytics). `holdingsAction`
-        // (holding + manual-asset intents) is mounted on `/equity`; the asset
-        // forms on Investments post to it and react-router revalidates the
-        // Investments loader.
+        // Net-worth-centric IA: Overview (generic, cross-asset) → Portfolio
+        // (per-ticker holdings + manual assets, merged Investments/Equity
+        // view). `holdingsAction` (holding + manual-asset intents) is mounted
+        // on `/portfolio`; `HoldingForm`/`AssetForm` post to it and
+        // react-router revalidates the Portfolio loader. `/equity` and
+        // `/investments` are legacy-bookmark redirects only — they carry no
+        // action, so a form must never target them (this stale comment
+        // previously said `/equity`, which is exactly the bug that caused
+        // both forms to hardcode the wrong `action` and 405 on every submit).
         { path: 'overview', Component: OverviewRoute, loader: dashboardLoader },
         { path: 'portfolio', Component: PortfolioRoute, loader: dashboardLoader, action: holdingsAction },
         {

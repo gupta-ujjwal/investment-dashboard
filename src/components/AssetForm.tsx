@@ -105,7 +105,7 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
 
   return (
     <ModalShell onClose={onClose} title={mode === 'add' ? 'Add asset' : `Edit ${initial.name}`}>
-      <fetcher.Form method="post" action="/equity" className="grid gap-5">
+      <fetcher.Form method="post" action="/portfolio" className="grid gap-5">
         <input type="hidden" name="intent" value={mode === 'add' ? 'addAsset' : 'updateAsset'} />
         {mode === 'edit' && asset && <input type="hidden" name="id" value={asset.id} />}
 
