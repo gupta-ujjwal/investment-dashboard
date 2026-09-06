@@ -1,5 +1,10 @@
 import type { Dispatch } from 'react'
-import { toDeleteKeys } from '../../parsers/diff'
+import {
+  applyDuplicateDecisions,
+  combineDuplicateGroup,
+  groupDuplicates,
+  toDeleteKeys,
+} from '../../parsers/diff'
 import { commitImport, exportSnapshot, type CanonicalHolding } from '../../storage/holdings'
 import { recordSnapshot } from '../../storage/history'
 import { formatMoney, formatQuantity } from '../../lib/format'
@@ -65,9 +70,16 @@ export function PreviewStep({ state, dispatch }: Props) {
       const toClose: CanonicalHolding[] = state.diff.missing
         .filter((m) => decisions[m.sourceSymbol] === 'close')
         .map((m) => ({ ...m, status: 'closed', updatedAt: now }))
+      // Duplicate-group decisions (keep-last / combine) apply before FX
+      // stamping — see combineDuplicateGroup's own doc comment on why this
+      // ordering is load-bearing.
+      const { inserts: effectiveInserts, updates: effectiveUpdates } = applyDuplicateDecisions(
+        state.diff,
+        state.duplicateDecisions,
+      )
       await commitImport({
-        inserts: stamp(state.diff.inserts),
-        updates: [...stamp(state.diff.updates), ...stamp(toClose)],
+        inserts: stamp(effectiveInserts),
+        updates: [...stamp(effectiveUpdates), ...stamp(toClose)],
         deletes: toDeleteKeys(toDelete),
       })
       // History snapshot is best-effort — holdings are the source of truth,
@@ -106,9 +118,14 @@ export function PreviewStep({ state, dispatch }: Props) {
       <div className="rounded-2xl border border-bone-100/10 bg-ink-900 p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
-              Review changes
-            </h3>
+            <div className="flex items-baseline justify-between">
+              <h3 className="font-sans text-lg font-semibold tracking-tight text-bone-50">
+                Review changes
+              </h3>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                step 04 / 04
+              </span>
+            </div>
             <p className="mt-1 font-sans text-sm text-bone-400">
               Compare the parsed file against existing positions before commit.
             </p>
@@ -158,6 +175,7 @@ export function PreviewStep({ state, dispatch }: Props) {
       </div>
 
       {missingCount > 0 && <MissingRowsPanel state={state} dispatch={dispatch} />}
+      {duplicateCount > 0 && <DuplicatesPanel state={state} dispatch={dispatch} />}
 
       <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <button type="button" onClick={() => dispatch({ type: 'back-to-upload' })} className="btn-secondary">
@@ -303,6 +321,106 @@ function MissingRowsPanel({ state, dispatch }: Props) {
                   }
                   label="Delete"
                   tone="ember"
+                />
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function DuplicatesPanel({ state, dispatch }: Props) {
+  if (!state.diff) return null
+  const groups = groupDuplicates(state.diff)
+  if (groups.length === 0) return null
+
+  return (
+    <div className="rounded-2xl border border-ember-400/30 bg-ember-900/15 p-6 sm:p-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="font-sans text-base font-semibold tracking-tight text-ember-300">
+            {groups.length} duplicate {groups.length === 1 ? 'symbol' : 'symbols'} in this file
+          </h3>
+          <p className="mt-1 max-w-xl font-sans text-sm text-ember-300/70">
+            Pick{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em]">keep last</span>{' '}
+            (today's default — the last row in the file wins), or{' '}
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em]">combine</span>{' '}
+            (quantity-weighted average cost across every lot).
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              dispatch({ type: 'set-all-duplicate-decisions', decision: 'keep-last' })
+            }
+            className="rounded-full border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-bone-100/40 hover:text-bone-50"
+          >
+            Keep last, all
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'set-all-duplicate-decisions', decision: 'combine' })}
+            className="rounded-full border border-bone-100/15 px-3 py-1.5 font-sans text-[10px] font-medium  text-bone-300 transition hover:border-act-400 hover:text-act-400"
+          >
+            Combine, all
+          </button>
+        </div>
+      </div>
+
+      <ul className="mt-6 divide-y divide-bone-100/10 overflow-hidden rounded-xl border border-bone-100/10 bg-ink-900">
+        {groups.map((group) => {
+          const decision = state.duplicateDecisions[group.sourceSymbol] ?? 'keep-last'
+          const combined = decision === 'combine' ? combineDuplicateGroup(group) : undefined
+          return (
+            <li
+              key={group.sourceSymbol}
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-sans text-sm font-medium text-bone-50">
+                  {group.survivor.name}
+                </p>
+                <p className="mt-0.5 font-mono text-[11px] text-bone-400">
+                  {group.sourceSymbol} · {group.lots.length} lots:{' '}
+                  {group.lots.map((l) => formatQuantity(l.quantity)).join(' + ')} @{' '}
+                  {group.lots.map((l) => formatMoney(l.avgBuyPrice, l.currency)).join(', ')}
+                </p>
+                {decision === 'combine' && (
+                  <p className="mt-1 font-mono text-[11px] text-act-400">
+                    {combined
+                      ? `→ ${formatQuantity(combined.quantity)} @ ${formatMoney(combined.avgBuyPrice, combined.currency)}`
+                      : '→ combine unavailable for this group (invalid lot) — keeping last instead'}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <DecisionButton
+                  active={decision === 'keep-last'}
+                  onClick={() =>
+                    dispatch({
+                      type: 'set-duplicate-decision',
+                      sourceSymbol: group.sourceSymbol,
+                      decision: 'keep-last',
+                    })
+                  }
+                  label="Keep last"
+                  tone="default"
+                />
+                <DecisionButton
+                  active={decision === 'combine'}
+                  onClick={() =>
+                    dispatch({
+                      type: 'set-duplicate-decision',
+                      sourceSymbol: group.sourceSymbol,
+                      decision: 'combine',
+                    })
+                  }
+                  label="Combine"
+                  tone="tick"
                 />
               </div>
             </li>
