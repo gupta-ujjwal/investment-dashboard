@@ -196,7 +196,7 @@
   },
   "APP": {
     "name": "AppLovin",
-    "sector": "Information Technology",
+    "sector": "Communication Services",
     "market": "USD"
   },
   "APTV": {
@@ -217,11 +217,6 @@
   "ATO": {
     "name": "Atmos Energy",
     "sector": "Utilities",
-    "market": "USD"
-  },
-  "AVB": {
-    "name": "AvalonBay Communities",
-    "sector": "Real Estate",
     "market": "USD"
   },
   "AVGO": {
@@ -646,7 +641,7 @@
   },
   "DD": {
     "name": "DuPont",
-    "sector": "Materials",
+    "sector": "Industrials",
     "market": "USD"
   },
   "DDOG": {
@@ -754,11 +749,6 @@
     "sector": "Health Care",
     "market": "USD"
   },
-  "EA": {
-    "name": "Electronic Arts",
-    "sector": "Communication Services",
-    "market": "USD"
-  },
   "EBAY": {
     "name": "eBay Inc.",
     "sector": "Consumer Discretionary",
@@ -821,11 +811,6 @@
   },
   "EQIX": {
     "name": "Equinix",
-    "sector": "Real Estate",
-    "market": "USD"
-  },
-  "EQR": {
-    "name": "Equity Residential",
     "sector": "Real Estate",
     "market": "USD"
   },
@@ -932,6 +917,11 @@
   "FE": {
     "name": "FirstEnergy",
     "sector": "Utilities",
+    "market": "USD"
+  },
+  "FERG": {
+    "name": "Ferguson Enterprises",
+    "sector": "Industrials",
     "market": "USD"
   },
   "FFIV": {
@@ -2100,7 +2090,7 @@
     "market": "USD"
   },
   "MSCI": {
-    "name": "MSCI Inc.",
+    "name": "MSCI",
     "sector": "Financials",
     "market": "USD"
   },
@@ -2260,7 +2250,7 @@
     "market": "USD"
   },
   "ORLY": {
-    "name": "O’Reilly Automotive",
+    "name": "O'Reilly Automotive",
     "sector": "Consumer Discretionary",
     "market": "USD"
   },
@@ -2434,6 +2424,11 @@
     "sector": "Consumer Discretionary",
     "market": "USD"
   },
+  "RDDT": {
+    "name": "Reddit",
+    "sector": "Communication Services",
+    "market": "USD"
+  },
   "REG": {
     "name": "Regency Centers",
     "sector": "Real Estate",
@@ -2460,7 +2455,7 @@
     "market": "USD"
   },
   "RMD": {
-    "name": "ResMed",
+    "name": "ResMed|",
     "sector": "Health Care",
     "market": "USD"
   },
@@ -2847,6 +2842,11 @@
   "VMC": {
     "name": "Vulcan Materials Company",
     "sector": "Materials",
+    "market": "USD"
+  },
+  "VMRK": {
+    "name": "Vivmark Residential",
+    "sector": "Real Estate",
     "market": "USD"
   },
   "VRSK": {
