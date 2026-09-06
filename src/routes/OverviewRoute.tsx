@@ -1,10 +1,10 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import type { BaseCurrency, CanonicalHolding } from '../storage/holdings'
 import type { HistoryRecord } from '../storage/history'
 import type { ManualAsset } from '../storage/assets'
 import type { BudgetMonth } from '../storage/budget'
-import type { Settings } from '../storage/settings'
+import { saveSettings, type Settings } from '../storage/settings'
 import { portfolioTotals } from '../lib/analytics'
 import {
   buildPositions,
@@ -74,8 +74,21 @@ type LoaderData = {
 export function OverviewRoute() {
   const { holdings, settings, history, assets, budgetMonths } = useLoaderData() as LoaderData
   const assetList = assets ?? []
+  const empty = holdings.length === 0 && assetList.length === 0
 
-  if (holdings.length === 0 && assetList.length === 0) {
+  // Watermark the visit *after* this render has used the pre-stamp
+  // `settings.lastSeenAt` (the delta/badge above must read the OLD value —
+  // see `sinceLastVisit.ts`). Skipped on the true empty state: a user with
+  // nothing imported yet has no "since you last looked" story to track.
+  useEffect(() => {
+    if (empty) return
+    saveSettings({ ...settings, lastSeenAt: Date.now() }).catch(() => {})
+    // Deliberately depends on `[empty]` only, not `settings`/`history` — this
+    // stamps once per mount (re-fires only on the empty/non-empty
+    // transition), never on every settings write.
+  }, [empty])
+
+  if (empty) {
     return <EmptyState />
   }
 
@@ -263,13 +276,23 @@ function NetWorthSection({
  *  day) — R1 forbids showing a number, or even a claim of "unchanged", that
  *  isn't backed by an actual computed comparison. */
 function SinceImportLine({ change, base }: { change: ChangeSinceImport; base: BaseCurrency }) {
-  if (change.sinceDate === undefined) return null
+  const seenBadge = change.importsSinceLastSeen > 0 && (
+    <span className="block font-mono text-[10px] text-act-400">
+      {change.importsSinceLastSeen} import{change.importsSinceLastSeen === 1 ? '' : 's'} since
+      you last looked
+    </span>
+  )
+
+  if (change.sinceDate === undefined) return seenBadge ? <>{seenBadge}</> : null
   const dateLabel = formatDate(new Date(change.sinceDate).getTime())
 
   if (change.delta === undefined) {
-    if (!change.unchanged) return null
+    if (!change.unchanged) return seenBadge ? <>{seenBadge}</> : null
     return (
-      <span className="font-mono text-[11px] text-bone-400">First snapshot · {dateLabel}</span>
+      <span className="block text-right">
+        <span className="font-mono text-[11px] text-bone-400">First snapshot · {dateLabel}</span>
+        {seenBadge}
+      </span>
     )
   }
 
@@ -277,12 +300,15 @@ function SinceImportLine({ change, base }: { change: ChangeSinceImport; base: Ba
   const pct = change.deltaPct === undefined ? '' : ` (${formatPercent(change.deltaPct).replace('+', '')})`
   const tone = change.delta > 0 ? 'text-jade-300' : change.delta < 0 ? 'text-ember-300' : 'text-bone-400'
   return (
-    <span className="font-mono text-[11px] text-bone-400">
-      <span className={tone}>
-        {arrow} {formatMoney(Math.abs(change.delta), base)}
-        {pct}
-      </span>{' '}
-      since {dateLabel}
+    <span className="block text-right">
+      <span className="font-mono text-[11px] text-bone-400">
+        <span className={tone}>
+          {arrow} {formatMoney(Math.abs(change.delta), base)}
+          {pct}
+        </span>{' '}
+        since {dateLabel}
+      </span>
+      {seenBadge}
     </span>
   )
 }
