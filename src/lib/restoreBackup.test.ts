@@ -375,4 +375,79 @@ describe('parseBackup', () => {
     if (result.ok) return
     expect(result.error).toMatch(/label/)
   })
+
+  // ── historySnapshots coverage — backup previously silently dropped this
+  //    store entirely (confirmed via grep: zero HISTORY_STORE references in
+  //    backup.ts). A pre-fix backup has no `history` key and must upconvert to
+  //    [] like every other post-v3 addition, never reject. ──────────────────
+  it('defaults history to [] when absent (pre-fix backup)', () => {
+    const result = parseBackup(validBackupJson())
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.history).toEqual([])
+  })
+
+  it('accepts a well-formed history record', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-09-06T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      history: [
+        {
+          date: '2026-09-01',
+          capturedAt: 1725148800000,
+          baseCurrency: 'INR',
+          holdings: [validHolding()],
+          assets: [],
+        },
+      ],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.history).toHaveLength(1)
+    expect(result.backup.history[0].date).toBe('2026-09-01')
+    expect(result.backup.history[0].holdings).toHaveLength(1)
+  })
+
+  it('tolerates a history record with no assets (pre-revamp record)', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-09-06T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      history: [
+        { date: '2026-09-01', capturedAt: 1725148800000, baseCurrency: 'INR', holdings: [] },
+      ],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.history[0].assets).toEqual([])
+  })
+
+  it('rejects a history record with an invalid date', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-09-06T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      history: [{ date: 'not-a-date', capturedAt: 1, baseCurrency: 'INR', holdings: [] }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/date/)
+  })
+
+  it('rejects a history record with an invalid baseCurrency', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-09-06T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      history: [{ date: '2026-09-01', capturedAt: 1, baseCurrency: 'EUR', holdings: [] }],
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/baseCurrency/)
+  })
 })

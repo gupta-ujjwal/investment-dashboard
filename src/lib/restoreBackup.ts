@@ -1,6 +1,7 @@
 import {
   DB_VERSION,
   type AssetClass,
+  type BaseCurrency,
   type CanonicalHolding,
   type Currency,
   type Source,
@@ -13,6 +14,7 @@ import type {
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
 import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
 import type { AllocationTarget } from '../storage/settings'
+import type { HistoryRecord } from '../storage/history'
 
 /** The planning/goal target subset of `Settings` a backup carries — config,
  *  not the whole settings record (base currency / FX meta are device-local and
@@ -36,6 +38,11 @@ export type ParsedBackup = {
   /** Always an array after parse — a pre-v5 backup has no `budgetTags` key and
    *  upconverts to `[]` (default-to-empty), never a parse error. */
   budgetTags: BudgetTag[]
+  /** Always an array after parse — every backup before this field existed has
+   *  no `history` key and upconverts to `[]` (default-to-empty), never a parse
+   *  error. `historySnapshots` was previously absent from backup/restore
+   *  entirely (verified: zero references in the pre-fix storage/backup.ts). */
+  history: HistoryRecord[]
   settings?: BackupSettingsTargets
 }
 
@@ -175,6 +182,22 @@ export function parseBackup(json: string): ParseBackupResult {
     }
   }
 
+  // `history` is absent in every backup before this field existed — default to
+  // empty (upconvert) rather than reject. When present every record must be
+  // well-formed, and its embedded holdings/assets reuse the same validators as
+  // the top-level arrays so a corrupt snapshot can't silently restore garbage.
+  const history: HistoryRecord[] = []
+  if (raw.history !== undefined) {
+    if (!Array.isArray(raw.history)) {
+      return { ok: false, error: 'Backup `history`, if present, must be an array.' }
+    }
+    for (let i = 0; i < raw.history.length; i++) {
+      const validated = validateHistoryRecord(raw.history[i], i)
+      if (!validated.ok) return { ok: false, error: validated.error }
+      history.push(validated.record)
+    }
+  }
+
   let settings: BackupSettingsTargets | undefined
   if (raw.settings !== undefined) {
     const validated = validateSettingsTargets(raw.settings)
@@ -184,7 +207,67 @@ export function parseBackup(json: string): ParseBackupResult {
 
   return {
     ok: true,
-    backup: { schemaVersion, exportedAt, holdings, assets, budgetMonths, budgetTags, settings },
+    backup: {
+      schemaVersion,
+      exportedAt,
+      holdings,
+      assets,
+      budgetMonths,
+      budgetTags,
+      history,
+      settings,
+    },
+  }
+}
+
+function validateHistoryRecord(
+  raw: unknown,
+  index: number,
+): { ok: true; record: HistoryRecord } | { ok: false; error: string } {
+  const prefix = `History record at index ${index}`
+  if (!isPlainObject(raw)) return { ok: false, error: `${prefix}: not an object.` }
+
+  if (typeof raw.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) {
+    return { ok: false, error: `${prefix}: \`date\` must be a YYYY-MM-DD string.` }
+  }
+  if (!isFiniteNumber(raw.capturedAt)) {
+    return { ok: false, error: `${prefix}: \`capturedAt\` must be a finite number.` }
+  }
+  if (typeof raw.baseCurrency !== 'string' || !VALID_CURRENCIES.has(raw.baseCurrency as BaseCurrency)) {
+    return { ok: false, error: `${prefix}: \`baseCurrency\` must be one of INR|USD.` }
+  }
+  if (!Array.isArray(raw.holdings)) {
+    return { ok: false, error: `${prefix}: \`holdings\` must be an array.` }
+  }
+  const holdings: CanonicalHolding[] = []
+  for (let i = 0; i < raw.holdings.length; i++) {
+    const validated = validateHolding(raw.holdings[i], i)
+    if (!validated.ok) return { ok: false, error: `${prefix}, ${validated.error}` }
+    holdings.push(validated.holding)
+  }
+  // `assets` is absent on pre-revamp records — default to empty, same
+  // upconvert discipline as the top-level `assets` field.
+  const assets: ManualAsset[] = []
+  if (raw.assets !== undefined) {
+    if (!Array.isArray(raw.assets)) {
+      return { ok: false, error: `${prefix}: \`assets\`, if present, must be an array.` }
+    }
+    for (let i = 0; i < raw.assets.length; i++) {
+      const validated = validateAsset(raw.assets[i], i)
+      if (!validated.ok) return { ok: false, error: `${prefix}, ${validated.error}` }
+      assets.push(validated.asset)
+    }
+  }
+
+  return {
+    ok: true,
+    record: {
+      date: raw.date,
+      capturedAt: raw.capturedAt,
+      baseCurrency: raw.baseCurrency as BaseCurrency,
+      holdings,
+      assets,
+    },
   }
 }
 
