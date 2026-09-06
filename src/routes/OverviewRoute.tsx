@@ -26,6 +26,7 @@ import {
 import { formatDate, formatMoney, formatPercent } from '../lib/format'
 import { changeSinceLastImport, type ChangeSinceImport } from '../lib/sinceLastVisit'
 import { RefreshBanner } from '../components/RefreshBanner'
+import { ActionRail } from '../components/ActionRail'
 import { ChartErrorBoundary } from '../components/charts/ChartErrorBoundary'
 import { AnimatedMoney } from '../components/decor/AnimatedNumber'
 import type { FeatureSlide } from '../components/decor/FeatureCarousel'
@@ -33,6 +34,7 @@ import { Sparkline } from '../components/decor/Sparkline'
 import { CardSpotlight } from '../components/decor/CardSpotlight'
 import { categoricalColor } from '../components/charts/chartTheme'
 import {
+  FEATURE_ACTION_RAIL,
   FEATURE_BASE_CURRENCY,
   FEATURE_BUDGET,
   FEATURE_GOALS,
@@ -129,6 +131,16 @@ export function OverviewRoute() {
         trend={trend}
         sinceImport={sinceImport}
       />
+
+      {FEATURE_ACTION_RAIL && (
+        <ActionRail
+          holdings={holdings}
+          assets={assetList}
+          budgetMonths={budgetMonths}
+          settings={settings}
+          now={Date.now()}
+        />
+      )}
 
       {avg && (
         <CashFlowCard avg={avg} runway={runwayMonths(liquidAssets(assetList), avg.avgExpenses)} base={base} />
