@@ -23,8 +23,10 @@ import {
   runwayMonths,
   type ValueSource,
 } from '../lib/cashflow'
-import { formatMoney, formatPercent } from '../lib/format'
+import { formatDate, formatMoney, formatPercent } from '../lib/format'
+import { changeSinceLastImport, type ChangeSinceImport } from '../lib/sinceLastVisit'
 import { RefreshBanner } from '../components/RefreshBanner'
+import { ChartErrorBoundary } from '../components/charts/ChartErrorBoundary'
 import { AnimatedMoney } from '../components/decor/AnimatedNumber'
 import type { FeatureSlide } from '../components/decor/FeatureCarousel'
 import { Sparkline } from '../components/decor/Sparkline'
@@ -91,6 +93,11 @@ export function OverviewRoute() {
       ? history.map((h) => netWorthTotals(buildPositions(h.holdings, h.assets ?? [])))
       : []
 
+  // "Since your last import" delta — always compares the two most recent
+  // historySnapshots records regardless of FEATURE_HISTORY (that flag only
+  // gates the trend charts below, not this store read).
+  const sinceImport = changeSinceLastImport(history, settings.lastSeenAt, base)
+
   // W2 — budget-fed figures. `avg` is undefined under 2 logged months (no
   // unstable single-point average); the derived feeds then fall back to unset.
   const avg = FEATURE_BUDGET ? monthlyAverages(budgetMonths) : undefined
@@ -115,7 +122,13 @@ export function OverviewRoute() {
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
       )}
 
-      <NetWorthSection netWorth={netWorth} allocation={allocation} base={base} trend={trend} />
+      <NetWorthSection
+        netWorth={netWorth}
+        allocation={allocation}
+        base={base}
+        trend={trend}
+        sinceImport={sinceImport}
+      />
 
       {avg && (
         <CashFlowCard avg={avg} runway={runwayMonths(liquidAssets(assetList), avg.avgExpenses)} base={base} />
@@ -154,11 +167,13 @@ function NetWorthSection({
   allocation,
   base,
   trend,
+  sinceImport,
 }: {
   netWorth: NetWorthTotals
   allocation: NetWorthSlice[]
   base: BaseCurrency
   trend: NetWorthTotals[]
+  sinceImport: ChangeSinceImport
 }) {
   const partial = netWorth.excludedCount > 0
   return (
@@ -166,7 +181,12 @@ function NetWorthSection({
       <Suspense fallback={null}>
         <AmbientBackground />
       </Suspense>
-      <SectionHeading to="/portfolio">Net worth</SectionHeading>
+      <div className="flex items-end justify-between gap-3">
+        <SectionHeading to="/portfolio">Net worth</SectionHeading>
+        <ChartErrorBoundary title="Since last import">
+          <SinceImportLine change={sinceImport} base={base} />
+        </ChartErrorBoundary>
+      </div>
       {/* 3 tiles: grid-cols-1 below sm, not -2 — an odd count in a 2-col grid
           leaves a dangling empty cell (the ChartsPanel bug, same root cause). */}
       <CardSpotlight className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-bone-100/10 bg-bone-100/10 sm:grid-cols-3">
@@ -221,6 +241,37 @@ function NetWorthSection({
 
       {allocation.length > 0 && <AllocationBars slices={allocation} base={base} />}
     </section>
+  )
+}
+
+/** The honest "since your last import" line — never "since your last visit"
+ *  (see `sinceLastVisit.ts`'s doc comment). Renders nothing when there isn't
+ *  an honest comparison to make: a true cold start, or two snapshots that
+ *  can't be compared (mixed base currency, an unpriced position on either
+ *  day) — R1 forbids showing a number, or even a claim of "unchanged", that
+ *  isn't backed by an actual computed comparison. */
+function SinceImportLine({ change, base }: { change: ChangeSinceImport; base: BaseCurrency }) {
+  if (change.sinceDate === undefined) return null
+  const dateLabel = formatDate(new Date(change.sinceDate).getTime())
+
+  if (change.delta === undefined) {
+    if (!change.unchanged) return null
+    return (
+      <span className="font-mono text-[11px] text-bone-400">First snapshot · {dateLabel}</span>
+    )
+  }
+
+  const arrow = change.delta > 0 ? '▲' : change.delta < 0 ? '▼' : '±'
+  const pct = change.deltaPct === undefined ? '' : ` (${formatPercent(change.deltaPct).replace('+', '')})`
+  const tone = change.delta > 0 ? 'text-jade-300' : change.delta < 0 ? 'text-ember-300' : 'text-bone-400'
+  return (
+    <span className="font-mono text-[11px] text-bone-400">
+      <span className={tone}>
+        {arrow} {formatMoney(Math.abs(change.delta), base)}
+        {pct}
+      </span>{' '}
+      since {dateLabel}
+    </span>
   )
 }
 
