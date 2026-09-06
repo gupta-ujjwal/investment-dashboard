@@ -35,8 +35,7 @@ Pushing to `main` will trigger a GitHub Actions workflow that builds and publish
 
 **One-time setup before the first deploy can fire:**
 
-1. Move `deploy.yml` from the repo root to `.github/workflows/deploy.yml`. (It lives at root in git for now because the OAuth token used to push this PR lacks the `workflow` scope; once committed under `.github/workflows/` by the maintainer, all future pushes work normally.)
-2. Repo **Settings → Pages → Source = "GitHub Actions"**.
+1. Repo **Settings → Pages → Source = "GitHub Actions"**.
 
 ## Hard constraints
 

@@ -59,7 +59,8 @@ Introduced by `89ce63c` (PR #52, merged 3 Aug 2026). The prior shell was `min-h-
 with a full-width top bar — see `git show 89ce63c^:src/routes/AppShell.tsx:25`.
 
 **How it passed review**: the evidence committed with that PR
-(`implementation-docs/evidence-nocturne-theme/mobile-01-overview.png`) already shows the bug — a
+(`git show 16a8c4d:implementation-docs/evidence-nocturne-theme/mobile-01-overview.png`,
+screenshots since dropped from the tree) already shows the bug — a
 cut-off nav and an empty body. The capture ran against an **empty IndexedDB**, so "blank page, no
 data yet" read as a plausible empty state. The process fix (seed before mobile capture, assert
 `scrollWidth === clientWidth`) matters as much as the one-line code fix.
