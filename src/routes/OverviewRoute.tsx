@@ -54,7 +54,7 @@ const FeatureCarousel = lazy(() => import('../components/decor/FeatureCarousel')
 const FIRST_RUN_SLIDES: FeatureSlide[] = [
   { title: 'Two markets, one view', body: 'India and US equity, side by side in one portfolio.' },
   { title: 'Everything stays on this device', body: 'No account, no server — your holdings never leave the browser.' },
-  { title: 'Net worth, budget, and goals', body: 'One Overview for where you stand and where you’re headed.' },
+  { title: 'Net worth, budget, and goals', body: 'One Today page for where you stand and where you’re headed.' },
 ]
 
 type LoaderData = {
@@ -118,7 +118,7 @@ export function OverviewRoute() {
 
   return (
     <div className="space-y-10">
-      <PageHead title="Overview" caption="Your whole net worth, on-device" />
+      <PageHead title="Today" caption="Your whole net worth, on-device" />
 
       {FEATURE_BASE_CURRENCY && totals.unstamped > 0 && (
         <RefreshBanner unstamped={totals.unstamped} baseCurrency={base} />
@@ -553,7 +553,7 @@ function ChartsFallback() {
 function EmptyState() {
   return (
     <div className="space-y-6">
-      <PageHead title="Overview" caption="Nothing on file yet" />
+      <PageHead title="Today" caption="Nothing on file yet" />
       <div className="relative isolate overflow-hidden rounded-3xl border border-dashed border-bone-100/15 bg-ink-900 px-8 py-16 text-center">
         <Suspense fallback={null}>
           <AmbientBackground />
