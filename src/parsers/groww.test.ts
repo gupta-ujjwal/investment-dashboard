@@ -19,6 +19,16 @@ async function growwWorkbookWithoutClosingPrice(): Promise<ArrayBuffer> {
   return (await wb.xlsx.writeBuffer()) as ArrayBuffer
 }
 
+/** Groww-shaped workbook with a valid name/ISIN/quantity but an unparseable
+ *  `Average buy price` cell — exercises the required-column garbage-cell path. */
+async function growwWorkbookWithGarbagePrice(): Promise<ArrayBuffer> {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Sheet1')
+  ws.addRow(['Stock Name', 'ISIN', 'Quantity', 'Average buy price'])
+  ws.addRow(['ASIAN PAINTS LIMITED', 'INE021A01026', 22, '#N/A'])
+  return (await wb.xlsx.writeBuffer()) as ArrayBuffer
+}
+
 describe('parseGroww — real sample', () => {
   it('parses the Groww holdings statement', async () => {
     const buf = await loadFixture('groww-sample.xlsx')
@@ -84,6 +94,14 @@ describe('parseGroww — optional current-price column', () => {
     const result = await parseGroww(await growwWorkbookWithoutClosingPrice())
     expect(result.rows).toHaveLength(1)
     expect(result.rows[0].currentPrice).toBeUndefined()
+  })
+})
+
+describe('parseGroww — required-column garbage cells', () => {
+  it('skips a row with an unparseable Average buy price cell instead of importing avgBuyPrice: 0', async () => {
+    const result = await parseGroww(await growwWorkbookWithGarbagePrice())
+    expect(result.rows).toHaveLength(0)
+    expect(result.skipped).toBe(1)
   })
 })
 

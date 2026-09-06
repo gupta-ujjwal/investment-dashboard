@@ -1,7 +1,7 @@
 import type { AssetClass, CanonicalHolding, Currency } from '../storage/holdings'
 import type { ManualAsset } from '../storage/assets'
 import { deriveRows } from './holdingsView'
-import { assetPosition, HOLDING_GROUP, MANUAL_ASSET_CLASS_LABELS } from './netWorth'
+import { assetPosition, finite, HOLDING_GROUP, MANUAL_ASSET_CLASS_LABELS } from './netWorth'
 
 /**
  * The Investments tab's unified row model. Equity is a *derived, read-only*
@@ -73,12 +73,6 @@ const MARKET_LABEL: Record<Currency, string> = {
  *  market so the row list never reshuffles between renders. */
 const MARKET_ORDER: Currency[] = ['INR', 'USD']
 const CLASS_ORDER: AssetClass[] = ['equity', 'etf', 'mf', 'invit', 'other']
-
-/** Finite-number guard: a non-finite figure (NaN/±Infinity from malformed data)
- *  is treated as "not computable", never propagated into a total. */
-function finite(v: number | undefined): number | undefined {
-  return v !== undefined && Number.isFinite(v) ? v : undefined
-}
 
 /**
  * Aggregate open holdings into one derived row per (asset class, market) group.

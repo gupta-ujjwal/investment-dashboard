@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CanonicalHolding } from '../storage/holdings'
-import { stampHolding, stampMany } from './refreshFx'
+import { deriveFxWarning, stampHolding, stampMany } from './refreshFx'
 
 function inrHolding(): CanonicalHolding {
   return {
@@ -76,5 +76,29 @@ describe('stampMany', () => {
     const stamped = stampMany(rows, 'INR', 95.77, 1234567890)
     expect(stamped[0]).not.toBe(original)
     expect(original.fxRate).toBeUndefined()
+  })
+})
+
+describe('deriveFxWarning', () => {
+  it('returns null when the live fetch succeeded (no failure)', () => {
+    expect(deriveFxWarning(null, 83.5, 1700000000000)).toBeNull()
+    // Even with no fallback rate on record — a null failure means the
+    // fallback values are irrelevant, since the live rate was used.
+    expect(deriveFxWarning(null, null, null)).toBeNull()
+  })
+
+  it('names the stale saved rate and date when live fails but a fallback exists', () => {
+    const warning = deriveFxWarning('Frankfurter timed out after 3000ms', 83.5, 1715126400000)
+    expect(warning).not.toBeNull()
+    expect(warning).toContain('83.5')
+    expect(warning).toContain('live')
+    expect(warning).toContain('Frankfurter timed out after 3000ms')
+  })
+
+  it('gives a distinct message when live fails and there is no fallback rate at all', () => {
+    const warning = deriveFxWarning('Network error fetching FX rate', null, null)
+    expect(warning).not.toBeNull()
+    expect(warning).toContain('Network error fetching FX rate')
+    expect(warning).not.toContain('83.5')
   })
 })

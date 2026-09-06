@@ -19,6 +19,11 @@ export type WizardState = {
   diff: DiffResult | null
   decisions: Record<string, MissingDecision>
   commitError: string | null
+  /** Set when the commit succeeded but used a stale/fallback FX rate (or no
+   *  rate at all) because the live Frankfurter fetch failed. `null` when the
+   *  live fetch succeeded. Surfaced on the Done screen — see
+   *  `lib/refreshFx.ts`'s `deriveFxWarning`. */
+  fxWarning: string | null
 }
 
 export type WizardAction =
@@ -32,7 +37,7 @@ export type WizardAction =
   | { type: 'back-to-upload' }
   | { type: 'commit-started' }
   | { type: 'commit-failed'; message: string }
-  | { type: 'commit-ok' }
+  | { type: 'commit-ok'; fxWarning: string | null }
   | { type: 'reset' }
 
 export const initialState: WizardState = {
@@ -43,6 +48,7 @@ export const initialState: WizardState = {
   diff: null,
   decisions: {},
   commitError: null,
+  fxWarning: null,
 }
 
 export function reducer(state: WizardState, action: WizardAction): WizardState {
@@ -85,7 +91,7 @@ export function reducer(state: WizardState, action: WizardAction): WizardState {
     case 'commit-failed':
       return { ...state, step: 'preview', commitError: action.message }
     case 'commit-ok':
-      return { ...state, step: 'done', commitError: null }
+      return { ...state, step: 'done', commitError: null, fxWarning: action.fxWarning }
     case 'reset':
       return initialState
   }

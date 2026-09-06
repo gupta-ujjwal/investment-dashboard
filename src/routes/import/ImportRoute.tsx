@@ -54,7 +54,11 @@ export function ImportWizard() {
       {state.step === 'preview' && <PreviewStep state={state} dispatch={dispatch} />}
       {state.step === 'committing' && <CommitStep state="committing" />}
       {state.step === 'done' && (
-        <CommitStep state="done" onContinue={() => navigate('/overview')} />
+        <CommitStep
+          state="done"
+          onContinue={() => navigate('/overview')}
+          fxWarning={state.fxWarning}
+        />
       )}
     </div>
   )

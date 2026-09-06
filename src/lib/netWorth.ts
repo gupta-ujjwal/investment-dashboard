@@ -17,6 +17,15 @@ import { deriveRows, type DerivedRow } from './holdingsView'
  * rather than collapsing the whole net worth to `—` because one holding lacks a
  * price. That dual return is the fix the plan review converged on.
  */
+/** Finite-number guard: a non-finite figure (NaN/±Infinity from malformed data)
+ *  is treated as "not computable", never propagated into a total. Exported so
+ *  `lib/investments.ts` shares this single definition instead of keeping its
+ *  own copy — both folds sit on core render paths and must apply the same
+ *  numeric-validity check. */
+export function finite(v: number | undefined): number | undefined {
+  return v !== undefined && Number.isFinite(v) ? v : undefined
+}
+
 export type NetWorthSourceKind = 'holding' | 'asset'
 
 export type NetWorthPosition = {
@@ -151,21 +160,23 @@ export function netWorthTotals(positions: NetWorthPosition[]): NetWorthTotals {
   let profitKnown = 0
 
   for (const p of positions) {
-    if (p.currentValueBase === undefined) {
+    const currentValueBase = finite(p.currentValueBase)
+    if (currentValueBase === undefined) {
       excludedCount++
       anyValueMissing = true
     } else {
-      knownCurrentValue += p.currentValueBase
+      knownCurrentValue += currentValueBase
     }
 
     if (p.hasBasis) {
-      if (p.investedBase === undefined) {
+      const investedBase = finite(p.investedBase)
+      if (investedBase === undefined) {
         anyBasisInvestedMissing = true
       } else {
-        knownInvested += p.investedBase
-        if (p.currentValueBase !== undefined) {
-          basisWithValue += p.investedBase
-          profitKnown += p.currentValueBase - p.investedBase
+        knownInvested += investedBase
+        if (currentValueBase !== undefined) {
+          basisWithValue += investedBase
+          profitKnown += currentValueBase - investedBase
         }
       }
     }

@@ -3,7 +3,6 @@ import type { AssetClass, CanonicalHolding } from '../storage/holdings'
 import type { ParseResult } from './types'
 import { ParseError } from './types'
 import {
-  cellNumber,
   cellNumberOrUndefined,
   cellString,
   findSheetBySignature,
@@ -69,19 +68,27 @@ export async function parseVested(file: ArrayBuffer): Promise<ParseResult> {
     const row = ws.getRow(i)
     const name = cellString(row.getCell(nameCol))
     const ticker = cellString(row.getCell(tickerCol))
-    const quantity = cellNumber(row.getCell(qtyCol))
-    const avgBuyPrice = cellNumber(row.getCell(avgCostCol))
+    const quantity = cellNumberOrUndefined(row.getCell(qtyCol))
+    const avgBuyPrice = cellNumberOrUndefined(row.getCell(avgCostCol))
     const currentPrice =
       currentPriceCol === undefined
         ? undefined
         : cellNumberOrUndefined(row.getCell(currentPriceCol))
 
-    const ghost = !name || quantity === 0
+    const ghost = !name || quantity === undefined || quantity === 0
     if (ghost) {
       if (name || ticker) skipped++
       continue
     }
     if (!ticker) {
+      skipped++
+      continue
+    }
+    // A garbage/empty cell in a required numeric column (e.g. a broker export
+    // glitch) must be rejected, not silently coerced to 0 — a 0 avgBuyPrice
+    // would understate invested capital with no signal (dsl.md R1: absence
+    // never collapses to a sentinel).
+    if (avgBuyPrice === undefined) {
       skipped++
       continue
     }

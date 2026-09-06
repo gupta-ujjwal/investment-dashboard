@@ -71,6 +71,7 @@ export function PortfolioRoute() {
   const [addHoldingOpen, setAddHoldingOpen] = useState(false)
   const [addAssetOpen, setAddAssetOpen] = useState(false)
   const [editing, setEditing] = useState<CanonicalHolding | null>(null)
+  const [editingAsset, setEditingAsset] = useState<ManualAsset | null>(null)
 
   const rows = useMemo(() => viewRows(holdings, filters, sort), [holdings, filters, sort])
   const existingKeys = useMemo(
@@ -341,7 +342,7 @@ export function PortfolioRoute() {
                     base={base}
                     onEdit={() => {
                       const asset = assets.find((a) => a.id === r.asset.id)
-                      if (asset) setAddAssetOpen(true)
+                      if (asset) setEditingAsset(asset)
                     }}
                     onDelete={() => onDeleteAsset(r.asset)}
                   />
@@ -377,6 +378,12 @@ export function PortfolioRoute() {
         onClose={() => setEditing(null)}
       />
       <AssetForm open={addAssetOpen} mode="add" onClose={() => setAddAssetOpen(false)} />
+      <AssetForm
+        open={editingAsset !== null}
+        mode="edit"
+        asset={editingAsset ?? undefined}
+        onClose={() => setEditingAsset(null)}
+      />
 
       <UndoToast toast={undoable.active} onUndo={undoable.undo} onDismiss={undoable.dismiss} />
     </div>
@@ -532,6 +539,17 @@ function RiskRow({ concentration: c }: { concentration: Concentration }) {
       verdict: `${c.singleStockRisk.holding.name} is ${pctNoSign(c.singleStockRisk.weight)} of your portfolio`,
       metric: `Single-stock risk: ${pctNoSign(c.singleStockRisk.weight)}`,
       tone: c.singleStockRisk.weight > 0.15 ? 'loss' : 'mute',
+    })
+  } else if (c.top5Pct === undefined) {
+    // singleStockRisk is undefined for two different reasons: nothing is
+    // priced at all (top5Pct is also undefined in that case, set
+    // unconditionally once anything is priced), or the top holding is
+    // genuinely ≤10%. Only the second case supports the "no concentration
+    // risk" claim below — this branch is the honest "can't tell yet" state.
+    verdicts.push({
+      label: 'Largest position',
+      verdict: 'No priced holdings yet',
+      tone: 'mute',
     })
   } else {
     verdicts.push({

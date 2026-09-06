@@ -1,6 +1,6 @@
 type Props =
   | { state: 'committing' }
-  | { state: 'done'; onContinue: () => void }
+  | { state: 'done'; onContinue: () => void; fxWarning: string | null }
 
 export function CommitStep(props: Props) {
   if (props.state === 'committing') {
@@ -41,6 +41,14 @@ export function CommitStep(props: Props) {
       <p className="mt-2 font-sans text-sm text-bone-300">
         Your positions are saved on this device.
       </p>
+      {props.fxWarning && (
+        <div className="mx-auto mt-6 max-w-md rounded-lg border border-ember-400/40 bg-ember-900/30 p-4 text-left font-sans text-xs text-ember-300">
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+            fx warning ·{' '}
+          </span>
+          {props.fxWarning}
+        </div>
+      )}
       <button type="button" onClick={props.onContinue} className="btn-primary mt-8">
         View analytics →
       </button>

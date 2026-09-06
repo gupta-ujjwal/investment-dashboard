@@ -84,6 +84,56 @@ describe('diffHoldings', () => {
     expect(result.updates).toHaveLength(0)
     expect(result.missing).toHaveLength(2)
   })
+
+  it('returns an empty duplicates array when incoming has no repeated keys', () => {
+    const incoming = [holding('vested', 'AAPL', 1, 100), holding('vested', 'MSFT', 2, 200)]
+    const result = diffHoldings([], incoming, 'vested')
+    expect(result.duplicates).toEqual([])
+  })
+})
+
+describe('diffHoldings — within-import duplicate keys', () => {
+  it('fresh import: a repeated sourceSymbol collapses to one insert (last wins), reporting the discarded row', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 1, 100),
+      holding('vested', 'AAPL', 5, 150),
+    ]
+    const result = diffHoldings([], incoming, 'vested')
+    // Exactly one insert survives — the crash this fix exists to prevent was
+    // two `store.add()` calls racing on the same [source, sourceSymbol] key.
+    expect(result.inserts).toHaveLength(1)
+    expect(result.inserts[0].quantity).toBe(5) // last-in-file wins
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].sourceSymbol).toBe('AAPL')
+    // The discarded row's full data survives on the return value — not
+    // silently thrown away, so a future picker can consume it directly.
+    expect(result.duplicates[0].discarded.quantity).toBe(1)
+  })
+
+  it('re-import: a repeated sourceSymbol collapses to one update (last wins), reporting the discarded row', () => {
+    const existing = [holding('vested', 'AAPL', 1, 100)]
+    const incoming = [
+      holding('vested', 'AAPL', 5, 150),
+      holding('vested', 'AAPL', 9, 175),
+    ]
+    const result = diffHoldings(existing, incoming, 'vested')
+    // Previously two `store.put()` calls silently raced with no signal at
+    // all — now exactly one update survives and the collision is visible.
+    expect(result.updates).toHaveLength(1)
+    expect(result.updates[0].quantity).toBe(9) // last-in-file wins
+    expect(result.duplicates).toHaveLength(1)
+    expect(result.duplicates[0].sourceSymbol).toBe('AAPL')
+    expect(result.duplicates[0].discarded.quantity).toBe(5)
+  })
+
+  it('duplicates within one import do not also appear in missing', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 1, 100),
+      holding('vested', 'AAPL', 5, 150),
+    ]
+    const result = diffHoldings([], incoming, 'vested')
+    expect(result.missing).toHaveLength(0)
+  })
 })
 
 describe('toDeleteKeys', () => {

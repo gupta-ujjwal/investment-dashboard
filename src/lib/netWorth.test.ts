@@ -7,7 +7,23 @@ import {
   netWorthAllocation,
   netWorthTotals,
   staleAssetCount,
+  type NetWorthPosition,
 } from './netWorth'
+
+function position(over: Partial<NetWorthPosition> = {}): NetWorthPosition {
+  return {
+    key: 'holding:groww:INE0001',
+    label: 'Test Co',
+    kind: 'holding',
+    group: 'Equity',
+    currency: 'INR',
+    investedBase: 1000,
+    currentValueBase: 1200,
+    profitAbsBase: 200,
+    hasBasis: true,
+    ...over,
+  }
+}
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
   return {
@@ -127,6 +143,29 @@ describe('netWorthTotals — partial-value discipline', () => {
       [],
     )
     expect(positions).toHaveLength(1)
+  })
+
+  it('treats a non-finite currentValueBase as not-computable, never poisoning the total with NaN — matches the finite() guard already applied in investments.ts', () => {
+    const poisoned = position({ currentValueBase: NaN })
+    const t = netWorthTotals([position(), poisoned])
+    // The good position (1200) must still be the known total — a NaN row
+    // must not turn the whole sum into NaN, and must not silently be
+    // dropped without being counted as excluded (R1).
+    expect(t.knownCurrentValue).toBe(1200)
+    expect(t.excludedCount).toBe(1)
+    expect(t.currentValueStrict).toBeUndefined()
+    expect(Number.isNaN(t.knownCurrentValue)).toBe(false)
+  })
+
+  it('treats a non-finite investedBase as not-computable, never poisoning knownInvested/profitKnown with NaN', () => {
+    const poisoned = position({ investedBase: Infinity })
+    const t = netWorthTotals([position(), poisoned])
+    // Same discipline for the invested side: profitKnown must come only
+    // from positions with both a finite basis and a finite value.
+    expect(t.knownInvested).toBe(1000)
+    expect(t.profitKnown).toBe(200)
+    expect(t.investedStrict).toBeUndefined()
+    expect(Number.isFinite(t.profitKnown)).toBe(true)
   })
 })
 
