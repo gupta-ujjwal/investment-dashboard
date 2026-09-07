@@ -479,7 +479,7 @@ export function HoldingCard({ row, baseCurrency, actions }: RowProps) {
           <dt className="font-mono text-[9px] uppercase tracking-[0.18em] text-bone-400">Profit</dt>
           <dd className={`mt-1 font-mono tabular-nums ${profitColor[tone]}`}>
             <div className="text-base font-semibold">{money(row.profitAbsBase, baseCurrency)}</div>
-            <div className="text-[11px]">
+            <div className="text-[11px] font-normal">
               {row.profitPct === undefined ? '—' : formatPercent(row.profitPct)}
             </div>
           </dd>
