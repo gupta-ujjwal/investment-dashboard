@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { BrokerSource, CanonicalHolding, OverridableField } from '../storage/holdings'
-import { diffHoldings, toDeleteKeys } from './diff'
+import {
+  applyDuplicateDecisions,
+  combineDuplicateGroup,
+  diffHoldings,
+  groupDuplicates,
+  toDeleteKeys,
+} from './diff'
 
 function holding(
   source: BrokerSource,
@@ -244,5 +250,143 @@ describe('diffHoldings — three-hop integration (edit → re-import → overrid
     expect(merged.currentPrice).toBe(220)
     expect(merged.manualOverrides).toEqual(['quantity'])
     expect(merged.createdAt).toBe(1000) // audit timestamp survives
+  })
+})
+
+describe('groupDuplicates', () => {
+  it('returns no groups when there are no duplicates', () => {
+    const diff = diffHoldings([], [holding('vested', 'AAPL', 1, 100)], 'vested')
+    expect(groupDuplicates(diff)).toEqual([])
+  })
+
+  it('reconstructs a 2-way group as [discarded, survivor]', () => {
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const groups = groupDuplicates(diff)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].sourceSymbol).toBe('AAPL')
+    expect(groups[0].lots.map((l) => l.quantity)).toEqual([10, 20])
+    expect(groups[0].survivor.quantity).toBe(20) // last occurrence wins, matches diffHoldings
+  })
+
+  it('reconstructs a 3-way group as [discarded, discarded, survivor]', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 10, 100),
+      holding('vested', 'AAPL', 20, 110),
+      holding('vested', 'AAPL', 5, 90),
+    ]
+    const diff = diffHoldings([], incoming, 'vested')
+    const groups = groupDuplicates(diff)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].lots.map((l) => l.quantity)).toEqual([10, 20, 5])
+    expect(groups[0].survivor.quantity).toBe(5)
+  })
+})
+
+describe('combineDuplicateGroup', () => {
+  it('computes the quantity-weighted average for a 2-way group', () => {
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const combined = combineDuplicateGroup(groupDuplicates(diff)[0])
+    // qty = 10+20 = 30; avgBuyPrice = (10*100 + 20*110) / 30 = 3200/30
+    expect(combined?.quantity).toBe(30)
+    expect(combined?.avgBuyPrice).toBeCloseTo(3200 / 30, 10)
+  })
+
+  it('computes a true single-pass weighted average for a 3-way group, not a pairwise-chained one', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 10, 100), // cost 1000
+      holding('vested', 'AAPL', 20, 110), // cost 2200
+      holding('vested', 'AAPL', 5, 90), // cost 450
+    ]
+    const diff = diffHoldings([], incoming, 'vested')
+    const combined = combineDuplicateGroup(groupDuplicates(diff)[0])
+    // Independently computed true weighted average: (1000+2200+450) / (10+20+5) = 3650/35.
+    // A pairwise-chained implementation (avg(avg(A,B), C)) would NOT reach this number —
+    // this assertion is the one from Step 5's review, guarding the associativity bug.
+    expect(combined?.quantity).toBe(35)
+    expect(combined?.avgBuyPrice).toBeCloseTo(3650 / 35, 10)
+  })
+
+  it('carries every non-quantity/non-price field through from the survivor unchanged', () => {
+    const incoming = [
+      holding('vested', 'AAPL', 10, 100, { currentPrice: 150 }),
+      holding('vested', 'AAPL', 20, 110, { currentPrice: 160, name: 'Apple Inc.' }),
+    ]
+    const diff = diffHoldings([], incoming, 'vested')
+    const combined = combineDuplicateGroup(groupDuplicates(diff)[0])
+    expect(combined?.currentPrice).toBe(160) // survivor's, not the discarded lot's
+    expect(combined?.name).toBe('Apple Inc.')
+  })
+
+  it('refuses when any lot has a zero, negative, or missing quantity/avgBuyPrice (R1)', () => {
+    const zeroQty = [holding('vested', 'AAPL', 0, 100), holding('vested', 'AAPL', 20, 110)]
+    const negativePrice = [
+      holding('vested', 'AAPL', 10, -5),
+      holding('vested', 'AAPL', 20, 110),
+    ]
+    const nanQty = [holding('vested', 'AAPL', NaN, 100), holding('vested', 'AAPL', 20, 110)]
+    expect(
+      combineDuplicateGroup(groupDuplicates(diffHoldings([], zeroQty, 'vested'))[0]),
+    ).toBeUndefined()
+    expect(
+      combineDuplicateGroup(groupDuplicates(diffHoldings([], negativePrice, 'vested'))[0]),
+    ).toBeUndefined()
+    expect(
+      combineDuplicateGroup(groupDuplicates(diffHoldings([], nanQty, 'vested'))[0]),
+    ).toBeUndefined()
+  })
+
+  it('refuses when the survivor carries a sticky manualOverrides entry for quantity or avgBuyPrice', () => {
+    // The survivor here is an UPDATE — it went through mergeWithOverrides
+    // against an existing row with a sticky avgBuyPrice correction (999,
+    // not the broker's own value) and so carries manualOverrides:
+    // ['avgBuyPrice']. Combining must not blend that corrected value with a
+    // discarded lot's raw broker price while still claiming the override.
+    const existing = holding('vested', 'AAPL', 5, 999, { manualOverrides: ['avgBuyPrice'] })
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([existing], incoming, 'vested')
+    expect(combineDuplicateGroup(groupDuplicates(diff)[0])).toBeUndefined()
+  })
+})
+
+describe('applyDuplicateDecisions', () => {
+  it('leaves inserts/updates unchanged when no decision is recorded (default keep-last)', () => {
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const result = applyDuplicateDecisions(diff, {})
+    expect(result.inserts).toEqual(diff.inserts)
+  })
+
+  it('leaves inserts/updates unchanged for an explicit keep-last decision', () => {
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const result = applyDuplicateDecisions(diff, { AAPL: 'keep-last' })
+    expect(result.inserts).toEqual(diff.inserts)
+  })
+
+  it('swaps in the combined row for a combine decision, in the insert bucket', () => {
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const result = applyDuplicateDecisions(diff, { AAPL: 'combine' })
+    expect(result.inserts).toHaveLength(1)
+    expect(result.inserts[0].quantity).toBe(30)
+  })
+
+  it('swaps in the combined row for a combine decision, in the update bucket', () => {
+    const existing = [holding('vested', 'AAPL', 5, 90)]
+    const incoming = [holding('vested', 'AAPL', 10, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings(existing, incoming, 'vested')
+    const result = applyDuplicateDecisions(diff, { AAPL: 'combine' })
+    expect(result.updates).toHaveLength(1)
+    expect(result.updates[0].quantity).toBe(30)
+  })
+
+  it('falls back to keep-last when combine is chosen but the group is unusable', () => {
+    const incoming = [holding('vested', 'AAPL', 0, 100), holding('vested', 'AAPL', 20, 110)]
+    const diff = diffHoldings([], incoming, 'vested')
+    const result = applyDuplicateDecisions(diff, { AAPL: 'combine' })
+    // combineDuplicateGroup refused (qty 0), so the survivor (last occurrence) ships as-is.
+    expect(result.inserts[0].quantity).toBe(20)
   })
 })

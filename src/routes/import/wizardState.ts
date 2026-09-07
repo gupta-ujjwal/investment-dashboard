@@ -1,4 +1,4 @@
-import type { DiffResult } from '../../parsers/diff'
+import type { DiffResult, DuplicateDecision } from '../../parsers/diff'
 import type { ParseResult } from '../../parsers/types'
 import type { BrokerSource } from '../../storage/holdings'
 
@@ -18,6 +18,9 @@ export type WizardState = {
   parseResult: ParseResult | null
   diff: DiffResult | null
   decisions: Record<string, MissingDecision>
+  /** Per duplicate-group `sourceSymbol`. No entry (the default) means
+   *  `'keep-last'` — see `applyDuplicateDecisions`'s own contract. */
+  duplicateDecisions: Record<string, DuplicateDecision>
   commitError: string | null
   /** Set when the commit succeeded but used a stale/fallback FX rate (or no
    *  rate at all) because the live Frankfurter fetch failed. `null` when the
@@ -34,6 +37,8 @@ export type WizardAction =
   | { type: 'parse-ok'; result: ParseResult; diff: DiffResult }
   | { type: 'set-decision'; sourceSymbol: string; decision: MissingDecision }
   | { type: 'set-all-decisions'; decision: MissingDecision }
+  | { type: 'set-duplicate-decision'; sourceSymbol: string; decision: DuplicateDecision }
+  | { type: 'set-all-duplicate-decisions'; decision: DuplicateDecision }
   | { type: 'back-to-upload' }
   | { type: 'commit-started' }
   | { type: 'commit-failed'; message: string }
@@ -47,6 +52,7 @@ export const initialState: WizardState = {
   parseResult: null,
   diff: null,
   decisions: {},
+  duplicateDecisions: {},
   commitError: null,
   fxWarning: null,
 }
@@ -71,6 +77,7 @@ export function reducer(state: WizardState, action: WizardAction): WizardState {
         parseResult: action.result,
         diff: action.diff,
         decisions,
+        duplicateDecisions: {},
       }
     }
     case 'set-decision':
@@ -84,8 +91,29 @@ export function reducer(state: WizardState, action: WizardAction): WizardState {
       for (const m of state.diff.missing) decisions[m.sourceSymbol] = action.decision
       return { ...state, decisions }
     }
+    case 'set-duplicate-decision':
+      return {
+        ...state,
+        duplicateDecisions: {
+          ...state.duplicateDecisions,
+          [action.sourceSymbol]: action.decision,
+        },
+      }
+    case 'set-all-duplicate-decisions': {
+      if (!state.diff) return state
+      const duplicateDecisions: Record<string, DuplicateDecision> = {}
+      for (const d of state.diff.duplicates) duplicateDecisions[d.sourceSymbol] = action.decision
+      return { ...state, duplicateDecisions }
+    }
     case 'back-to-upload':
-      return { ...state, step: 'upload', parseResult: null, diff: null, decisions: {} }
+      return {
+        ...state,
+        step: 'upload',
+        parseResult: null,
+        diff: null,
+        decisions: {},
+        duplicateDecisions: {},
+      }
     case 'commit-started':
       return { ...state, step: 'committing', commitError: null }
     case 'commit-failed':

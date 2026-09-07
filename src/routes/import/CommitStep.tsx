@@ -50,7 +50,7 @@ export function CommitStep(props: Props) {
         </div>
       )}
       <button type="button" onClick={props.onContinue} className="btn-primary mt-8">
-        View analytics →
+        Go to Today →
       </button>
     </section>
   )
