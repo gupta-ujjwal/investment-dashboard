@@ -86,7 +86,7 @@ export function Cell({
     <div>
       <dt className="font-mono text-[9px] uppercase tracking-[0.18em] text-bone-400">{label}</dt>
       <dd
-        className={`mt-1 font-mono text-sm tabular-nums ${emphasis ? 'text-bone-50' : 'text-bone-200'}`}
+        className={`mt-1 font-mono tabular-nums ${emphasis ? 'text-base font-semibold text-bone-50' : 'text-sm text-bone-200'}`}
       >
         {value}
       </dd>
@@ -218,12 +218,12 @@ export function HoldingRow({ row, baseCurrency, actions }: RowProps) {
       <td className="px-4 py-4 text-right font-mono text-sm text-bone-300 tabular-nums">
         {money(row.investedBase, baseCurrency)}
       </td>
-      <td className="px-4 py-4 text-right font-mono text-sm text-bone-50 tabular-nums">
+      <td className="px-4 py-4 text-right font-mono text-base font-semibold text-bone-50 tabular-nums">
         {money(row.currentValueBase, baseCurrency)}
       </td>
-      <td className={`px-4 py-4 text-right font-mono text-sm tabular-nums ${profitColor[tone]}`}>
+      <td className={`px-4 py-4 text-right font-mono text-base font-semibold tabular-nums ${profitColor[tone]}`}>
         <div>{money(row.profitAbsBase, baseCurrency)}</div>
-        <div className="text-[11px]">
+        <div className="text-[11px] font-normal">
           {row.profitPct === undefined ? '—' : formatPercent(row.profitPct)}
         </div>
       </td>
@@ -478,7 +478,7 @@ export function HoldingCard({ row, baseCurrency, actions }: RowProps) {
         <div>
           <dt className="font-mono text-[9px] uppercase tracking-[0.18em] text-bone-400">Profit</dt>
           <dd className={`mt-1 font-mono tabular-nums ${profitColor[tone]}`}>
-            <div className="text-sm">{money(row.profitAbsBase, baseCurrency)}</div>
+            <div className="text-base font-semibold">{money(row.profitAbsBase, baseCurrency)}</div>
             <div className="text-[11px]">
               {row.profitPct === undefined ? '—' : formatPercent(row.profitPct)}
             </div>
