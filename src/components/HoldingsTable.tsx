@@ -105,14 +105,14 @@ export function HoldingsTable({ rows, baseCurrency, sort, onSort, actions }: Pro
               <td className="px-4 py-3.5 text-right font-mono text-sm text-bone-200 tabular-nums">
                 {money(totalInvested, baseCurrency)}
               </td>
-              <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-bone-50 tabular-nums">
+              <td className="px-4 py-3.5 text-right font-mono text-base font-semibold text-bone-50 tabular-nums">
                 {money(totalValue, baseCurrency)}
               </td>
               <td
-                className={`px-4 py-3.5 text-right font-mono text-sm tabular-nums ${profitColor[totalTone]}`}
+                className={`px-4 py-3.5 text-right font-mono text-base font-semibold tabular-nums ${profitColor[totalTone]}`}
               >
                 <div>{money(totalProfit, baseCurrency)}</div>
-                <div className="text-[11px]">
+                <div className="text-[11px] font-normal">
                   {totalProfitPct === undefined ? '—' : formatPercent(totalProfitPct)}
                 </div>
               </td>
