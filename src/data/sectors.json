@@ -279,6 +279,11 @@
     "sector": "Health Care",
     "market": "USD"
   },
+  "BE": {
+    "name": "Bloom Energy",
+    "sector": "Industrials",
+    "market": "USD"
+  },
   "BEN": {
     "name": "Franklin Resources",
     "sector": "Financials",
@@ -307,11 +312,6 @@
   "BKR": {
     "name": "Baker Hughes",
     "sector": "Energy",
-    "market": "USD"
-  },
-  "BLDR": {
-    "name": "Builders FirstSource",
-    "sector": "Industrials",
     "market": "USD"
   },
   "BLK": {
@@ -1214,6 +1214,11 @@
     "sector": "Materials",
     "market": "USD"
   },
+  "ILMN": {
+    "name": "Illumina, Inc.",
+    "sector": "Health Care",
+    "market": "USD"
+  },
   "INCY": {
     "name": "Incyte",
     "sector": "Health Care",
@@ -1247,11 +1252,6 @@
   "INE019A01038": {
     "name": "JSW Steel Ltd.",
     "sector": "Metals & Mining",
-    "market": "INR"
-  },
-  "INE020B01018": {
-    "name": "REC Ltd.",
-    "sector": "Financial Services",
     "market": "INR"
   },
   "INE021A01026": {
@@ -1299,11 +1299,6 @@
     "sector": "Construction Materials",
     "market": "INR"
   },
-  "INE053A01029": {
-    "name": "Indian Hotels Co. Ltd.",
-    "sector": "Consumer Services",
-    "market": "INR"
-  },
   "INE053F01010": {
     "name": "Indian Railway Finance Corporation Ltd.",
     "sector": "Financial Services",
@@ -1334,11 +1329,6 @@
     "sector": "Capital Goods",
     "market": "INR"
   },
-  "INE070A01015": {
-    "name": "Shree Cement Ltd.",
-    "sector": "Construction Materials",
-    "market": "INR"
-  },
   "INE075A01022": {
     "name": "Wipro Ltd.",
     "sector": "Information Technology",
@@ -1347,6 +1337,11 @@
   "INE079A01024": {
     "name": "Ambuja Cements Ltd.",
     "sector": "Construction Materials",
+    "market": "INR"
+  },
+  "INE07Y701011": {
+    "name": "Hitachi Energy India Ltd.",
+    "sector": "Capital Goods",
     "market": "INR"
   },
   "INE081A01020": {
@@ -1386,6 +1381,11 @@
   },
   "INE118A01012": {
     "name": "Bajaj Holdings & Investment Ltd.",
+    "sector": "Financial Services",
+    "market": "INR"
+  },
+  "INE118H01025": {
+    "name": "BSE Ltd.",
     "sector": "Financial Services",
     "market": "INR"
   },
@@ -1437,6 +1437,11 @@
   "INE192R01011": {
     "name": "Avenue Supermarts Ltd.",
     "sector": "Consumer Services",
+    "market": "INR"
+  },
+  "INE1CDF01017": {
+    "name": "Vedanta Aluminium Metal Ltd.",
+    "sector": "Metals & Mining",
     "market": "INR"
   },
   "INE1NPP01017": {
@@ -1579,6 +1584,11 @@
     "sector": "Healthcare",
     "market": "INR"
   },
+  "INE455K01017": {
+    "name": "Polycab India Ltd.",
+    "sector": "Capital Goods",
+    "market": "INR"
+  },
   "INE467B01029": {
     "name": "Tata Consultancy Services Ltd.",
     "sector": "Information Technology",
@@ -1619,9 +1629,9 @@
     "sector": "Information Technology",
     "market": "INR"
   },
-  "INE670K01029": {
-    "name": "Lodha Developers Ltd.",
-    "sector": "Realty",
+  "INE669E01016": {
+    "name": "Vodafone Idea Ltd.",
+    "sector": "Telecommunication",
     "market": "INR"
   },
   "INE685A01028": {
@@ -1687,11 +1697,6 @@
   "INE849A01020": {
     "name": "Trent Ltd.",
     "sector": "Consumer Services",
-    "market": "INR"
-  },
-  "INE854D01024": {
-    "name": "United Spirits Ltd.",
-    "sector": "Fast Moving Consumer Goods",
     "market": "INR"
   },
   "INE860A01027": {
@@ -2264,6 +2269,11 @@
     "sector": "Energy",
     "market": "USD"
   },
+  "P": {
+    "name": "Everpure",
+    "sector": "Information Technology",
+    "market": "USD"
+  },
   "PANW": {
     "name": "Palo Alto Networks",
     "sector": "Information Technology",
@@ -2629,11 +2639,6 @@
     "sector": "Communication Services",
     "market": "USD"
   },
-  "TAP": {
-    "name": "Molson Coors Beverage Company",
-    "sector": "Consumer Staples",
-    "market": "USD"
-  },
   "TDG": {
     "name": "TransDigm Group",
     "sector": "Industrials",
@@ -2737,11 +2742,6 @@
   "TT": {
     "name": "Trane Technologies",
     "sector": "Industrials",
-    "market": "USD"
-  },
-  "TTD": {
-    "name": "Trade Desk (The)",
-    "sector": "Communication Services",
     "market": "USD"
   },
   "TTWO": {
