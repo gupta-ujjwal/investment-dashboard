@@ -434,126 +434,152 @@ function BudgetEditor({
   return (
     <section
       aria-label={existing ? `Edit ${existing.month}` : 'Add month'}
-      className="space-y-5 rounded-2xl border border-bone-100/10 bg-ink-900 p-5 sm:p-6"
+      className="relative isolate overflow-hidden rounded-2xl border border-act-400/30 bg-ink-900"
     >
-      <div className="flex items-center justify-between">
-        <h3 className="font-sans text-sm font-medium text-bone-300">
-          {existing ? `Edit ${formatMonthKey(existing.month)}` : 'Add month'}
-        </h3>
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400 transition hover:text-bone-100"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
+      {/* Spotlight hover like the read view's "This month" panel — marks the
+          editor as the active flow, and its tinted border breaks it out of
+          the page's usual hairline chrome. */}
+      <CardSpotlight>
+        <fetcher.Form
+          method="post"
+          action="/budget"
+          onSubmit={(e) => {
+            if (hasInvalidLines) e.preventDefault()
+          }}
+          className="grid min-w-0 gap-6 p-5 sm:p-6"
+        >
+          <input type="hidden" name="intent" value="saveMonth" />
+          <input type="hidden" name="incomeJson" value={incomeJson} />
+          <input type="hidden" name="expensesJson" value={expensesJson} />
 
-      <fetcher.Form
-        method="post"
-        action="/budget"
-        onSubmit={(e) => {
-          if (hasInvalidLines) e.preventDefault()
-        }}
-        className="grid min-w-0 gap-5"
-      >
-        <input type="hidden" name="intent" value="saveMonth" />
-        <input type="hidden" name="incomeJson" value={incomeJson} />
-        <input type="hidden" name="expensesJson" value={expensesJson} />
+          {/* Display-weight heading (the read view styles the same month name
+              at text-xl) with a mono kicker; Cancel rides header-right as the
+              same quiet pill FocusedMonthView uses for its actions. */}
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-act-400">
+                {existing ? 'Editing' : 'New month'}
+              </span>
+              <h3 className="font-display text-xl leading-none tabular-nums text-bone-50">
+                {existing ? `Edit ${formatMonthKey(existing.month)}` : 'Add month'}
+              </h3>
+            </div>
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-full border border-bone-100/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-bone-300 transition hover:border-act-400 hover:text-act-400"
+              >
+                Cancel
+              </button>
+            )}
+          </header>
 
-        <label className="grid max-w-full gap-1.5 sm:max-w-[12rem]">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
-            Month
-          </span>
-          <input
-            type="month"
-            name="month"
-            required
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="field"
-          />
-        </label>
-
-        {/* Live balance — visible while editing both grids below, before any
-            save. Sits above them rather than below so it never scrolls away. */}
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
-            <span className={`h-px w-3 ${toneRail[balanceTone]}`} />
-            Balance this month · {base}
-          </span>
-          <span
-            className={`font-display text-2xl leading-none tabular-nums whitespace-nowrap ${toneText[balanceTone]}`}
-          >
-            {formatMoney(liveBalance, base)}
-          </span>
-        </div>
-
-        {/* Side-by-side on wide viewports. The read view's LineDetails pair
-            splits at sm:, but editor rows carry inputs (amount + remove
-            controls), so the columns need one step up to stay usable. */}
-        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-          <LineEditor
-            title="Income"
-            kind="income"
-            lines={income}
-            onChange={setIncome}
-            base={base}
-            tags={incomeTags}
-            onCreateTag={onCreateTag}
-            onDeleteTag={onDeleteTag}
-          />
-          <LineEditor
-            title="Expenses"
-            kind="expense"
-            lines={expenses}
-            onChange={setExpenses}
-            base={base}
-            tags={expenseTags}
-            onCreateTag={onCreateTag}
-            onDeleteTag={onDeleteTag}
-          />
-        </div>
-
-        <label className="grid max-w-full gap-1.5 sm:max-w-[16rem]">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
-            Invested this month · {base}
-          </span>
-          <input
-            type="text"
-            inputMode="decimal"
-            name="invested"
-            value={invested}
-            onChange={(e) => setInvested(e.target.value)}
-            placeholder="e.g. 50000"
-            className="field"
-          />
-          {investedHint && (
-            <span className="font-sans text-[11px] text-bone-500">
-              Your holdings cost basis moved{' '}
-              <span className="tabular-nums whitespace-nowrap text-bone-300">
-                {investedHint.delta >= 0 ? '+' : '−'}
-                {formatMoney(Math.abs(investedHint.delta), base)}
-              </span>{' '}
-              between snapshots ({investedHint.fromDate} → {investedHint.toDate}) — a rough guide, not an entry.
-            </span>
-          )}
-        </label>
-
-        {fetcher.data && !fetcher.data.ok && (
-          <div role="alert" className="rounded-lg border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
-            {fetcher.data.error}
+          {/* Month + live balance share one band: the figure sits beside the
+              control it reacts to instead of floating across the full form
+              width under it. Balance stays visible above both grids, before
+              any save — label rail and number tone are unchanged. */}
+          <div className="rounded-xl border border-bone-100/10 bg-ink-850 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+              <label className="grid w-full min-w-0 gap-1.5 sm:max-w-[12rem]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                  Month
+                </span>
+                <input
+                  type="month"
+                  name="month"
+                  required
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                  className="field"
+                />
+              </label>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 sm:flex-col sm:items-end sm:gap-1.5">
+                <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                  <span className={`h-px w-3 ${toneRail[balanceTone]}`} />
+                  Balance this month · {base}
+                </span>
+                <span
+                  className={`font-display text-2xl leading-none tabular-nums whitespace-nowrap ${toneText[balanceTone]}`}
+                >
+                  {formatMoney(liveBalance, base)}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
 
-        <div>
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
-          </button>
-        </div>
-      </fetcher.Form>
+          {/* Side-by-side on wide viewports. The read view's LineDetails pair
+              splits at sm:, but editor rows carry inputs (amount + remove
+              controls), so the columns need one step up to stay usable. Each
+              grid is its own bordered sub-card so the two voices read as
+              distinct sections, not one wall of controls. */}
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            <LineEditor
+              title="Income"
+              kind="income"
+              lines={income}
+              onChange={setIncome}
+              base={base}
+              tags={incomeTags}
+              onCreateTag={onCreateTag}
+              onDeleteTag={onDeleteTag}
+            />
+            <LineEditor
+              title="Expenses"
+              kind="expense"
+              lines={expenses}
+              onChange={setExpenses}
+              base={base}
+              tags={expenseTags}
+              onCreateTag={onCreateTag}
+              onDeleteTag={onDeleteTag}
+            />
+          </div>
+
+          {fetcher.data && !fetcher.data.ok && (
+            <div role="alert" className="rounded-lg border border-ember-400/40 bg-ember-900/30 p-3 font-sans text-xs text-ember-300">
+              {fetcher.data.error}
+            </div>
+          )}
+
+          {/* Footer band — invested drifts left under the separator, the
+              primary action anchors right. The 11px hint gets the app's
+              quiet border-left treatment instead of competing with Save. */}
+          <div className="hairline-t pt-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+              <label className="grid w-full min-w-0 gap-1.5 sm:max-w-[16rem]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+                  Invested this month · {base}
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="invested"
+                  value={invested}
+                  onChange={(e) => setInvested(e.target.value)}
+                  placeholder="e.g. 50000"
+                  className="field"
+                />
+                {investedHint && (
+                  <span className="mt-0.5 border-l-2 border-bone-100/10 pl-3 font-sans text-[11px] leading-relaxed text-bone-500">
+                    Your holdings cost basis moved{' '}
+                    <span className="tabular-nums whitespace-nowrap text-bone-300">
+                      {investedHint.delta >= 0 ? '+' : '−'}
+                      {formatMoney(Math.abs(investedHint.delta), base)}
+                    </span>{' '}
+                    between snapshots ({investedHint.fromDate} → {investedHint.toDate}) — a rough guide, not an entry.
+                  </span>
+                )}
+              </label>
+              <div className="sm:shrink-0">
+                <button type="submit" disabled={saving} className="btn-primary w-full sm:w-auto">
+                  {saving ? 'Saving…' : existing ? 'Save changes' : 'Save month'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </fetcher.Form>
+      </CardSpotlight>
     </section>
   )
 }
@@ -597,8 +623,10 @@ function LineEditor({
   }
 
   return (
-    <fieldset className="grid min-w-0 gap-2">
-      <legend className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+    <fieldset className="grid min-w-0 content-start gap-3 rounded-xl border border-bone-100/10 p-4 sm:p-5">
+      {/* Sub-card with the mono label straddling its border — the legend
+          notch stays even inside a grid fieldset (rendered-legend rules). */}
+      <legend className="px-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
         {title} · {base}
       </legend>
 
@@ -614,48 +642,58 @@ function LineEditor({
         const error = amountError(l)
         return (
           <div key={l.id} className="grid min-w-0 gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <input
-                type="text"
-                aria-label={`${title} category`}
-                value={l.category}
-                onChange={(e) => update(l.id, { category: e.target.value })}
-                placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
-                list={tagsOn ? listId : undefined}
-                className="field min-w-0 flex-1 py-1.5"
-              />
-              {tagsOn && isUntagged(l.category) && (
+            {/* Two deterministic rows on phone (category+tag-slot, then
+                amount+remove); one row from sm: up. The "+ tag" button lives
+                in a fixed-width slot so the row geometry never shifts when it
+                appears for an untagged category. */}
+            <div className="grid min-w-0 gap-2 sm:flex sm:items-center">
+              <div className="flex min-w-0 items-center gap-2 sm:flex-1">
+                <input
+                  type="text"
+                  aria-label={`${title} category`}
+                  value={l.category}
+                  onChange={(e) => update(l.id, { category: e.target.value })}
+                  placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
+                  list={tagsOn ? listId : undefined}
+                  className="field min-w-0 flex-1 py-2"
+                />
+                <span className="w-16 shrink-0">
+                  {tagsOn && isUntagged(l.category) && (
+                    <button
+                      type="button"
+                      onClick={() => onCreateTag(l.category.trim(), kind)}
+                      title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
+                      className="flex w-full justify-center rounded-full border border-act-400/40 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] whitespace-nowrap text-act-400 transition hover:border-act-400 hover:text-act-300"
+                    >
+                      + tag
+                    </button>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  aria-label={`${title} amount`}
+                  aria-invalid={Boolean(error)}
+                  required={l.category.trim() !== ''}
+                  value={l.amount}
+                  onChange={(e) => update(l.id, { amount: e.target.value })}
+                  placeholder="Amount"
+                  className={
+                    'field w-28 py-2 text-right font-mono tabular-nums' +
+                    (error ? ' border-ember-400/60 focus:border-ember-400' : '')
+                  }
+                />
                 <button
                   type="button"
-                  onClick={() => onCreateTag(l.category.trim(), kind)}
-                  title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
-                  className="whitespace-nowrap border border-act-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-act-400 transition hover:border-act-400 hover:text-act-300"
+                  aria-label="Remove line"
+                  onClick={() => remove(l.id)}
+                  className="rounded-full border border-bone-100/15 px-2.5 py-2 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
                 >
-                  + tag
+                  ×
                 </button>
-              )}
-              <input
-                type="text"
-                inputMode="decimal"
-                aria-label={`${title} amount`}
-                aria-invalid={Boolean(error)}
-                required={l.category.trim() !== ''}
-                value={l.amount}
-                onChange={(e) => update(l.id, { amount: e.target.value })}
-                placeholder="Amount"
-                className={
-                  'field w-24 py-1.5 text-right font-mono tabular-nums sm:w-32' +
-                  (error ? ' border-ember-400/60 focus:border-ember-400' : '')
-                }
-              />
-              <button
-                type="button"
-                aria-label="Remove line"
-                onClick={() => remove(l.id)}
-                className="rounded-full border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
-              >
-                ×
-              </button>
+              </div>
             </div>
             {error && (
               <span role="alert" className="font-sans text-[11px] text-ember-400">
@@ -673,35 +711,39 @@ function LineEditor({
         + Add line
       </button>
 
+      {/* Quick-add rail — separated from the line list by a hairline and
+          labelled, so the chips read as a shortcut picker, not more form. */}
       {tagsOn && tags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">
-            {kind} tags
+        <div className="hairline-t pt-3">
+          <span className="mb-2 block font-mono text-[9px] uppercase tracking-[0.16em] text-bone-500">
+            Quick add · {kind} tags
           </span>
-          {tags.map((t) => (
-            <span
-              key={t.id}
-              className="inline-flex items-center gap-1 border border-bone-100/15 bg-ink-950 py-0.5 pl-2 pr-1 font-sans text-[11px] text-bone-300 transition hover:border-bone-100/30"
-            >
-              <button
-                type="button"
-                onClick={() => add(t.label)}
-                title={`Add an ${kind} line for ${t.label}`}
-                className="cursor-pointer transition hover:text-bone-100"
+          <div className="flex flex-wrap items-center gap-1.5">
+            {tags.map((t) => (
+              <span
+                key={t.id}
+                className="inline-flex items-center gap-0.5 rounded-full border border-bone-100/15 bg-ink-950 py-0.5 pl-3 pr-1 font-sans text-[11px] text-bone-300 transition hover:border-bone-100/30"
               >
-                {t.label}
-              </button>
-              <button
-                type="button"
-                aria-label={`Delete tag ${t.label}`}
-                onClick={() => onDeleteTag(t.id)}
-                title="Remove from picker (past months keep this label)"
-                className="px-1 font-mono text-bone-500 transition hover:text-ember-400"
-              >
-                ×
-              </button>
-            </span>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => add(t.label)}
+                  title={`Add an ${kind} line for ${t.label}`}
+                  className="cursor-pointer transition hover:text-bone-100"
+                >
+                  {t.label}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete tag ${t.label}`}
+                  onClick={() => onDeleteTag(t.id)}
+                  title="Remove from picker (past months keep this label)"
+                  className="rounded-full px-1 font-mono text-bone-500 transition hover:text-ember-400"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </fieldset>
