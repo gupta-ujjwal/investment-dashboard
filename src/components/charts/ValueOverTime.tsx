@@ -1,4 +1,5 @@
 import {
+  Brush,
   CartesianGrid,
   Line,
   LineChart,
@@ -12,7 +13,8 @@ import type { BaseCurrency } from '../../storage/holdings'
 import type { BenchmarkOverlayPoint, ValuePoint } from '../../lib/analytics'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { axisTick, chartColor, compactMoney, formatDateKey } from './chartTheme'
+import { axisTick, brushStyle, chartColor, compactMoney, formatDateKey } from './chartTheme'
+import { ChartZoomReset, useChartZoom } from './useChartZoom'
 
 /** Optional benchmark overlay layered on top of the portfolio value line.
  *  Already rebased to portfolio start (`analytics.benchmarkSeries`). The
@@ -105,6 +107,11 @@ export function ValueOverTime({ series, baseCurrency, benchmark }: Props) {
     benchmark && !benchmark.mixedCurrency && (benchmark.series.length > 0),
   )
 
+  // Zoom state for the Brush range selector below the plot. Keyed on the
+  // merged chartData so the benchmark line follows the window in lockstep —
+  // it lives in the same data array the Brush narrows.
+  const zoom = useChartZoom(chartData.length)
+
   // Text alternative for screen readers — the SVG itself is opaque to them.
   const summary =
     series.length < 2
@@ -153,7 +160,12 @@ export function ValueOverTime({ series, baseCurrency, benchmark }: Props) {
   }
 
   return (
-    <ChartCard title="Value over time" chip="line" figure={figure}>
+    <ChartCard
+      title="Value over time"
+      chip="line"
+      figure={figure}
+      action={zoom.isZoomed ? <ChartZoomReset onReset={zoom.reset} /> : undefined}
+    >
       {series.length < 2 ? (
         <ChartEmpty message="A value trend appears once you've imported holdings on at least two different days." />
       ) : (
@@ -170,8 +182,8 @@ export function ValueOverTime({ series, baseCurrency, benchmark }: Props) {
           <div role="img" aria-label={summary}>
             <ResponsiveContainer
               width="100%"
-              height={224}
-              initialDimension={{ width: 320, height: 224 }}
+              height={264}
+              initialDimension={{ width: 320, height: 264 }}
             >
               <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke={chartColor.grid} vertical={false} />
@@ -232,6 +244,14 @@ export function ValueOverTime({ series, baseCurrency, benchmark }: Props) {
                   activeDot={{ r: 3.5 }}
                   connectNulls={false}
                   isAnimationActive={false}
+                />
+                <Brush
+                  dataKey="date"
+                  tickFormatter={formatDateKey}
+                  {...brushStyle}
+                  startIndex={zoom.startIndex}
+                  endIndex={zoom.endIndex}
+                  onChange={zoom.onChange}
                 />
               </LineChart>
             </ResponsiveContainer>

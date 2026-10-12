@@ -1,6 +1,7 @@
 import {
   Area,
   AreaChart,
+  Brush,
   CartesianGrid,
   ReferenceLine,
   ResponsiveContainer,
@@ -12,7 +13,8 @@ import type { BaseCurrency } from '../../storage/holdings'
 import type { ValuePoint } from '../../lib/analytics'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { axisTick, chartColor, compactMoney, formatDateKey } from './chartTheme'
+import { axisTick, brushStyle, chartColor, compactMoney, formatDateKey } from './chartTheme'
+import { ChartZoomReset, useChartZoom } from './useChartZoom'
 
 type Props = { series: ValuePoint[]; baseCurrency: BaseCurrency }
 
@@ -34,6 +36,8 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
   const latest = series[series.length - 1]
   const figure =
     latest?.profit === undefined ? '—' : formatMoney(latest.profit, baseCurrency)
+
+  const zoom = useChartZoom(series.length)
 
   // Text alternative for screen readers — the SVG itself is opaque to them.
   const summary =
@@ -66,15 +70,20 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
   }
 
   return (
-    <ChartCard title="P&amp;L over time" chip="area" figure={figure}>
+    <ChartCard
+      title="P&amp;L over time"
+      chip="area"
+      figure={figure}
+      action={zoom.isZoomed ? <ChartZoomReset onReset={zoom.reset} /> : undefined}
+    >
       {series.length < 2 ? (
         <ChartEmpty message="Profit history builds up as snapshots accumulate — import on two or more days to see the trend." />
       ) : (
         <div role="img" aria-label={summary}>
           <ResponsiveContainer
             width="100%"
-            height={224}
-            initialDimension={{ width: 320, height: 224 }}
+            height={264}
+            initialDimension={{ width: 320, height: 264 }}
           >
             <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <defs>
@@ -113,6 +122,14 @@ export function PnlOverTime({ series, baseCurrency }: Props) {
                 activeDot={{ r: 3.5 }}
                 connectNulls={false}
                 isAnimationActive={false}
+              />
+              <Brush
+                dataKey="date"
+                tickFormatter={formatDateKey}
+                {...brushStyle}
+                startIndex={zoom.startIndex}
+                endIndex={zoom.endIndex}
+                onChange={zoom.onChange}
               />
             </AreaChart>
           </ResponsiveContainer>

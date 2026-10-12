@@ -1,6 +1,7 @@
 import {
   Area,
   AreaChart,
+  Brush,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -11,7 +12,8 @@ import type { BaseCurrency } from '../../storage/holdings'
 import type { ClassSeries } from '../../lib/analytics'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { axisTick, chartColor, compactMoney, categoricalColor, formatDateKey } from './chartTheme'
+import { axisTick, brushStyle, chartColor, compactMoney, categoricalColor, formatDateKey } from './chartTheme'
+import { ChartZoomReset, useChartZoom } from './useChartZoom'
 
 type Props = {
   series: ClassSeries
@@ -45,6 +47,8 @@ export function NetWorthHistoryArea({ series, baseCurrency }: Props) {
   const latestTotal =
     latest === undefined ? undefined : groups.reduce((sum, g) => sum + cellValue(g), 0)
   const figure = latestTotal === undefined ? '—' : formatMoney(latestTotal, baseCurrency)
+
+  const zoom = useChartZoom(rows.length)
 
   const summary =
     rows.length < 2
@@ -92,15 +96,20 @@ export function NetWorthHistoryArea({ series, baseCurrency }: Props) {
   }
 
   return (
-    <ChartCard title="Net worth by asset class" chip="area" figure={figure}>
+    <ChartCard
+      title="Net worth by asset class"
+      chip="area"
+      figure={figure}
+      action={zoom.isZoomed ? <ChartZoomReset onReset={zoom.reset} /> : undefined}
+    >
       {rows.length < 2 || groups.length === 0 ? (
         <ChartEmpty message="A net-worth-by-class trend appears once you have snapshots on at least two different days." />
       ) : (
         <div role="img" aria-label={summary}>
           <ResponsiveContainer
             width="100%"
-            height={224}
-            initialDimension={{ width: 320, height: 224 }}
+            height={264}
+            initialDimension={{ width: 320, height: 264 }}
           >
             <AreaChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid stroke={chartColor.grid} vertical={false} />
@@ -135,6 +144,14 @@ export function NetWorthHistoryArea({ series, baseCurrency }: Props) {
                   isAnimationActive={false}
                 />
               ))}
+              <Brush
+                dataKey="date"
+                tickFormatter={formatDateKey}
+                {...brushStyle}
+                startIndex={zoom.startIndex}
+                endIndex={zoom.endIndex}
+                onChange={zoom.onChange}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
