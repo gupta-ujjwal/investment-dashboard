@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { CanonicalHolding } from '../storage/holdings'
 import type { ManualAsset } from '../storage/assets'
 import {
+  assetInvestmentRow,
   buildInvestmentRows,
   deriveHoldingsRows,
   legacyEquityCount,
@@ -148,5 +149,41 @@ describe('buildInvestmentRows', () => {
     expect(legacy?.kind).toBe('asset')
     if (legacy?.kind === 'asset') expect(legacy.isLegacyEquity).toBe(true)
     expect(legacyEquityCount(rows)).toBe(1)
+  })
+})
+
+describe('assetInvestmentRow profit fields', () => {
+  it('computes profit and pct when both basis and value are known', () => {
+    const row = assetInvestmentRow(
+      asset({ investedAmount: 200_000, investedAmountBase: 200_000 }),
+    )
+    expect(row.profitBase).toBe(300_000) // 500_000 − 200_000
+    expect(row.profitPct).toBeCloseTo(1.5)
+  })
+
+  it('is undefined for both when no invested amount is recorded', () => {
+    const row = assetInvestmentRow(asset())
+    expect(row.profitBase).toBeUndefined()
+    expect(row.profitPct).toBeUndefined()
+  })
+
+  it('is undefined for both when the recorded basis is zero — no fake 100% figure', () => {
+    const row = assetInvestmentRow(
+      asset({ investedAmount: 0, investedAmountBase: 0 }),
+    )
+    expect(row.profitBase).toBeUndefined()
+    expect(row.profitPct).toBeUndefined()
+  })
+
+  it('is undefined for both when the base-currency value is unknown', () => {
+    const row = assetInvestmentRow(
+      asset({
+        investedAmount: 100_000,
+        investedAmountBase: 100_000,
+        currentValueBase: undefined, // non-base asset with no FX stamp
+      }),
+    )
+    expect(row.profitBase).toBeUndefined()
+    expect(row.profitPct).toBeUndefined()
   })
 })

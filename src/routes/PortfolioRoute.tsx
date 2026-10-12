@@ -33,7 +33,7 @@ import { CardSpotlight } from '../components/decor/CardSpotlight'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
 import { AssetForm } from '../components/AssetForm'
-import type { RowActions } from '../components/HoldingRow'
+import { profitColor, toneOf, type RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { useUndoableAction } from '../components/useUndoableAction'
 import { UndoToast } from '../components/UndoToast'
@@ -325,6 +325,7 @@ export function PortfolioRoute() {
                   <Th>Class</Th>
                   <Th className="text-right">Invested</Th>
                   <Th className="text-right">Current value</Th>
+                  <Th className="text-right">Profit</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
@@ -685,6 +686,14 @@ function AssetRowView({
       <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">
         {money(row.currentValueBase, base)}
       </td>
+      <td
+        className={`px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap ${profitColor[toneOf(row.profitBase)]}`}
+      >
+        <div>{money(row.profitBase, base)}</div>
+        <div className="text-[11px]">
+          {row.profitPct === undefined ? '—' : formatPercent(row.profitPct)}
+        </div>
+      </td>
       <td className="px-4 py-3 text-right">
         <div className="inline-flex items-center gap-1">
           <button
@@ -727,6 +736,17 @@ function AssetCard({
           </div>
         </div>
         <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
+      </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">Profit</span>
+        <span
+          className={`font-mono text-sm tabular-nums whitespace-nowrap ${profitColor[toneOf(row.profitBase)]}`}
+        >
+          {money(row.profitBase, base)}
+          {row.profitPct !== undefined && (
+            <span className="ml-1.5 text-[11px]">{formatPercent(row.profitPct)}</span>
+          )}
+        </span>
       </div>
       <button
         type="button"
