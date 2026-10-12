@@ -71,6 +71,19 @@ export const axisTick = {
   fontFamily: 'var(--font-mono)',
 } as const
 
+/** Zoom `<Brush>` styling — the range-selector strip under each time-series
+ *  chart. Recharts' defaults are light-theme (`#fff` strip, `#666` handles);
+ *  these re-theme it so the strip reads as an inset well on the ink-900 card.
+ *  `stroke` is the multi-role knob: Recharts uses it for the strip border,
+ *  the selected-window highlight (drawn at 0.2 fill-opacity), the traveller
+ *  handles, and the edge date labels. */
+export const brushStyle = {
+  height: 28,
+  travellerWidth: 8,
+  fill: 'var(--color-ink-800)',
+  stroke: 'rgba(238, 238, 244, 0.3)',
+} as const
+
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

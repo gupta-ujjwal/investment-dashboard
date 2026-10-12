@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import {
+  Brush,
   CartesianGrid,
   Line,
   LineChart,
@@ -13,7 +14,8 @@ import type { BudgetMonth } from '../../storage/budget'
 import { OTHER_TAG_KEY, tagTimeSeries, type TagTrend } from '../../lib/budget'
 import { formatMoney } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
-import { axisTick, chartColor, compactMoney, donutOther, donutPalette, formatMonthKey } from './chartTheme'
+import { axisTick, brushStyle, chartColor, compactMoney, donutOther, donutPalette, formatMonthKey } from './chartTheme'
+import { ChartZoomReset, useChartZoom } from './useChartZoom'
 
 type Props = {
   months: BudgetMonth[]
@@ -60,6 +62,8 @@ function TagTrendChart({
 }) {
   const trend: TagTrend = useMemo(() => tagTimeSeries(months, kind), [months, kind])
   const title = kind === 'income' ? 'Income by tag' : 'Expenses by tag'
+  // Per-chart zoom — the income and expense charts narrow independently.
+  const zoom = useChartZoom(trend.rows.length)
 
   const colorOf = useMemo(() => {
     const map = new Map<string, string>()
@@ -75,7 +79,11 @@ function TagTrendChart({
         } across ${trend.rows.length} months: ${trend.labels.map(displayLabel).join(', ')}.`
 
   return (
-    <ChartCard title={title} chip="line">
+    <ChartCard
+      title={title}
+      chip="line"
+      action={zoom.isZoomed ? <ChartZoomReset onReset={zoom.reset} /> : undefined}
+    >
       {trend.labels.length === 0 ? (
         <ChartEmpty
           message={`Log ${kind} lines across a couple of months to see each tag's trend.`}
@@ -95,7 +103,7 @@ function TagTrendChart({
             ))}
           </ul>
           <div role="img" aria-label={summary}>
-            <ResponsiveContainer width="100%" height={224} initialDimension={{ width: 320, height: 224 }}>
+            <ResponsiveContainer width="100%" height={264} initialDimension={{ width: 320, height: 264 }}>
               <LineChart data={trend.rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke={chartColor.grid} vertical={false} />
                 <XAxis
@@ -129,6 +137,14 @@ function TagTrendChart({
                     isAnimationActive={false}
                   />
                 ))}
+                <Brush
+                  dataKey="month"
+                  tickFormatter={formatMonthKey}
+                  {...brushStyle}
+                  startIndex={zoom.startIndex}
+                  endIndex={zoom.endIndex}
+                  onChange={zoom.onChange}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
