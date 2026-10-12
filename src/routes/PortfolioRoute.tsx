@@ -273,10 +273,10 @@ export function PortfolioRoute() {
       {conc && <RiskRow concentration={conc} />}
 
       {FEATURE_ANALYTICS_DEPTH && (
-        <section aria-label="Charts">
+        <section aria-label="Stock charts">
           <div className="flex items-end justify-between">
             <h3 className="font-sans text-sm font-medium text-bone-300">
-              Charts
+              Stock charts
             </h3>
             {FEATURE_HISTORY && (
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
@@ -284,9 +284,16 @@ export function PortfolioRoute() {
               </span>
             )}
           </div>
+          {/* Everything here folds over equity holdings only, except the
+              Allocation donut, which also counts the manual assets shown
+              further down the page — the caption says so, so the section
+              can't be misread as whole-portfolio charts. */}
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+            Equity holdings only · Allocation includes other assets
+          </p>
           <div className="mt-4">
             <Suspense fallback={<ChartsFallback />}>
-              <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+              <ChartsPanel holdings={holdings} assets={assets} history={history} baseCurrency={base} />
             </Suspense>
           </div>
         </section>

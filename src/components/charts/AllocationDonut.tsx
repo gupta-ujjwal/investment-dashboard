@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import type { BaseCurrency } from '../../storage/holdings'
-import type { DerivedRow } from '../../lib/holdingsView'
-import { allocation, type AllocationMode, type AllocationSlice } from '../../lib/analytics'
+import type { NetWorthPosition } from '../../lib/netWorth'
+import { positionAllocation, type AllocationMode, type AllocationSlice } from '../../lib/analytics'
 import { formatMoney, formatPercent } from '../../lib/format'
 import { ChartCard, ChartEmpty } from './ChartCard'
 import { donutOther, categoricalColor } from './chartTheme'
 
-type Props = { rows: DerivedRow[]; baseCurrency: BaseCurrency }
+type Props = { positions: NetWorthPosition[]; baseCurrency: BaseCurrency }
 
 /** Beyond this many slices the tail is folded into a single "Other" wedge —
  *  a donut with 20 thin slivers reads as noise. */
@@ -33,14 +33,17 @@ function sliceColor(slice: AllocationSlice): string {
 }
 
 /**
- * Current-value allocation as a donut, with a market ↔ holding toggle. The
- * hollow centre carries the total so the donut answers "how much, split how"
- * in one glance. Only priced holdings are allocated — an unstamped position
- * cannot honestly claim a wedge.
+ * Current-value allocation as a donut, with a market ↔ holding toggle. Folds
+ * over the unified position list — equity holdings AND manual assets — so it
+ * answers "how much, split how" for the whole portfolio: market mode keeps
+ * India/US for holdings and buckets every manual asset into one "Other
+ * assets" slice; holding mode gives each position its own wedge. The hollow
+ * centre carries the total. Only valued positions are allocated — an
+ * unstamped position cannot honestly claim a wedge.
  */
-export function AllocationDonut({ rows, baseCurrency }: Props) {
+export function AllocationDonut({ positions, baseCurrency }: Props) {
   const [mode, setMode] = useState<AllocationMode>('market')
-  const slices = useMemo(() => withOther(allocation(rows, mode)), [rows, mode])
+  const slices = useMemo(() => withOther(positionAllocation(positions, mode)), [positions, mode])
 
   const total = slices.reduce((sum, s) => sum + s.valueBase, 0)
   const figure = total > 0 ? formatMoney(total, baseCurrency) : '—'
@@ -49,7 +52,7 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
   // stays outside the `role="img"` wrapper, so it is not double-announced.
   const summary =
     slices.length === 0
-      ? 'Allocation chart, no priced holdings yet.'
+      ? 'Allocation chart, no valued positions yet.'
       : `Donut chart of allocation by ${mode}: ` +
         slices
           .map((s) => `${s.label} ${formatPercent(s.pct).replace('+', '')}`)
@@ -78,7 +81,7 @@ export function AllocationDonut({ rows, baseCurrency }: Props) {
   return (
     <ChartCard title="Allocation" chip="donut" figure={figure} action={toggle}>
       {slices.length === 0 ? (
-        <ChartEmpty message="Allocation needs at least one holding with a current price in your base currency." />
+        <ChartEmpty message="Allocation needs at least one position with a current value in your base currency." />
       ) : (
         <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
           <div role="img" aria-label={summary} className="relative h-44 w-44 shrink-0">

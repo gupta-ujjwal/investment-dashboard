@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import type { BaseCurrency, CanonicalHolding } from '../../storage/holdings'
+import type { ManualAsset } from '../../storage/assets'
 import type { HistoryRecord } from '../../storage/history'
 import { deriveRows } from '../../lib/holdingsView'
+import { buildPositions } from '../../lib/netWorth'
 import {
   benchmarkSeries,
   isHoldingPosition,
@@ -25,6 +27,7 @@ import { TopMovers } from './TopMovers'
 
 type Props = {
   holdings: CanonicalHolding[]
+  assets: ManualAsset[]
   history: HistoryRecord[]
   baseCurrency: BaseCurrency
 }
@@ -49,10 +52,13 @@ const sp500 = sp500Json as BenchmarkData
  *  - `FEATURE_ANALYTICS_DEPTH`   — currency-exposure donut (PR A)
  *  - `FEATURE_SECTOR_DONUT`      — sector donut (PR B)
  *  - `FEATURE_BENCHMARK_OVERLAY` — benchmark line on `ValueOverTime` (PR B)
- * Allocation and movers fold over current holdings only and always render.
+ * Allocation folds over current holdings AND manual assets (a point-in-time
+ * value breakdown is honest for both); movers fold over holdings only and
+ * always render.
  */
-export default function ChartsPanel({ holdings, history, baseCurrency }: Props) {
+export default function ChartsPanel({ holdings, assets, history, baseCurrency }: Props) {
   const rows = deriveRows(holdings)
+  const positions = useMemo(() => buildPositions(holdings, assets), [holdings, assets])
   // Equity-only series: this panel lives on the Equity tab, and the NIFTY/S&P
   // benchmark must compare against the equity portfolio, not a net-worth line
   // that includes cash/gold. Filtering to holding positions excludes manual
@@ -110,7 +116,7 @@ export default function ChartsPanel({ holdings, history, baseCurrency }: Props) 
           <PnlOverTime series={series} baseCurrency={baseCurrency} />
         </>
       )}
-      <AllocationDonut rows={rows} baseCurrency={baseCurrency} />
+      <AllocationDonut positions={positions} baseCurrency={baseCurrency} />
       {FEATURE_SECTOR_DONUT && (
         <SectorDonut rows={rows} baseCurrency={baseCurrency} sectors={sectors} />
       )}

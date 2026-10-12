@@ -11,6 +11,7 @@ import {
   concentration,
   isHoldingPosition,
   portfolioTotals,
+  positionAllocation,
   sectorAllocation,
   topMovers,
   valueSeries,
@@ -19,6 +20,7 @@ import {
   type ValuePoint,
   investedDeltaForMonth,
 } from './analytics'
+import { buildPositions } from './netWorth'
 
 function holding(over: Partial<CanonicalHolding> = {}): CanonicalHolding {
   return {
@@ -114,6 +116,49 @@ describe('allocation', () => {
   it('returns [] when nothing is allocatable', () => {
     const rows = deriveRows([holding()]) // no current price at all
     expect(allocation(rows, 'market')).toEqual([])
+  })
+})
+
+describe('positionAllocation', () => {
+  it('market mode buckets holdings by market and ALL manual assets into one Other assets slice', () => {
+    const positions = buildPositions(
+      [
+        stamped({ sourceSymbol: 'IN', currency: 'INR', currentPriceBase: 150 }), // 1500
+        stamped({ sourceSymbol: 'US', currency: 'USD', currentPriceBase: 400 }), // 4000
+      ],
+      [
+        assetRecord({ id: 'gold', name: 'Gold', currentValueBase: 1000 }),
+        assetRecord({ id: 'cash', name: 'Cash', assetClass: 'cash', currentValueBase: 400 }),
+      ],
+    )
+    const slices = positionAllocation(positions, 'market')
+    expect(slices.map((s) => s.key)).toEqual(['USD', 'INR', 'other-assets']) // 4000 > 1500 > 1400
+    expect(slices[2].label).toBe('Other assets')
+    expect(slices[2].valueBase).toBe(1400)
+    expect(slices[2].pct).toBeCloseTo(1400 / 6900)
+  })
+
+  it('holding mode gives every position its own slice by name', () => {
+    const positions = buildPositions(
+      [stamped({ sourceSymbol: 'A', name: 'Alpha' })],
+      [assetRecord({ id: 'gold', name: 'Gold' })],
+    )
+    const slices = positionAllocation(positions, 'holding')
+    expect(slices.map((s) => s.label).sort()).toEqual(['Alpha', 'Gold'])
+  })
+
+  it('excludes positions with no computable base value', () => {
+    const positions = buildPositions(
+      [stamped({ sourceSymbol: 'A' })],
+      [assetRecord({ currentValue: 0, currentValueBase: undefined })], // unstamped asset
+    )
+    const slices = positionAllocation(positions, 'holding')
+    expect(slices).toHaveLength(1)
+    expect(slices[0].pct).toBe(1)
+  })
+
+  it('returns [] when nothing is allocatable', () => {
+    expect(positionAllocation(buildPositions([holding()], []), 'market')).toEqual([])
   })
 })
 
