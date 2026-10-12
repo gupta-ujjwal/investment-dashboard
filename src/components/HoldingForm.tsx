@@ -8,6 +8,7 @@ import type {
   Source,
 } from '../storage/holdings'
 import type { HoldingFormErrors } from '../lib/holdingValidators'
+import { isSubmitSuccessEdge } from '../lib/fetcherTransition'
 import { Field, inputClass, ModalShell } from './formModal'
 
 /**
@@ -60,6 +61,7 @@ const markets: { value: Currency; label: string; subtitle: string }[] = [
 export function HoldingForm({ open, mode, holding, existingKeys, onClose }: Props) {
   const fetcher = useFetcher<HoldingActionResult>()
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const prevFetcherStateRef = useRef(fetcher.state)
 
   // Reset + focus on open. The `key` reset on the form below covers state
   // reset across open cycles; the ref handles the autofocus.
@@ -72,13 +74,15 @@ export function HoldingForm({ open, mode, holding, existingKeys, onClose }: Prop
     return undefined
   }, [open])
 
-  // Close on successful submit. Watching fetcher.state moves us out of any
-  // intermediate "submitting" UI back to idle before we call onClose, so the
-  // toast (added in a later commit) lands cleanly.
+  // Close only on the submitting → idle success edge — never on the resting
+  // state. This form renders null when closed but never unmounts, so
+  // `fetcher.data` still carries the previous save's {ok:true} while idle,
+  // and the parent's fresh `onClose` closure re-runs this effect on the next
+  // open; a level-triggered "idle && ok" check would instantly re-close the
+  // modal for the next edit (or Add).
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.ok === true) {
-      onClose()
-    }
+    if (isSubmitSuccessEdge(prevFetcherStateRef.current, fetcher.state, fetcher.data)) onClose()
+    prevFetcherStateRef.current = fetcher.state
   }, [fetcher.state, fetcher.data, onClose])
 
   // Escape key closes (when nothing else has captured it).

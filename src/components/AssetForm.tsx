@@ -3,6 +3,7 @@ import { useFetcher } from 'react-router-dom'
 import type { Currency } from '../storage/holdings'
 import type { ManualAsset, ManualAssetClass } from '../storage/assets'
 import type { AssetFormErrors } from '../lib/assetValidators'
+import { isSubmitSuccessEdge } from '../lib/fetcherTransition'
 import { FEATURE_PLANNING } from '../featureFlags'
 import { Field, inputClass, ModalShell } from './formModal'
 
@@ -59,6 +60,7 @@ const riskBands = [
 export function AssetForm({ open, mode, asset, onClose }: Props) {
   const fetcher = useFetcher<AssetActionResult>()
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const prevFetcherStateRef = useRef(fetcher.state)
 
   useEffect(() => {
     if (open) {
@@ -68,8 +70,15 @@ export function AssetForm({ open, mode, asset, onClose }: Props) {
     return undefined
   }, [open])
 
+  // Close only on the submitting → idle success edge — never on the resting
+  // state. This form renders null when closed but never unmounts, so
+  // `fetcher.data` still carries the previous save's {ok:true} while idle,
+  // and the parent's fresh `onClose` closure re-runs this effect on the next
+  // open; a level-triggered "idle && ok" check would instantly re-close the
+  // modal for the next edit (or Add).
   useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.ok === true) onClose()
+    if (isSubmitSuccessEdge(prevFetcherStateRef.current, fetcher.state, fetcher.data)) onClose()
+    prevFetcherStateRef.current = fetcher.state
   }, [fetcher.state, fetcher.data, onClose])
 
   useEffect(() => {
