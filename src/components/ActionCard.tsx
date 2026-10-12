@@ -13,7 +13,7 @@ const SEVERITY_CLASS: Record<ActionSeverity, string> = {
   info: 'border-sev-info/30 bg-sev-info/10',
 }
 
-const SEVERITY_TEXT: Record<ActionSeverity, string> = {
+export const SEVERITY_TEXT: Record<ActionSeverity, string> = {
   crit: 'text-sev-crit',
   warn: 'text-sev-warn',
   info: 'text-sev-info',
