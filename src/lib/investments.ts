@@ -54,6 +54,13 @@ export type AssetInvestmentRow = {
   asset: ManualAsset
   currentValueBase: number | undefined
   investedBase: number | undefined
+  /** `currentValueBase − investedBase`. `undefined` when either figure is
+   *  missing OR the recorded basis is `0` — a zero basis has no honest P&L
+   *  reading (it would render a nonsense 100%-style figure), so it is treated
+   *  like an unknown one and shows `—`. */
+  profitBase: number | undefined
+  /** `profitBase / investedBase`, or `undefined` whenever `profitBase` is. */
+  profitPct: number | undefined
   /** A pre-existing manual asset whose class is `equity`. New ones can no longer
    *  be created (equity comes from holdings), but legacy ones stay editable and
    *  are flagged so the UI can note they count separately from the derived
@@ -130,14 +137,24 @@ export function deriveHoldingsRows(holdings: CanonicalHolding[]): HoldingsDerive
 /** Project a manual asset into an editable Investments row. */
 export function assetInvestmentRow(asset: ManualAsset): AssetInvestmentRow {
   const pos = assetPosition(asset)
+  const investedBase = finite(pos.investedBase)
+  const currentValueBase = finite(pos.currentValueBase)
+  let profitBase: number | undefined
+  let profitPct: number | undefined
+  if (investedBase !== undefined && investedBase > 0 && currentValueBase !== undefined) {
+    profitBase = currentValueBase - investedBase
+    profitPct = profitBase / investedBase
+  }
   return {
     kind: 'asset',
     key: `asset:${asset.id}`,
     label: asset.name,
     group: MANUAL_ASSET_CLASS_LABELS[asset.assetClass] ?? 'Other',
     asset,
-    currentValueBase: finite(pos.currentValueBase),
-    investedBase: finite(pos.investedBase),
+    currentValueBase,
+    investedBase,
+    profitBase,
+    profitPct,
     isLegacyEquity: asset.assetClass === 'equity',
   }
 }

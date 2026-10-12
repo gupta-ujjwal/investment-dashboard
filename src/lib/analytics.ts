@@ -80,6 +80,25 @@ export type AllocationSlice = {
 
 const marketLabel: Record<Currency, string> = { INR: 'India', USD: 'US' }
 
+/** Shared bucketing for the allocation folds: sum pre-computed entries per
+ *  key, drop the fold when nothing (or a non-positive total) is allocatable,
+ *  and return slices largest-first with shares of the allocated total. */
+function bucketedSlices(
+  entries: Iterable<{ key: string; label: string; valueBase: number }>,
+): AllocationSlice[] {
+  const buckets = new Map<string, { label: string; valueBase: number }>()
+  for (const e of entries) {
+    const bucket = buckets.get(e.key) ?? { label: e.label, valueBase: 0 }
+    bucket.valueBase += e.valueBase
+    buckets.set(e.key, bucket)
+  }
+  const total = [...buckets.values()].reduce((s, b) => s + b.valueBase, 0)
+  if (total <= 0) return []
+  return [...buckets.entries()]
+    .map(([key, b]) => ({ key, label: b.label, valueBase: b.valueBase, pct: b.valueBase / total }))
+    .sort((a, b) => b.valueBase - a.valueBase)
+}
+
 /**
  * Allocation of current value, base currency. Only holdings with a computable
  * `currentValueBase` count — an unpriced or unstamped holding cannot honestly
@@ -90,21 +109,49 @@ export function allocation(
   rows: DerivedRow[],
   mode: AllocationMode,
 ): AllocationSlice[] {
-  const buckets = new Map<string, { label: string; valueBase: number }>()
-  for (const r of rows) {
-    if (r.currentValueBase === undefined) continue
-    const key = mode === 'market' ? r.holding.currency : r.holding.sourceSymbol
-    const label =
-      mode === 'market' ? marketLabel[r.holding.currency] : r.holding.name
-    const bucket = buckets.get(key) ?? { label, valueBase: 0 }
-    bucket.valueBase += r.currentValueBase
-    buckets.set(key, bucket)
-  }
-  const total = [...buckets.values()].reduce((s, b) => s + b.valueBase, 0)
-  if (total <= 0) return []
-  return [...buckets.entries()]
-    .map(([key, b]) => ({ key, label: b.label, valueBase: b.valueBase, pct: b.valueBase / total }))
-    .sort((a, b) => b.valueBase - a.valueBase)
+  return bucketedSlices(
+    rows
+      .filter((r): r is DerivedRow & { currentValueBase: number } => r.currentValueBase !== undefined)
+      .map((r) => ({
+        key: mode === 'market' ? r.holding.currency : r.holding.sourceSymbol,
+        label: mode === 'market' ? marketLabel[r.holding.currency] : r.holding.name,
+        valueBase: r.currentValueBase,
+      })),
+  )
+}
+
+/** Bucket key for the single manual-assets slice `positionAllocation` uses in
+ *  market mode. Distinct from `'__other'`, which `AllocationDonut` reserves
+ *  for its grouped tail. */
+const OTHER_ASSETS_KEY = 'other-assets'
+
+/**
+ * Allocation over the unified position list (holdings + manual assets) — the
+ * portfolio AllocationDonut's fold. In 'market' mode, holdings keep the
+ * market dimension (India/US) while ALL manual assets collapse into a single
+ * "Other assets" slice: a gold bar or an FD has no market, fragmenting assets
+ * into class slices would drown the market signal, and folding them into
+ * India/US by currency would overstate equity-market exposure. In 'holding'
+ * mode every position — holding or asset — gets its own slice by name. Only
+ * positions with a computable `currentValueBase` count, mirroring
+ * `allocation`.
+ */
+export function positionAllocation(
+  positions: NetWorthPosition[],
+  mode: AllocationMode,
+): AllocationSlice[] {
+  return bucketedSlices(
+    positions
+      .filter((p): p is NetWorthPosition & { currentValueBase: number } => p.currentValueBase !== undefined)
+      .map((p) => {
+        if (mode === 'holding') {
+          return { key: p.key, label: p.label, valueBase: p.currentValueBase }
+        }
+        return p.kind === 'holding'
+          ? { key: p.currency, label: marketLabel[p.currency], valueBase: p.currentValueBase }
+          : { key: OTHER_ASSETS_KEY, label: 'Other assets', valueBase: p.currentValueBase }
+      }),
+  )
 }
 
 // ── Top movers (bars) ───────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useId, useMemo, useState } from 'react'
 import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
 import { upsertHolding, type BaseCurrency, type CanonicalHolding } from '../storage/holdings'
 import type { ManualAsset, RiskBand } from '../storage/assets'
@@ -33,7 +33,7 @@ import { CardSpotlight } from '../components/decor/CardSpotlight'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { HoldingForm } from '../components/HoldingForm'
 import { AssetForm } from '../components/AssetForm'
-import type { RowActions } from '../components/HoldingRow'
+import { profitColor, toneOf, type RowActions } from '../components/HoldingRow'
 import { RefreshBanner } from '../components/RefreshBanner'
 import { useUndoableAction } from '../components/useUndoableAction'
 import { UndoToast } from '../components/UndoToast'
@@ -273,10 +273,10 @@ export function PortfolioRoute() {
       {conc && <RiskRow concentration={conc} />}
 
       {FEATURE_ANALYTICS_DEPTH && (
-        <section aria-label="Charts">
+        <section aria-label="Stock charts">
           <div className="flex items-end justify-between">
             <h3 className="font-sans text-sm font-medium text-bone-300">
-              Charts
+              Stock charts
             </h3>
             {FEATURE_HISTORY && (
               <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
@@ -284,18 +284,22 @@ export function PortfolioRoute() {
               </span>
             )}
           </div>
+          {/* Everything here folds over equity holdings only, except the
+              Allocation donut, which also counts the manual assets shown
+              further down the page — the caption says so, so the section
+              can't be misread as whole-portfolio charts. */}
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
+            Equity holdings only · Allocation includes other assets
+          </p>
           <div className="mt-4">
             <Suspense fallback={<ChartsFallback />}>
-              <ChartsPanel holdings={holdings} history={history} baseCurrency={base} />
+              <ChartsPanel holdings={holdings} assets={assets} history={history} baseCurrency={base} />
             </Suspense>
           </div>
         </section>
       )}
 
-      <section aria-label="Holdings" className="space-y-4">
-        <h3 className="font-sans text-sm font-medium text-bone-300">
-          Holdings
-        </h3>
+      <SectionDisclosure label="Holdings" storageKey="portfolio:holdings:collapsed">
         {pricedAt !== undefined && (
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
             Prices as of {formatDate(pricedAt)} · snapshot from last import
@@ -316,13 +320,10 @@ export function PortfolioRoute() {
         ) : (
           <HoldingsTable rows={rows} baseCurrency={base} sort={sort} onSort={onSort} actions={actions} />
         )}
-      </section>
+      </SectionDisclosure>
 
       {manualAssetRows.length > 0 && (
-        <section aria-label="Other assets" className="space-y-4">
-          <h3 className="font-sans text-sm font-medium text-bone-300">
-            Other assets
-          </h3>
+        <SectionDisclosure label="Other assets" storageKey="portfolio:other-assets:collapsed">
           <div className="overflow-hidden rounded-2xl border border-bone-100/10">
             <table className="hidden w-full border-collapse md:table">
               <thead>
@@ -331,6 +332,7 @@ export function PortfolioRoute() {
                   <Th>Class</Th>
                   <Th className="text-right">Invested</Th>
                   <Th className="text-right">Current value</Th>
+                  <Th className="text-right">Profit</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
@@ -366,7 +368,7 @@ export function PortfolioRoute() {
               above and included in the portfolio totals.
             </p>
           )}
-        </section>
+        </SectionDisclosure>
       )}
 
       <HoldingForm open={addHoldingOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddHoldingOpen(false)} />
@@ -515,6 +517,75 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
   )
 }
 
+/** Collapsible page section — a long holdings table should not stand between
+ *  the user and the Other-assets section below it (or vice versa). The toggle
+ *  is a button inside the `h3` (a heading may contain a button; a button may
+ *  not contain a heading) with a rotating caret, and the body unmounts when
+ *  collapsed. Both sections default open — hiding a returning user's holdings
+ *  by default would be a surprise; collapsing is a user action. The collapsed
+ *  state persists per section in `localStorage` (`'1'` = collapsed) so it
+ *  survives a reload on this frequently-revisited page. Storage access is
+ *  guarded: a private-mode/quota failure just falls back to session-only
+ *  toggling. */
+function SectionDisclosure({
+  label,
+  storageKey,
+  children,
+}: {
+  label: string
+  storageKey: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(storageKey) !== '1'
+    } catch {
+      return true
+    }
+  })
+  const bodyId = useId()
+
+  function toggle() {
+    setOpen((prev) => {
+      const next = !prev
+      try {
+        if (next) localStorage.removeItem(storageKey)
+        else localStorage.setItem(storageKey, '1')
+      } catch {
+        // Session-only fallback — see doc comment above.
+      }
+      return next
+    })
+  }
+
+  return (
+    <section aria-label={label} className="space-y-4">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          className="inline-flex items-center gap-1.5 transition hover:text-bone-100"
+        >
+          {label}
+          <span
+            aria-hidden="true"
+            className={`font-mono text-[10px] transition-transform ${open ? '' : '-rotate-90'}`}
+          >
+            ▾
+          </span>
+        </button>
+      </h3>
+      {open && (
+        <div id={bodyId} className="space-y-4">
+          {children}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function RiskRow({ concentration: c }: { concentration: Concentration }) {
   const verdicts: { label: string; verdict: string; metric?: string; tone: KpiTone }[] = []
 
@@ -622,6 +693,14 @@ function AssetRowView({
       <td className="px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">
         {money(row.currentValueBase, base)}
       </td>
+      <td
+        className={`px-4 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap ${profitColor[toneOf(row.profitBase)]}`}
+      >
+        <div>{money(row.profitBase, base)}</div>
+        <div className="text-[11px]">
+          {row.profitPct === undefined ? '—' : formatPercent(row.profitPct)}
+        </div>
+      </td>
       <td className="px-4 py-3 text-right">
         <div className="inline-flex items-center gap-1">
           <button
@@ -664,6 +743,17 @@ function AssetCard({
           </div>
         </div>
         <div className="font-mono text-sm tabular-nums whitespace-nowrap text-bone-50">{money(row.currentValueBase, base)}</div>
+      </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone-500">Profit</span>
+        <span
+          className={`font-mono text-sm tabular-nums whitespace-nowrap ${profitColor[toneOf(row.profitBase)]}`}
+        >
+          {money(row.profitBase, base)}
+          {row.profitPct !== undefined && (
+            <span className="ml-1.5 text-[11px]">{formatPercent(row.profitPct)}</span>
+          )}
+        </span>
       </div>
       <button
         type="button"

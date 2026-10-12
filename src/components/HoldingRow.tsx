@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useFetcher } from 'react-router-dom'
 import type {
   AssetClass,
@@ -36,10 +36,27 @@ export const marketLabels: Record<Currency, string> = {
   INR: 'IN',
   USD: 'US',
 }
-/** Market badges are intentionally neutral. Jade is reserved for gains and
- *  ember for losses; a market tag must not borrow either, or a green `IN`
- *  badge reads as a positive signal. */
-export const marketBadge = 'rounded text-bone-300 border-bone-100/20 bg-bone-100/[0.06]'
+/** Market badges are colour-keyed to the categorical chart ramp — `--cat-5`
+ *  (amber) for India, `--cat-6` (teal) for US — never to jade or ember
+ *  (reserved for gains/losses; a green `IN` badge would read as a positive
+ *  signal) and never to the cobalt accent (reserved for primary actions).
+ *  The `--cat-*` tokens carry no `--color-` prefix, so Tailwind generates no
+ *  utility for them — the hue is applied inline via the CSS var with a
+ *  color-mix tint, the same mechanism `chartTheme.ts` and the Overview's
+ *  allocation bars already use for chart colours. */
+export const marketBadge = 'rounded'
+export const marketBadgeStyle: Record<Currency, CSSProperties> = {
+  INR: {
+    color: 'var(--cat-5)',
+    borderColor: 'color-mix(in srgb, var(--cat-5) 35%, transparent)',
+    background: 'color-mix(in srgb, var(--cat-5) 10%, transparent)',
+  },
+  USD: {
+    color: 'var(--cat-6)',
+    borderColor: 'color-mix(in srgb, var(--cat-6) 35%, transparent)',
+    background: 'color-mix(in srgb, var(--cat-6) 10%, transparent)',
+  },
+}
 export const assetClassLabels: Record<AssetClass, string> = {
   equity: 'Equity',
   mf: 'MF',
@@ -202,6 +219,7 @@ export function HoldingRow({ row, baseCurrency, actions }: RowProps) {
       <td className="px-4 py-4">
         <span
           className={`inline-flex items-center border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${marketBadge}`}
+          style={marketBadgeStyle[h.currency]}
         >
           {marketLabels[h.currency]}
         </span>
@@ -436,7 +454,10 @@ export function HoldingCard({ row, baseCurrency, actions }: RowProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
-            <span className={`inline-flex items-center border px-1.5 py-0.5 ${marketBadge}`}>
+            <span
+              className={`inline-flex items-center border px-1.5 py-0.5 ${marketBadge}`}
+              style={marketBadgeStyle[h.currency]}
+            >
               {marketLabels[h.currency]}
             </span>
             <span>{assetClassLabels[h.assetClass]}</span>
