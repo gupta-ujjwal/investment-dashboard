@@ -22,6 +22,7 @@
 
   <p>
     <a href="#-features">Features</a> •
+    <a href="#-screenshots">Screenshots</a> •
     <a href="#-getting-started">Getting Started</a> •
     <a href="#-tech-stack">Tech Stack</a> •
     <a href="#-architecture-notes">Architecture</a> •
@@ -62,6 +63,32 @@ tracking, and no sign-up. Clone it, run it, and it's yours.
 | 💾 **Backup / restore**       | Full export/restore of every store, with a preview step before any destructive restore |
 | 🔒 **Local-first**            | No accounts, no server — every byte of portfolio data stays in your browser's IndexedDB |
 
+## 📸 Screenshots
+
+The app is fully responsive — the same dashboard, not a cut-down mobile view.
+
+**Desktop**
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>Today — net worth, allocation, history</b><br/><img src=".github/screenshots/overview-desktop.png" /></td>
+    <td align="center" width="50%"><b>Portfolio — holdings, colour-keyed by market</b><br/><img src=".github/screenshots/portfolio-desktop.png" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><b>Budget — side-by-side income/expense editor</b><br/><img src=".github/screenshots/budget-desktop.png" /></td>
+    <td align="center" width="50%"><b>Planning — emergency fund & risk allocation</b><br/><img src=".github/screenshots/planning-desktop.png" /></td>
+  </tr>
+</table>
+
+**Mobile**
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>Today</b><br/><img src=".github/screenshots/overview-mobile.png" width="320" /></td>
+    <td align="center" width="50%"><b>Portfolio</b><br/><img src=".github/screenshots/portfolio-mobile.png" width="320" /></td>
+  </tr>
+</table>
+
 ## 🚀 Getting started
 
 Requires Node.js 20+.
@@ -99,7 +126,7 @@ npm run test:run   # vitest run (one-shot)
 - **React 19 + TypeScript** on **Vite 8** — static build, no SSR.
 - **`react-router-dom` v7** in SPA mode (`createBrowserRouter`).
 - **`idb`** — promise wrapper over IndexedDB; six object stores at schema
-  version 5 (see [Architecture notes](#%EF%B8%8F-architecture-notes)).
+  version 5 (see [Architecture notes](#-architecture-notes)).
 - **`exceljs`** for XLSX parsing — picked over SheetJS (`xlsx`) because the
   npm-published `xlsx` carries two unpatched advisories (Prototype Pollution
   + ReDoS).
