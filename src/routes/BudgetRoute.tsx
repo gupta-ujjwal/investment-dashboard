@@ -402,6 +402,19 @@ function BudgetEditor({
     [history, base, month],
   )
 
+  // Live running totals over the in-progress lines — the same "non-empty
+  // category + finite amount" semantics as the save payload, so the balance
+  // figure always agrees with what Save will persist. Pure client state, no
+  // round-trip.
+  const liveIncome = useMemo(() => sumSavedLines(income), [income])
+  const liveExpenses = useMemo(() => sumSavedLines(expenses), [expenses])
+  const liveBalance = liveIncome - liveExpenses
+  const balanceTone: Tone = liveBalance > 0 ? 'jade' : liveBalance < 0 ? 'ember' : 'mute'
+
+  // Client-side amount gate (see `amountError`); the action's own parsing
+  // stays as the backstop.
+  const hasInvalidLines = [...income, ...expenses].some((l) => amountError(l) !== undefined)
+
   const incomeJson = JSON.stringify(linesToPayload(income))
   const expensesJson = JSON.stringify(linesToPayload(expenses))
   const saving = fetcher.state !== 'idle'
@@ -438,7 +451,14 @@ function BudgetEditor({
         )}
       </div>
 
-      <fetcher.Form method="post" action="/budget" className="grid min-w-0 gap-5">
+      <fetcher.Form
+        method="post"
+        action="/budget"
+        onSubmit={(e) => {
+          if (hasInvalidLines) e.preventDefault()
+        }}
+        className="grid min-w-0 gap-5"
+      >
         <input type="hidden" name="intent" value="saveMonth" />
         <input type="hidden" name="incomeJson" value={incomeJson} />
         <input type="hidden" name="expensesJson" value={expensesJson} />
@@ -457,26 +477,45 @@ function BudgetEditor({
           />
         </label>
 
-        <LineEditor
-          title="Income"
-          kind="income"
-          lines={income}
-          onChange={setIncome}
-          base={base}
-          tags={incomeTags}
-          onCreateTag={onCreateTag}
-          onDeleteTag={onDeleteTag}
-        />
-        <LineEditor
-          title="Expenses"
-          kind="expense"
-          lines={expenses}
-          onChange={setExpenses}
-          base={base}
-          tags={expenseTags}
-          onCreateTag={onCreateTag}
-          onDeleteTag={onDeleteTag}
-        />
+        {/* Live balance — visible while editing both grids below, before any
+            save. Sits above them rather than below so it never scrolls away. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
+            <span className={`h-px w-3 ${toneRail[balanceTone]}`} />
+            Balance this month · {base}
+          </span>
+          <span
+            className={`font-display text-2xl leading-none tabular-nums whitespace-nowrap ${toneText[balanceTone]}`}
+          >
+            {formatMoney(liveBalance, base)}
+          </span>
+        </div>
+
+        {/* Side-by-side on wide viewports. The read view's LineDetails pair
+            splits at sm:, but editor rows carry inputs (amount + remove
+            controls), so the columns need one step up to stay usable. */}
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+          <LineEditor
+            title="Income"
+            kind="income"
+            lines={income}
+            onChange={setIncome}
+            base={base}
+            tags={incomeTags}
+            onCreateTag={onCreateTag}
+            onDeleteTag={onDeleteTag}
+          />
+          <LineEditor
+            title="Expenses"
+            kind="expense"
+            lines={expenses}
+            onChange={setExpenses}
+            base={base}
+            tags={expenseTags}
+            onCreateTag={onCreateTag}
+            onDeleteTag={onDeleteTag}
+          />
+        </div>
 
         <label className="grid max-w-full gap-1.5 sm:max-w-[16rem]">
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone-400">
@@ -541,7 +580,9 @@ function LineEditor({
   const update = (id: number, patch: Partial<Line>) =>
     onChange(lines.map((l) => (l.id === id ? { ...l, ...patch } : l)))
   const remove = (id: number) => onChange(lines.filter((l) => l.id !== id))
-  const add = () => onChange([...lines, { id: lineSeq++, category: '', amount: '' }])
+  // "+ Add line" and a tag-chip click both create lines through here — the
+  // chip just pre-seeds the category with the tag's label.
+  const add = (category = '') => onChange([...lines, { id: lineSeq++, category, amount: '' }])
 
   // Tags are a reusable, kind-scoped vocabulary. The category input is backed by
   // a native <datalist> of this kind's tag labels (reuse via autocomplete);
@@ -569,49 +610,64 @@ function LineEditor({
         </datalist>
       )}
 
-      {lines.map((l) => (
-        <div key={l.id} className="flex min-w-0 items-center gap-2">
-           <input
-             type="text"
-             aria-label={`${title} category`}
-             value={l.category}
-             onChange={(e) => update(l.id, { category: e.target.value })}
-             placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
-             list={tagsOn ? listId : undefined}
-             className="field min-w-0 flex-1 py-1.5"
-          />
-          {tagsOn && isUntagged(l.category) && (
-            <button
-              type="button"
-              onClick={() => onCreateTag(l.category.trim(), kind)}
-              title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
-              className="whitespace-nowrap border border-act-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-act-400 transition hover:border-act-400 hover:text-act-300"
-            >
-              + tag
-            </button>
-          )}
-          <input
-            type="text"
-            inputMode="decimal"
-            aria-label={`${title} amount`}
-            value={l.amount}
-            onChange={(e) => update(l.id, { amount: e.target.value })}
-            placeholder="Amount"
-            className="field w-24 py-1.5 text-right font-mono tabular-nums sm:w-32"
-          />
-          <button
-            type="button"
-            aria-label="Remove line"
-            onClick={() => remove(l.id)}
-            className="rounded-full border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
-          >
-            ×
-          </button>
-        </div>
-      ))}
+      {lines.map((l) => {
+        const error = amountError(l)
+        return (
+          <div key={l.id} className="grid min-w-0 gap-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <input
+                type="text"
+                aria-label={`${title} category`}
+                value={l.category}
+                onChange={(e) => update(l.id, { category: e.target.value })}
+                placeholder={tagsOn ? 'Pick or type a tag' : 'Category'}
+                list={tagsOn ? listId : undefined}
+                className="field min-w-0 flex-1 py-1.5"
+              />
+              {tagsOn && isUntagged(l.category) && (
+                <button
+                  type="button"
+                  onClick={() => onCreateTag(l.category.trim(), kind)}
+                  title={`Save "${l.category.trim()}" as a reusable ${kind} tag`}
+                  className="whitespace-nowrap border border-act-400/40 px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-act-400 transition hover:border-act-400 hover:text-act-300"
+                >
+                  + tag
+                </button>
+              )}
+              <input
+                type="text"
+                inputMode="decimal"
+                aria-label={`${title} amount`}
+                aria-invalid={Boolean(error)}
+                required={l.category.trim() !== ''}
+                value={l.amount}
+                onChange={(e) => update(l.id, { amount: e.target.value })}
+                placeholder="Amount"
+                className={
+                  'field w-24 py-1.5 text-right font-mono tabular-nums sm:w-32' +
+                  (error ? ' border-ember-400/60 focus:border-ember-400' : '')
+                }
+              />
+              <button
+                type="button"
+                aria-label="Remove line"
+                onClick={() => remove(l.id)}
+                className="rounded-full border border-bone-100/15 px-2 py-1.5 font-mono text-xs text-bone-400 transition hover:border-ember-400 hover:text-ember-400"
+              >
+                ×
+              </button>
+            </div>
+            {error && (
+              <span role="alert" className="font-sans text-[11px] text-ember-400">
+                {error}
+              </span>
+            )}
+          </div>
+        )
+      })}
       <button
         type="button"
-        onClick={add}
+        onClick={() => add()}
         className="w-fit font-mono text-[10px] uppercase tracking-[0.16em] text-act-400 transition hover:text-act-300"
       >
         + Add line
@@ -625,9 +681,16 @@ function LineEditor({
           {tags.map((t) => (
             <span
               key={t.id}
-              className="inline-flex items-center gap-1 border border-bone-100/15 bg-ink-950 py-0.5 pl-2 pr-1 font-sans text-[11px] text-bone-300"
+              className="inline-flex items-center gap-1 border border-bone-100/15 bg-ink-950 py-0.5 pl-2 pr-1 font-sans text-[11px] text-bone-300 transition hover:border-bone-100/30"
             >
-              {t.label}
+              <button
+                type="button"
+                onClick={() => add(t.label)}
+                title={`Add an ${kind} line for ${t.label}`}
+                className="cursor-pointer transition hover:text-bone-100"
+              >
+                {t.label}
+              </button>
               <button
                 type="button"
                 aria-label={`Delete tag ${t.label}`}
@@ -649,6 +712,31 @@ function linesToPayload(lines: Line[]): BudgetLine[] {
   return lines
     .map((l) => ({ category: l.category.trim(), amount: Number(l.amount) }))
     .filter((l) => l.category !== '' && Number.isFinite(l.amount))
+}
+
+/** The amount a line will contribute when saved — the same "non-empty
+ *  category + finite amount" semantics `linesToPayload` filters by, so the
+ *  per-line validation and the live balance never disagree with what Save
+ *  actually persists. `undefined` means the line is blank or invalid. */
+function savedAmount(line: Line): number | undefined {
+  if (line.category.trim() === '' || line.amount.trim() === '') return undefined
+  const amount = Number(line.amount)
+  return Number.isFinite(amount) ? amount : undefined
+}
+
+/** Live total of the lines that will actually be saved. */
+function sumSavedLines(lines: Line[]): number {
+  return lines.reduce((s, l) => s + (savedAmount(l) ?? 0), 0)
+}
+
+/** Inline validation for a line's amount: a line only *needs* an amount once
+ *  its category is non-empty (matching the payload filter), so an untouched
+ *  trailing blank line never blocks saving the filled-in lines. A typed
+ *  amount with no category stays silently dropped, as before. */
+function amountError(line: Line): string | undefined {
+  if (line.category.trim() === '') return undefined
+  if (savedAmount(line) !== undefined) return undefined
+  return line.amount.trim() === '' ? 'Amount required' : 'Enter a number'
 }
 
 function pct(value: number | undefined): string {
