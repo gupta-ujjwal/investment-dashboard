@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useId, useMemo, useState } from 'react'
 import { Link, useFetcher, useLoaderData, useRevalidator } from 'react-router-dom'
 import { upsertHolding, type BaseCurrency, type CanonicalHolding } from '../storage/holdings'
 import type { ManualAsset, RiskBand } from '../storage/assets'
@@ -292,10 +292,7 @@ export function PortfolioRoute() {
         </section>
       )}
 
-      <section aria-label="Holdings" className="space-y-4">
-        <h3 className="font-sans text-sm font-medium text-bone-300">
-          Holdings
-        </h3>
+      <SectionDisclosure label="Holdings" storageKey="portfolio:holdings:collapsed">
         {pricedAt !== undefined && (
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-bone-400">
             Prices as of {formatDate(pricedAt)} · snapshot from last import
@@ -316,13 +313,10 @@ export function PortfolioRoute() {
         ) : (
           <HoldingsTable rows={rows} baseCurrency={base} sort={sort} onSort={onSort} actions={actions} />
         )}
-      </section>
+      </SectionDisclosure>
 
       {manualAssetRows.length > 0 && (
-        <section aria-label="Other assets" className="space-y-4">
-          <h3 className="font-sans text-sm font-medium text-bone-300">
-            Other assets
-          </h3>
+        <SectionDisclosure label="Other assets" storageKey="portfolio:other-assets:collapsed">
           <div className="overflow-hidden rounded-2xl border border-bone-100/10">
             <table className="hidden w-full border-collapse md:table">
               <thead>
@@ -366,7 +360,7 @@ export function PortfolioRoute() {
               above and included in the portfolio totals.
             </p>
           )}
-        </section>
+        </SectionDisclosure>
       )}
 
       <HoldingForm open={addHoldingOpen} mode="add" existingKeys={existingKeys} onClose={() => setAddHoldingOpen(false)} />
@@ -512,6 +506,75 @@ function FilteredEmpty({ onClear }: { onClear: () => void }) {
         Clear filters
       </button>
     </div>
+  )
+}
+
+/** Collapsible page section — a long holdings table should not stand between
+ *  the user and the Other-assets section below it (or vice versa). The toggle
+ *  is a button inside the `h3` (a heading may contain a button; a button may
+ *  not contain a heading) with a rotating caret, and the body unmounts when
+ *  collapsed. Both sections default open — hiding a returning user's holdings
+ *  by default would be a surprise; collapsing is a user action. The collapsed
+ *  state persists per section in `localStorage` (`'1'` = collapsed) so it
+ *  survives a reload on this frequently-revisited page. Storage access is
+ *  guarded: a private-mode/quota failure just falls back to session-only
+ *  toggling. */
+function SectionDisclosure({
+  label,
+  storageKey,
+  children,
+}: {
+  label: string
+  storageKey: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(storageKey) !== '1'
+    } catch {
+      return true
+    }
+  })
+  const bodyId = useId()
+
+  function toggle() {
+    setOpen((prev) => {
+      const next = !prev
+      try {
+        if (next) localStorage.removeItem(storageKey)
+        else localStorage.setItem(storageKey, '1')
+      } catch {
+        // Session-only fallback — see doc comment above.
+      }
+      return next
+    })
+  }
+
+  return (
+    <section aria-label={label} className="space-y-4">
+      <h3 className="font-sans text-sm font-medium text-bone-300">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          className="inline-flex items-center gap-1.5 transition hover:text-bone-100"
+        >
+          {label}
+          <span
+            aria-hidden="true"
+            className={`font-mono text-[10px] transition-transform ${open ? '' : '-rotate-90'}`}
+          >
+            ▾
+          </span>
+        </button>
+      </h3>
+      {open && (
+        <div id={bodyId} className="space-y-4">
+          {children}
+        </div>
+      )}
+    </section>
   )
 }
 
