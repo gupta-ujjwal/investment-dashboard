@@ -1,4 +1,4 @@
-# Investment Dashboard — DSL & Rules Reference
+# Koshalaya — DSL & Rules Reference
 
 > What the rules are. Skills read sections by anchor ID — update this file when terminology, constraints, or reviewer guidance changes.
 

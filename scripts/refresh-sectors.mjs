@@ -42,7 +42,7 @@ const SOURCES = {
 // Some upstreams (NSE archive in particular) reject empty / bot-like
 // user-agents. This is the smallest UA each source accepts — not a
 // deception, just a gate-pass.
-const USER_AGENT = 'Mozilla/5.0 (compatible; investment-dashboard-refresh)'
+const USER_AGENT = 'Mozilla/5.0 (compatible; koshalaya-refresh)'
 
 // Floors guarding against truncated / partial CSV downloads. ~500 USD +
 // 100 INR is what a successful run looks like; if the count drops well

@@ -1,6 +1,6 @@
-# Contributing to Investment Dashboard
+# Contributing to Koshalaya
 
-Thanks for your interest in improving Investment Dashboard! This is a small,
+Thanks for your interest in improving Koshalaya! This is a small,
 edge-only portfolio tracker, and contributions of any size — bug fixes, new
 features, docs, design tweaks — are welcome.
 
