@@ -1,6 +1,6 @@
 <div align="center">
 
-  # Investment Dashboard
+  # Koshalaya
 
   <strong>An edge-only dashboard for tracking personal investments across the Indian and US stock markets.</strong>
   <br />
@@ -8,12 +8,12 @@
 
   <br />
 
-  [![Live Demo](https://img.shields.io/badge/demo-live-3556E8?style=for-the-badge)](https://gupta-ujjwal.github.io/investment-dashboard/)
+  [![Live Demo](https://img.shields.io/badge/demo-live-3556E8?style=for-the-badge)](https://gupta-ujjwal.github.io/koshalaya/)
 
   <br />
   <br />
 
-  [![Deploy](https://img.shields.io/github/actions/workflow/status/gupta-ujjwal/investment-dashboard/deploy.yml?branch=main&label=deploy&style=flat-square)](https://github.com/gupta-ujjwal/investment-dashboard/actions/workflows/deploy.yml)
+  [![Deploy](https://img.shields.io/github/actions/workflow/status/gupta-ujjwal/koshalaya/deploy.yml?branch=main&label=deploy&style=flat-square)](https://github.com/gupta-ujjwal/koshalaya/actions/workflows/deploy.yml)
   [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](./LICENSE)
   [![React](https://img.shields.io/badge/react-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/typescript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -32,9 +32,9 @@
 
 <br />
 
-## What is Investment Dashboard?
+## What is Koshalaya?
 
-**Investment Dashboard** is for people who hold stocks in both India and the
+**Koshalaya** is for people who hold stocks in both India and the
 US and want one honest view of the whole portfolio — without handing a
 broker login or a ticker list to a third-party service. Import a broker
 export, see allocation/P&L/net-worth analytics computed entirely on your
@@ -94,13 +94,13 @@ The app is fully responsive — the same dashboard, not a cut-down mobile view.
 Requires Node.js 20+.
 
 ```bash
-git clone https://github.com/gupta-ujjwal/investment-dashboard.git
-cd investment-dashboard
+git clone https://github.com/gupta-ujjwal/koshalaya.git
+cd koshalaya
 npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173/investment-dashboard/`.
+The app will be available at `http://localhost:5173/koshalaya/`.
 
 <details>
 <summary>Build, typecheck, and test</summary>
@@ -201,7 +201,7 @@ bounded).
 - **Broker coverage** — Vested + Groww only; Zerodha/Kuvera/Robinhood
   parsers are tracked but unbuilt.
 
-Have an idea or found a gap? [Open an issue](https://github.com/gupta-ujjwal/investment-dashboard/issues).
+Have an idea or found a gap? [Open an issue](https://github.com/gupta-ujjwal/koshalaya/issues).
 
 ## 🔒 Hard constraints
 
@@ -223,8 +223,8 @@ it before touching storage, FX, or privacy-sensitive code. The short version:
 
 Pushing to `main` triggers [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
 which builds the app and publishes it to GitHub Pages. The deployed URL is
-https://gupta-ujjwal.github.io/investment-dashboard/, so `vite.config.ts`
-pins `base: '/investment-dashboard/'`.
+https://gupta-ujjwal.github.io/koshalaya/, so `vite.config.ts`
+pins `base: '/koshalaya/'`.
 
 To deploy your own fork: **Settings → Pages → Source = "GitHub Actions"**.
 
@@ -234,8 +234,8 @@ Contributions are welcome, big or small! See [CONTRIBUTING.md](./CONTRIBUTING.md
 for setup steps, coding conventions, and PR expectations, and please follow
 our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
-Found a bug or have a feature idea? [Open an issue](https://github.com/gupta-ujjwal/investment-dashboard/issues).
+Found a bug or have a feature idea? [Open an issue](https://github.com/gupta-ujjwal/koshalaya/issues).
 
 ## 📄 License
 
-Investment Dashboard is [MIT licensed](./LICENSE).
+Koshalaya is [MIT licensed](./LICENSE).

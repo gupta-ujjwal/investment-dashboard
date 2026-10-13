@@ -1,4 +1,4 @@
-# Investment Dashboard — Architecture Reference
+# Koshalaya — Architecture Reference
 
 > What this system is. Skills read sections by anchor ID — update this file when the architecture itself changes.
 
@@ -120,7 +120,7 @@ Routes:
 <a id="arch-storage"></a>
 ## 4. Storage Layer
 
-Single IndexedDB database (`investment-dashboard`, version 5) opened via `idb`'s `openDB` (`src/storage/holdings.ts`, `getDB()`).
+Single IndexedDB database (`investment-dashboard`, version 5) opened via `idb`'s `openDB` (`src/storage/holdings.ts`, `getDB()`). The DB name is a legacy string kept as-is post-rename — changing it would orphan existing users' browser data.
 
 **Stores and schemas:**
 
@@ -276,7 +276,7 @@ All analytics are pure folds over `DerivedRow[]` (output of `deriveRows` in `lib
 
 - **Build:** Vite 8 (`vite.config.ts:1-8`) with `@vitejs/plugin-react` and `@tailwindcss/vite`. Output to `dist/`.
 - **Static hosting:** GitHub Pages from `main` branch pushes (`deploy.yml:1-36`).
-- **Base path:** `/investment-dashboard/` (`vite.config.ts:6`). Router `basename` derived from `import.meta.env.BASE_URL` (`App.tsx`).
+- **Base path:** `/koshalaya/` (`vite.config.ts:6`). Router `basename` derived from `import.meta.env.BASE_URL` (`App.tsx`).
 - **CI:** GitHub Actions workflow (`deploy.yml:18-36`) runs `npm ci && npm run build` then uploads `./dist`.
 - **Type checking:** `tsc -b --noEmit` (also `npm run typecheck`).
 - **Tests:** Vitest (`vitest.config.ts:1-8`), `npm run test:run` for one-shot, `npm test` for watch mode.

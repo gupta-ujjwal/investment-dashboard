@@ -35,7 +35,7 @@ When a task touches one of these, surface the decision rather than silently pick
 
 ## Repo
 
-- GitHub: https://github.com/gupta-ujjwal/investment-dashboard
+- GitHub: https://github.com/gupta-ujjwal/koshalaya
 - Default branch: `main`
 - Deploy target: GitHub Pages from this repo
 

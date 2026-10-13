@@ -24,7 +24,7 @@ The capture sub-agent should:
 6. **Host the screenshots so the PR comment can link them.** Upload each PNG as a GitHub release asset on a draft "evidence" release tagged with the PR number, then reference the asset URLs in markdown. Concretely:
    - `gh release create pr-evidence-<PR_NUMBER> --draft --notes "Evidence assets for PR #<PR_NUMBER>"` (idempotent — if it already exists, skip create and just upload).
    - `gh release upload pr-evidence-<PR_NUMBER> <file>.png --clobber` for each screenshot.
-   - The asset URL is `https://github.com/gupta-ujjwal/investment-dashboard/releases/download/pr-evidence-<PR_NUMBER>/<file>.png`. Embed inline: `![desktop default](<url>)`.
+   - The asset URL is `https://github.com/gupta-ujjwal/koshalaya/releases/download/pr-evidence-<PR_NUMBER>/<file>.png`. Embed inline: `![desktop default](<url>)`.
 7. **Return a single block of markdown** suitable for posting under `## Evidence`, structured as:
 
    ```md

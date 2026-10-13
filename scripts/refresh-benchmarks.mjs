@@ -46,7 +46,7 @@ const INTERVAL = '1d'
 // Yahoo's `/v8/finance/chart` endpoint rejects empty / generic user-agents.
 // The string here is the smallest UA Yahoo accepts; not a deception, just a
 // gate-pass.
-const USER_AGENT = 'Mozilla/5.0 (compatible; investment-dashboard-refresh)'
+const USER_AGENT = 'Mozilla/5.0 (compatible; koshalaya-refresh)'
 
 const MAX_AGE_DAYS = 7
 

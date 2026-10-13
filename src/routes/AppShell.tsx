@@ -30,7 +30,7 @@ function useActiveLabel(): string | undefined {
 }
 
 export function AppShell() {
-  const title = import.meta.env.VITE_APP_TITLE ?? 'Investment Dashboard'
+  const title = import.meta.env.VITE_APP_TITLE ?? 'Koshalaya'
   const activeLabel = useActiveLabel()
 
   return (
