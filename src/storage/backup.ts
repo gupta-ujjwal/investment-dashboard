@@ -25,6 +25,7 @@ export type BackupManifest = {
   budgetTags: number
   history: number
   hasSettings: boolean
+  hasDeviceSnapshot: boolean
 }
 
 /**
@@ -35,6 +36,9 @@ export type BackupManifest = {
  * record), so a restored portfolio keeps its base-currency figures.
  * `historySnapshots` is included too — previously the only store absent from
  * backup entirely, which meant a bad snapshot write had no recovery path.
+ * `deviceSnapshot` (name/base currency/number locale/last FX stamp) is
+ * captured too, so the file is a complete record of the device at export
+ * time — but see `restoreAll`: it is never applied back automatically.
  */
 export async function exportBackup(): Promise<string> {
   const [holdings, assets, budgetMonths, budgetTags, history, settings] = await Promise.all([
@@ -61,6 +65,13 @@ export async function exportBackup(): Promise<string> {
         monthlyContribution: settings.monthlyContribution,
         allocationTargets: settings.allocationTargets,
       },
+      deviceSnapshot: {
+        name: settings.name,
+        baseCurrency: settings.baseCurrency,
+        numberLocale: settings.numberLocale,
+        lastFxRate: settings.lastFxRate ?? undefined,
+        lastFxAsOf: settings.lastFxAsOf ?? undefined,
+      },
     },
     null,
     2,
@@ -75,6 +86,7 @@ export function backupManifest(backup: ParsedBackup): BackupManifest {
     budgetTags: backup.budgetTags.length,
     history: backup.history.length,
     hasSettings: backup.settings !== undefined,
+    hasDeviceSnapshot: backup.deviceSnapshot !== undefined,
   }
 }
 
@@ -86,7 +98,9 @@ export function backupManifest(backup: ParsedBackup): BackupManifest {
  * write assets is impossible by construction). Settings targets are merged
  * after the atomic data restore (config, not data: the device-local base
  * currency and FX metadata are preserved, only the planning/goal targets
- * present in the backup overwrite).
+ * present in the backup overwrite). `backup.deviceSnapshot` — the device's
+ * name/base currency/number locale/FX stamp at export time — is intentionally
+ * never read here; it exists only for display (see `BackupDeviceSnapshot`).
  */
 export async function restoreAll(backup: ParsedBackup): Promise<void> {
   const db = await getDB()
