@@ -49,6 +49,11 @@ notes/
 # Personal/local files that don't belong in the repo (not project artifacts).
 /Finance 2026.xlsx
 
+# Local video production scratch (HyperFrames project state, raw frames,
+# audio stems) — large binaries, not a repo artifact. Host the finished
+# video externally and link it from the README instead.
+/videos/
+
 # direnv local dev override (LD_LIBRARY_PATH fix for Playwright/glibc) — see
 # the file's own header comment: local convenience only, never tracked.
 /.envrc
