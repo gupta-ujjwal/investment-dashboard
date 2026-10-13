@@ -95,9 +95,11 @@ export function DataBackupSection({ currentHoldings }: Props) {
         </h3>
         <p className="font-sans text-[12px] text-bone-400">
           {currentCount} holding{currentCount === 1 ? '' : 's'} on this device. The
-          export captures everything — holdings, manual assets, budget months, and
-          planning / goal targets (base-currency stamps included). History
-          snapshots are not included.
+          export captures everything — holdings, manual assets, budget months,
+          budget tags, history snapshots, and planning / goal targets
+          (base-currency stamps included). This device's name/currency/locale
+          are captured too, for reference — restoring a backup never changes
+          them on this device.
         </p>
         <button
           type="button"
@@ -228,6 +230,18 @@ function RestoreConfirmPanel({
           </span>
         )}
       </div>
+
+      {backup.deviceSnapshot && (
+        <div className="rounded-r-lg border-l-2 border-bone-100/20 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">
+          <span className="font-mono uppercase tracking-[0.16em] text-bone-400">
+            exported from ·{' '}
+          </span>
+          {backup.deviceSnapshot.baseCurrency ?? '—'} ·{' '}
+          {backup.deviceSnapshot.numberLocale ?? '—'}
+          {backup.deviceSnapshot.name ? ` · "${backup.deviceSnapshot.name}"` : ''} — reference
+          only, restoring never changes this device's settings.
+        </div>
+      )}
 
       {largest ? (
         <div className="rounded-r-lg border-l-2 border-bone-200/40 bg-ink-850 px-4 py-3 font-sans text-xs text-bone-300">

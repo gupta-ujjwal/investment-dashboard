@@ -450,4 +450,79 @@ describe('parseBackup', () => {
     if (result.ok) return
     expect(result.error).toMatch(/baseCurrency/)
   })
+
+  // ── deviceSnapshot: reference-only device settings (name/base currency/
+  //    number locale/FX stamp). Must round-trip for display, default to
+  //    undefined on older backups, and reject malformed values the same way
+  //    every other optional section does. ───────────────────────────────────
+  it('round-trips a deviceSnapshot', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-10-13T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      deviceSnapshot: {
+        name: 'Ujjwal',
+        baseCurrency: 'INR',
+        numberLocale: 'en-IN',
+        lastFxRate: 84.5,
+        lastFxAsOf: 1717200000000,
+      },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.deviceSnapshot).toEqual({
+      name: 'Ujjwal',
+      baseCurrency: 'INR',
+      numberLocale: 'en-IN',
+      lastFxRate: 84.5,
+      lastFxAsOf: 1717200000000,
+    })
+  })
+
+  it('defaults deviceSnapshot to undefined when absent (pre-fix backup)', () => {
+    const result = parseBackup(validBackupJson([]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.backup.deviceSnapshot).toBeUndefined()
+  })
+
+  it('rejects a deviceSnapshot with an invalid baseCurrency', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-10-13T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      deviceSnapshot: { baseCurrency: 'EUR' },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/baseCurrency/)
+  })
+
+  it('rejects a deviceSnapshot with an invalid numberLocale', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-10-13T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      deviceSnapshot: { numberLocale: 'fr-FR' },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/numberLocale/)
+  })
+
+  it('rejects a deviceSnapshot with a non-finite lastFxRate', () => {
+    const json = JSON.stringify({
+      exportedAt: '2026-10-13T12:00:00.000Z',
+      schemaVersion: DB_VERSION,
+      holdings: [],
+      deviceSnapshot: { lastFxRate: 'not-a-number' },
+    })
+    const result = parseBackup(json)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/lastFxRate/)
+  })
 })

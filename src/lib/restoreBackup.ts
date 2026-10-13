@@ -13,7 +13,7 @@ import type {
 } from '../storage/assets'
 import type { BudgetLine, BudgetMonth } from '../storage/budget'
 import type { BudgetTag, BudgetTagKind } from '../storage/budgetTags'
-import type { AllocationTarget } from '../storage/settings'
+import type { AllocationTarget, NumberLocale } from '../storage/settings'
 import type { HistoryRecord } from '../storage/history'
 
 /** The planning/goal target subset of `Settings` a backup carries — config,
@@ -25,6 +25,22 @@ export type BackupSettingsTargets = {
   goalCorpus?: number
   monthlyContribution?: number
   allocationTargets?: AllocationTarget[]
+}
+
+/** The device-local display settings at export time — name, base currency,
+ *  number locale, last-known FX stamp. Captured so a backup is a complete
+ *  record of "what this device looked like", but deliberately **never**
+ *  applied by `restoreAll`: restoring is routinely done on the *same* device
+ *  after a bad import, and silently flipping its currency/locale back to
+ *  whatever an older backup had would be a surprise, not a fix. Present on
+ *  `ParsedBackup` purely for display (e.g. "this backup was INR, USD 1.2")
+ *  and for a future explicit "also apply device settings" opt-in. */
+export type BackupDeviceSnapshot = {
+  name?: string
+  baseCurrency?: BaseCurrency
+  numberLocale?: NumberLocale
+  lastFxRate?: number
+  lastFxAsOf?: number
 }
 
 export type ParsedBackup = {
@@ -44,6 +60,10 @@ export type ParsedBackup = {
    *  entirely (verified: zero references in the pre-fix storage/backup.ts). */
   history: HistoryRecord[]
   settings?: BackupSettingsTargets
+  /** Absent on every backup before this field existed — upconverts to
+   *  `undefined`, never a parse error. See `BackupDeviceSnapshot` for why
+   *  restore never applies it. */
+  deviceSnapshot?: BackupDeviceSnapshot
 }
 
 export type ParseBackupResult =
@@ -83,6 +103,10 @@ const VALID_RISK_BANDS: ReadonlySet<RiskBand> = new Set<RiskBand>([
 const VALID_BUDGET_TAG_KINDS: ReadonlySet<BudgetTagKind> = new Set<BudgetTagKind>([
   'income',
   'expense',
+])
+const VALID_NUMBER_LOCALES: ReadonlySet<NumberLocale> = new Set<NumberLocale>([
+  'en-IN',
+  'en-US',
 ])
 
 /**
@@ -205,6 +229,13 @@ export function parseBackup(json: string): ParseBackupResult {
     settings = validated.settings
   }
 
+  let deviceSnapshot: BackupDeviceSnapshot | undefined
+  if (raw.deviceSnapshot !== undefined) {
+    const validated = validateDeviceSnapshot(raw.deviceSnapshot)
+    if (!validated.ok) return { ok: false, error: validated.error }
+    deviceSnapshot = validated.snapshot
+  }
+
   return {
     ok: true,
     backup: {
@@ -216,6 +247,7 @@ export function parseBackup(json: string): ParseBackupResult {
       budgetTags,
       history,
       settings,
+      deviceSnapshot,
     },
   }
 }
@@ -473,6 +505,49 @@ function validateSettingsTargets(
       goalCorpus: numberOrUndefined(raw.goalCorpus),
       monthlyContribution: numberOrUndefined(raw.monthlyContribution),
       allocationTargets: allocationTargets.value,
+    },
+  }
+}
+
+function validateDeviceSnapshot(
+  raw: unknown,
+): { ok: true; snapshot: BackupDeviceSnapshot } | { ok: false; error: string } {
+  if (!isPlainObject(raw)) {
+    return { ok: false, error: 'Backup `deviceSnapshot` must be an object.' }
+  }
+  if (raw.name !== undefined && typeof raw.name !== 'string') {
+    return { ok: false, error: 'Backup deviceSnapshot `name`, if present, must be a string.' }
+  }
+  if (
+    raw.baseCurrency !== undefined &&
+    (typeof raw.baseCurrency !== 'string' || !VALID_CURRENCIES.has(raw.baseCurrency as BaseCurrency))
+  ) {
+    return { ok: false, error: 'Backup deviceSnapshot `baseCurrency` must be one of INR|USD.' }
+  }
+  if (
+    raw.numberLocale !== undefined &&
+    (typeof raw.numberLocale !== 'string' ||
+      !VALID_NUMBER_LOCALES.has(raw.numberLocale as NumberLocale))
+  ) {
+    return { ok: false, error: 'Backup deviceSnapshot `numberLocale` must be one of en-IN|en-US.' }
+  }
+  for (const key of ['lastFxRate', 'lastFxAsOf'] as const) {
+    const v = raw[key]
+    if (v !== undefined && !isFiniteNumber(v)) {
+      return {
+        ok: false,
+        error: `Backup deviceSnapshot \`${key}\`, if present, must be a finite number.`,
+      }
+    }
+  }
+  return {
+    ok: true,
+    snapshot: {
+      name: raw.name as string | undefined,
+      baseCurrency: raw.baseCurrency as BaseCurrency | undefined,
+      numberLocale: raw.numberLocale as NumberLocale | undefined,
+      lastFxRate: numberOrUndefined(raw.lastFxRate),
+      lastFxAsOf: numberOrUndefined(raw.lastFxAsOf),
     },
   }
 }
