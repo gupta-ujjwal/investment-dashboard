@@ -604,11 +604,6 @@
     "sector": "Information Technology",
     "market": "USD"
   },
-  "CTVA": {
-    "name": "Corteva",
-    "sector": "Materials",
-    "market": "USD"
-  },
   "CVNA": {
     "name": "Carvana",
     "sector": "Consumer Discretionary",
@@ -1995,7 +1990,7 @@
     "market": "USD"
   },
   "MCK": {
-    "name": "McKesson Corporation",
+    "name": "McKesson",
     "sector": "Health Care",
     "market": "USD"
   },
@@ -2394,11 +2389,6 @@
     "sector": "Real Estate",
     "market": "USD"
   },
-  "PSKY": {
-    "name": "Paramount Skydance Corporation",
-    "sector": "Communication Services",
-    "market": "USD"
-  },
   "PSX": {
     "name": "Phillips 66",
     "sector": "Energy",
@@ -2527,6 +2517,11 @@
   "SJM": {
     "name": "J.M. Smucker Company (The)",
     "sector": "Consumer Staples",
+    "market": "USD"
+  },
+  "SKYD": {
+    "name": "Skydance Corporation",
+    "sector": "Communication Services",
     "market": "USD"
   },
   "SLB": {
@@ -2749,6 +2744,11 @@
     "sector": "Communication Services",
     "market": "USD"
   },
+  "TWLO": {
+    "name": "Twilio",
+    "sector": "Information Technology",
+    "market": "USD"
+  },
   "TXN": {
     "name": "Texas Instruments",
     "sector": "Information Technology",
@@ -2884,6 +2884,11 @@
     "sector": "Health Care",
     "market": "USD"
   },
+  "VYLR": {
+    "name": "Vylor",
+    "sector": "Consumer Staples",
+    "market": "USD"
+  },
   "VZ": {
     "name": "Verizon",
     "sector": "Communication Services",
@@ -2897,11 +2902,6 @@
   "WAT": {
     "name": "Waters Corporation",
     "sector": "Health Care",
-    "market": "USD"
-  },
-  "WBD": {
-    "name": "Warner Bros. Discovery",
-    "sector": "Communication Services",
     "market": "USD"
   },
   "WDAY": {
